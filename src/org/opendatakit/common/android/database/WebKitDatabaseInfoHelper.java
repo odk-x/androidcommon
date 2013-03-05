@@ -34,7 +34,7 @@ public abstract class WebKitDatabaseInfoHelper extends ODKSQLiteOpenHelper {
 	private static final String WEBKIT_INFO_KEY = "key";
 	private static final String WEBKIT_INFO_VALUE = "value";
 
-	static int WEBKIT_VERSION = 1;
+	static final int WEBKIT_VERSION = 1;
 
 	private static final String WEBKIT_APP_VERSION_TABLE = "_AppVersionTable_";
 	private static final String WEBKIT_APP_KEY = "appkey";

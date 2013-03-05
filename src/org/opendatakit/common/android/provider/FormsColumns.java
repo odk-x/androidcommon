@@ -2,6 +2,7 @@ package org.opendatakit.common.android.provider;
 
 import android.provider.BaseColumns;
 
+
 /**
  * ODK Survey (only)
  *
@@ -74,12 +75,12 @@ public final class FormsColumns implements BaseColumns {
 	  public static String getTableCreateSql(String tableName) {
 	    //@formatter:off
 	      return "CREATE TABLE IF NOT EXISTS " + tableName + " ("
-	            + _ID + " integer primary key, "
+	            + _ID + " integer not null primary key, " // for Google...
+	            + FORM_ID + " text not null unique, "  // real PK
 	            + DISPLAY_NAME + " text not null, "
 	            + DISPLAY_SUBTEXT + " text not null, "
 	            + DESCRIPTION + " text, "
 	            + TABLE_ID + " text not null, "
-	            + FORM_ID + " text not null, "
 	            + FORM_VERSION + " text, "
 	            + FORM_FILE_PATH + " text null, "
 	            + FORM_MEDIA_PATH + " text not null, "

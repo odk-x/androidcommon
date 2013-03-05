@@ -30,15 +30,15 @@ public class WebDbDatabaseHelper extends ODKSQLiteOpenHelper {
 
 	// private static final String t = "WebDbDatabaseHelper";
 
-	static String WEBDB_DATABASE_NAME = "Databases.db";
-	static String WEBDB_DATABASES_TABLE = "Databases";
-	static String WEBDB_ORIGINS_TABLE = "Origins";
+	static final String WEBDB_DATABASE_NAME = "Databases.db";
+	static final String WEBDB_DATABASES_TABLE = "Databases";
+	static final String WEBDB_ORIGINS_TABLE = "Origins";
 
-	public static String WEBDB_INSTANCE_DB_SHORT_NAME = "odk";
-	public static String WEBDB_INSTANCE_DB_DISPLAY_NAME = "ODK Instances Database";
-	public static Integer WEBDB_INSTANCE_DB_ESTIMATED_SIZE = 65536;
-	public static Integer WEBDB_INSTANCE_DB_VERSION = 1;
-	static int WEBDB_VERSION = 1;
+	public static final String WEBDB_INSTANCE_DB_SHORT_NAME = "odk";
+	public static final String WEBDB_INSTANCE_DB_DISPLAY_NAME = "ODK Instances Database";
+	public static final Integer WEBDB_INSTANCE_DB_ESTIMATED_SIZE = 65536;
+	public static final Integer WEBDB_INSTANCE_DB_VERSION = 1;
+	static final int WEBDB_VERSION = 1;
 
 	static final String COMMON_ORIGIN = "origin";
 

@@ -16,16 +16,16 @@ package org.opendatakit.common.android.provider;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.opendatakit.common.android.utilities.ODKFileUtils;
 
 import android.content.ContentProvider;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Environment;
 import android.os.ParcelFileDescriptor;
 
 /**
@@ -39,9 +39,9 @@ import android.os.ParcelFileDescriptor;
  *
  */
 public class FileProvider extends ContentProvider {
-	private static final String FILE_AUTHORITY = "org.opendatakit.common.android.provider.file";
-	private static final String FILE_URL_PREFIX = ContentResolver.SCHEME_CONTENT
-			+ "://" + FileProvider.FILE_AUTHORITY;
+   public static final String CONTENT_ITEM_TYPE = "vnd.android.cursor.item/vnd.opendatakit.file";
+   public static final String FILE_AUTHORITY = "org.opendatakit.common.android.provider.file";
+	public static final Uri CONTENT_URI = Uri.parse("content://" + FILE_AUTHORITY + "/");
 
 	public static String getFileOriginString() {
 		return ContentResolver.SCHEME_CONTENT + "_" + FILE_AUTHORITY
@@ -49,58 +49,59 @@ public class FileProvider extends ContentProvider {
 	}
 
 	/**
-	 * Directories at the application name level that are inaccessible.
-	 * e.g., legacy ODK Collect directories.
-	 */
-	private static List<String> LEGACY_DIRECTORIES;
-	static {
-		LEGACY_DIRECTORIES = new ArrayList<String>();
-		LEGACY_DIRECTORIES.add("forms");
-		LEGACY_DIRECTORIES.add("instances");
-		LEGACY_DIRECTORIES.add(".cache");
-		LEGACY_DIRECTORIES.add("metadata");
-		LEGACY_DIRECTORIES.add("config");
-	}
-
-	/**
 	 * directories within an application that are inaccessible via the file provider.
 	 */
-	private static List<String> INACCESSIBLE_DIRECTORIES;
+	private static final List<String> INACCESSIBLE_DIRECTORIES;
 	static {
 		INACCESSIBLE_DIRECTORIES = new ArrayList<String>();
 		INACCESSIBLE_DIRECTORIES.add("metadata"); // where the database lives...
 	}
 
-	// Storage paths
-	public static final String ODK_BASE_DIR = Environment
-			.getExternalStorageDirectory()
-			+ File.separator
-			+ "odk";
+	/**
+	 * Internal routine that does not require that the returned File exists or is of a particular type.
+	 *
+	 * @param uriString
+	 * @return File corresponding to the specified uri
+	 */
+   private static File getAsFileObject(String uriString) {
+      Uri uri = Uri.parse(uriString);
+      if ( !uri.getAuthority().equals(FILE_AUTHORITY) ) {
+         throw new IllegalArgumentException("Not a valid uri: " + uriString);
+      }
+      List<String> segments = uri.getPathSegments();
+      if ( segments.size() < 2 ) {
+         throw new IllegalArgumentException("Not a valid uri: " + uriString + " application or subdirectory not specified.");
+      }
+
+      if ( segments.get(0).contains(File.separator) ) {
+        throw new IllegalArgumentException("Not a valid uri: " + uriString + " invalid application.");
+      }
+      File f = ODKFileUtils.fromAppPath(segments.get(0));
+      if ( f == null || !f.exists() || !f.isDirectory() ) {
+        throw new IllegalArgumentException("Not a valid uri: " + uriString + " invalid application.");
+     }
+      f = new File(f, segments.get(1));
+      if ( !f.exists() || !f.isDirectory() || INACCESSIBLE_DIRECTORIES.contains(segments.get(1)) ) {
+         throw new IllegalArgumentException("Not a valid uri: " + uriString + " invalid subdirectory.");
+      }
+      for ( int i = 2 ; i < segments.size() ; ++i ) {
+         f = new File(f, segments.get(i));
+      }
+     return f;
+   }
+
+   public static File getAsDirectory(String uriString) {
+      File f = getAsFileObject(uriString);
+      if ( !f.exists() || !f.isDirectory() ) {
+         throw new IllegalArgumentException("Not a valid uri: " + uriString + " file does not exist or is not a valid directory.");
+      }
+      return f;
+   }
 
 	public static File getAsFile(String uriString) {
-		Uri uri = Uri.parse(uriString);
-		if ( !uri.getAuthority().equals(FILE_AUTHORITY) ) {
-			throw new IllegalArgumentException("Not a valid uri: " + uriString);
-		}
-		List<String> segments = uri.getPathSegments();
-		if ( segments.size() < 2 ) {
-			throw new IllegalArgumentException("Not a valid uri: " + uriString + " application or subdirectory not specified.");
-		}
-
-		File f = new File(ODK_BASE_DIR, segments.get(0));
-		// exclude LEGACY_DIRECTORIES...
-		if ( !f.exists() || !f.isDirectory() || LEGACY_DIRECTORIES.contains(segments.get(0)) ) {
-			throw new IllegalArgumentException("Not a valid uri: " + uriString + " invalid application.");
-		}
-		f = new File(f, segments.get(1));
-		if ( !f.exists() || !f.isDirectory() || INACCESSIBLE_DIRECTORIES.contains(segments.get(1)) ) {
-			throw new IllegalArgumentException("Not a valid uri: " + uriString + " invalid subdirectory.");
-		}
-		for ( int i = 2 ; i < segments.size() ; ++i ) {
-			f = new File(f, segments.get(i));
-		}
-		if ( !f.exists() || f.isFile() ) {
-			throw new IllegalArgumentException("Not a valid uri: " + uriString + " file does not exists or is not a valid file.");
+		File f = getAsFileObject(uriString);
+		if ( !f.exists() || !f.isFile() ) {
+			throw new IllegalArgumentException("Not a valid uri: " + uriString + " file does not exist or is not a valid file.");
 		}
 		return f;
 	}
@@ -115,14 +116,18 @@ public class FileProvider extends ContentProvider {
 	public static String getAsUrl(File filePath) {
 
 		String fullPath = filePath.getAbsolutePath();
-		if (fullPath.startsWith(ODK_BASE_DIR)) {
-			fullPath = fullPath.substring(ODK_BASE_DIR.length());
-			fullPath = FILE_URL_PREFIX + fullPath;
-		} else {
-			throw new IllegalArgumentException("Invalid file access: "
-					+ filePath.getAbsolutePath());
-		}
-		return fullPath;
+		String relativePath = ODKFileUtils.toAppPath(fullPath);
+	   if ( relativePath == null ) {
+	         throw new IllegalArgumentException("Invalid file access: " + fullPath);
+	   }
+
+	   // we need to escape the segments.
+	   String[] segments = relativePath.split(File.separator);
+	   Uri u = FileProvider.CONTENT_URI;
+	   for ( String s : segments ) {
+	     u = Uri.withAppendedPath(u, Uri.encode(s));
+	   }
+		return u.toString();
 	}
 
 	@Override
@@ -130,30 +135,11 @@ public class FileProvider extends ContentProvider {
 			throws FileNotFoundException {
 		String path = uri.getPath();
 
-		File pathFile;
-		if (uri.getAuthority().equalsIgnoreCase(FILE_AUTHORITY)) {
-			pathFile = new File(ODK_BASE_DIR);
-		} else {
+		if (!uri.getAuthority().equalsIgnoreCase(FILE_AUTHORITY)) {
 			throw new FileNotFoundException("Not a valid uri: " + uri + " file does not exists or is not a file.");
 		}
 
-		File realFile = new File(pathFile, path);
-
-		try {
-			String parentPath = pathFile.getCanonicalPath();
-			String fullPath = realFile.getCanonicalPath();
-			if (!fullPath.startsWith(parentPath)) {
-				throw new FileNotFoundException("Not a valid uri: " + uri + " canonical path violation: "
-						+ realFile.getAbsolutePath());
-			}
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			throw e;
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new FileNotFoundException("Not a valid uri: " + uri + " canonical path violation: "
-					+ realFile.getAbsolutePath());
-		}
+		File realFile = ODKFileUtils.fromAppPath(path);
 
 		if ( !realFile.isFile() ) {
 			throw new FileNotFoundException("Not a valid uri: " + uri + " is not a file.");
@@ -169,7 +155,7 @@ public class FileProvider extends ContentProvider {
 
 	@Override
 	public String getType(Uri uri) {
-		return null;
+		return FileProvider.CONTENT_ITEM_TYPE;
 	}
 
 	@Override

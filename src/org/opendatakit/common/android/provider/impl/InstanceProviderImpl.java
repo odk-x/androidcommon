@@ -25,16 +25,13 @@ import java.util.List;
 import java.util.Locale;
 
 import org.apache.commons.io.FileUtils;
+import org.opendatakit.common.android.R;
 import org.opendatakit.common.android.database.DataModelDatabaseHelper;
-import org.opendatakit.common.android.database.WebDbDefinition;
-import org.opendatakit.common.android.database.WebSqlDatabaseHelper;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.InstanceColumns;
-import org.opendatakit.common.android.R;
+import org.opendatakit.common.android.utilities.ODKFileUtils;
 
-import android.content.ContentProvider;
 import android.content.ContentValues;
-import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
@@ -42,7 +39,7 @@ import android.net.Uri;
 /**
  * TODO: convert to true app-scoped instance provider
  */
-public abstract class InstanceProviderImpl extends ContentProvider {
+public abstract class InstanceProviderImpl extends CommonContentProvider {
 
 	// private static final String t = "InstancesProviderImpl";
 
@@ -54,38 +51,12 @@ public abstract class InstanceProviderImpl extends ContentProvider {
 
 	private static HashMap<String, String> sInstancesProjectionMap;
 
-	private static final int INSTANCES = 1;
-	private static final int INSTANCE_ID = 2;
-
-	private UriMatcher sUriMatcher;
-
-	private WebSqlDatabaseHelper h;
-	private DataModelDatabaseHelper mDbHelper;
-
-	public abstract String getWebDbPath();
-
-	public abstract String getInstancesPath();
-
 	public abstract String getInstanceAuthority();
 
 	@Override
 	public boolean onCreate() {
-		String path = getWebDbPath();
 
-		sUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
-		sUriMatcher.addURI(getInstanceAuthority(), "instances",
-				INSTANCES);
-		sUriMatcher.addURI(getInstanceAuthority(), "instances/#",
-				INSTANCE_ID);
-
-		h = new WebSqlDatabaseHelper(path);
-		WebDbDefinition defn = h.getWebKitDatabaseInfoHelper();
-		if (defn != null) {
-			defn.dbFile.getParentFile().mkdirs();
-			mDbHelper = new DataModelDatabaseHelper(defn.dbFile.getParent(),
-					defn.dbFile.getName());
-		}
-		return true;
+	  return true;
 	}
 
 	@Override
@@ -93,16 +64,17 @@ public abstract class InstanceProviderImpl extends ContentProvider {
 			String[] selectionArgs, String sortOrder) {
 		List<String> segments = uri.getPathSegments();
 
-		if (segments.size() < 1 || segments.size() > 2) {
+		if (segments.size() < 2 || segments.size() > 3) {
 			throw new IllegalArgumentException(
 					"Unknown URI (too many segments!) " + uri);
 		}
 
-		String tableId = segments.get(0);
+		String appName = segments.get(0);
+		String tableId = segments.get(1);
 		// _ID in UPLOADS_TABLE_NAME
-		String instanceId = (segments.size() == 2 ? segments.get(1) : null);
+		String instanceId = (segments.size() == 3 ? segments.get(2) : null);
 
-		SQLiteDatabase db = mDbHelper.getReadableDatabase();
+		SQLiteDatabase db = getDbHelper(appName).getReadableDatabase();
 
 		String dbTableName = DataModelDatabaseHelper
 				.getDbTableName(db, tableId);
@@ -265,17 +237,19 @@ public abstract class InstanceProviderImpl extends ContentProvider {
 	 */
 	@Override
 	public int delete(Uri uri, String where, String[] whereArgs) {
-		List<String> segments = uri.getPathSegments();
+     List<String> segments = uri.getPathSegments();
 
-		if (segments.size() < 1 || segments.size() > 2) {
-			throw new IllegalArgumentException(
-					"Unknown URI (too many segments!) " + uri);
-		}
+     if (segments.size() < 2 || segments.size() > 3) {
+        throw new IllegalArgumentException(
+              "Unknown URI (too many segments!) " + uri);
+     }
 
-		String tableId = segments.get(0);
-		String instanceId = (segments.size() == 2 ? segments.get(1) : null);
+     String appName = segments.get(0);
+     String tableId = segments.get(1);
+     // _ID in UPLOADS_TABLE_NAME
+     String instanceId = (segments.size() == 3 ? segments.get(2) : null);
 
-		SQLiteDatabase db = mDbHelper.getWritableDatabase();
+     SQLiteDatabase db = getDbHelper(appName).getWritableDatabase();
 
 		String dbTableName = DataModelDatabaseHelper
 				.getDbTableName(db, tableId);
@@ -310,8 +284,8 @@ public abstract class InstanceProviderImpl extends ContentProvider {
 						.getString(del
 								.getColumnIndex(InstanceColumns.DATA_TABLE_INSTANCE_ID));
 				ids.add(iId);
-				File f = new File(new File(new File(getInstancesPath()),
-						tableId), iId);
+				String path = ODKFileUtils.getInstanceFolder(appName, tableId, iId);
+				File f = new File(path);
 				if (f.exists()) {
 					if (f.isDirectory()) {
 						FileUtils.deleteDirectory(f);
@@ -345,16 +319,20 @@ public abstract class InstanceProviderImpl extends ContentProvider {
 	@Override
 	public int update(Uri uri, ContentValues values, String where,
 			String[] whereArgs) {
-		List<String> segments = uri.getPathSegments();
+     List<String> segments = uri.getPathSegments();
 
-		if (segments.size() != 2) {
-			throw new IllegalArgumentException(
-					"Unknown URI (does not specify instance!) " + uri);
-		}
+     if (segments.size() != 3) {
+        throw new IllegalArgumentException(
+              "Unknown URI (does not specify instance!) " + uri);
+     }
 
-		String tableId = segments.get(0);
+     String appName = segments.get(0);
+     String tableId = segments.get(1);
+     // _ID in UPLOADS_TABLE_NAME
+     String instanceId = segments.get(2);
+     // TODO: should we do something to ensure instanceId is the one updated?
 
-		SQLiteDatabase db = mDbHelper.getWritableDatabase();
+     SQLiteDatabase db = getDbHelper(appName).getWritableDatabase();
 
 		String dbTableName = DataModelDatabaseHelper
 				.getDbTableName(db, tableId);

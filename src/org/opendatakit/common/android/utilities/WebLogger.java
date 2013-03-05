@@ -23,7 +23,9 @@ import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 import android.util.Log;
 
@@ -46,10 +48,21 @@ public class WebLogger {
 	public static final int SUCCESS = 7;
 	public static final int TIP = 8;
 
+	private static Map<String,WebLogger> loggers = new HashMap<String, WebLogger>();
+
+   public synchronized static WebLogger getLogger(String appName) {
+     WebLogger logger = loggers.get(appName);
+     if (logger == null) {
+        logger = new WebLogger(ODKFileUtils.getLoggingFolder(appName));
+     }
+     return logger;
+  }
+
 	public WebLogger(String loggingPath) {
 		long now = System.currentTimeMillis();
 		final long distantPast = now - 30L * 86400000L; // thirty days ago...
 		File loggingDirectory = new File(loggingPath);
+		loggingDirectory.mkdirs();
 
 		File[] stale = loggingDirectory.listFiles(new FileFilter() {
 			@Override

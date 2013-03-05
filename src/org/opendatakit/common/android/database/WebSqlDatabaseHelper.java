@@ -26,11 +26,10 @@ import android.util.Log;
 public class WebSqlDatabaseHelper {
 	private static final String t = "WebSqlDatabaseHelper";
 
-	private WebDbDatabaseHelper mWebDb;
 	private List<WebDbDefinition> webDatabasePaths;
 
 	public WebSqlDatabaseHelper(String path) {
-		mWebDb = new WebDbDatabaseHelper(path);
+	   WebDbDatabaseHelper mWebDb = new WebDbDatabaseHelper(path);
 
 		List<WebDbDefinition> dbCandidates = new ArrayList<WebDbDefinition>();
 
@@ -67,6 +66,9 @@ public class WebSqlDatabaseHelper {
 		} finally {
 			if (c != null) {
 				c.close();
+			}
+			if ( db != null ) {
+			  db.close();
 			}
 		}
 

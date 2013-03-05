@@ -1,0 +1,224 @@
+package org.opendatakit.common.android.utilities;
+
+import java.util.Iterator;
+import java.util.Set;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import android.os.Bundle;
+
+/**
+ * Utilities for converting a Bundle to and from a JSON serialization
+ * for transmission to javascript inside a WebKit.
+ *
+ * @author mitchellsundt@gmail.com
+ *
+ */
+public class AndroidUtils {
+
+  public static interface MacroStringExpander {
+    public String expandString(String value);
+  }
+
+  // no constructor
+  private AndroidUtils() {};
+
+  public static JSONObject convertFromBundle(Bundle b) throws JSONException {
+     JSONObject jo = new JSONObject();
+     Set<String> keys = b.keySet();
+     for (String key : keys) {
+        Object o = b.get(key);
+        if (o == null) {
+           jo.put(key, JSONObject.NULL);
+        } else if (o.getClass().isArray()) {
+           JSONArray ja = new JSONArray();
+           Class<?> t = o.getClass().getComponentType();
+           if (t.equals(long.class)) {
+              long[] a = (long[]) o;
+              for (int i = 0; i < a.length; ++i) {
+                 ja.put(a[i]);
+              }
+              jo.put(key, ja);
+           } else if (t.equals(int.class)) {
+              int[] a = (int[]) o;
+              for (int i = 0; i < a.length; ++i) {
+                 ja.put(a[i]);
+              }
+              jo.put(key, ja);
+           } else if (t.equals(double.class)) {
+              double[] a = (double[]) o;
+              for (int i = 0; i < a.length; ++i) {
+                 ja.put(a[i]);
+              }
+              jo.put(key, ja);
+           } else if (t.equals(boolean.class)) {
+              boolean[] a = (boolean[]) o;
+              for (int i = 0; i < a.length; ++i) {
+                 ja.put(a[i]);
+              }
+              jo.put(key, ja);
+           } else if (t.equals(Long.class)) {
+              Long[] a = (Long[]) o;
+              for (int i = 0; i < a.length; ++i) {
+                 ja.put((a[i] == null) ? JSONObject.NULL : a[i]);
+              }
+           } else if (t.equals(Integer.class)) {
+              Integer[] a = (Integer[]) o;
+              for (int i = 0; i < a.length; ++i) {
+                 ja.put((a[i] == null) ? JSONObject.NULL : a[i]);
+              }
+              jo.put(key, ja);
+           } else if (t.equals(Double.class)) {
+              Double[] a = (Double[]) o;
+              for (int i = 0; i < a.length; ++i) {
+                 ja.put((a[i] == null) ? JSONObject.NULL : a[i]);
+              }
+              jo.put(key, ja);
+           } else if (t.equals(Boolean.class)) {
+              Boolean[] a = (Boolean[]) o;
+              for (int i = 0; i < a.length; ++i) {
+                 ja.put((a[i] == null) ? JSONObject.NULL : a[i]);
+              }
+              jo.put(key, ja);
+           } else if (t.equals(Bundle.class)
+                 || Bundle.class.isAssignableFrom(t)) {
+              Bundle[] a = (Bundle[]) o;
+              for (int i = 0; i < a.length; ++i) {
+                 ja.put((a[i] == null) ? JSONObject.NULL
+                       : convertFromBundle(a[i]));
+              }
+              jo.put(key, ja);
+           } else {
+              throw new JSONException("unrecognized class");
+           }
+        } else if (o instanceof Bundle) {
+           jo.put(key, convertFromBundle((Bundle) o));
+        } else if (o instanceof String) {
+           jo.put(key, b.getString(key));
+        } else if (o instanceof Boolean) {
+           jo.put(key, b.getBoolean(key));
+        } else if (o instanceof Integer) {
+           jo.put(key, b.getInt(key));
+        } else if (o instanceof Long) {
+           jo.put(key, b.getLong(key));
+        } else if (o instanceof Double) {
+           jo.put(key, b.getDouble(key));
+        }
+     }
+     return jo;
+  }
+
+  public static Bundle convertToBundle(JSONObject valueMap, final MacroStringExpander expander)
+        throws JSONException {
+     Bundle b = new Bundle();
+     @SuppressWarnings("unchecked")
+     Iterator<String> cur = valueMap.keys();
+     while (cur.hasNext()) {
+        String key = cur.next();
+        if (!valueMap.isNull(key)) {
+           Object o = valueMap.get(key);
+           if (o instanceof JSONObject) {
+              Bundle be = convertToBundle((JSONObject) o, expander);
+              b.putBundle(key, be);
+           } else if (o instanceof JSONArray) {
+              JSONArray a = (JSONArray) o;
+              // only non-empty arrays are written into the Bundle
+              // first non-null element defines data type
+              // for the array
+              Object oe = null;
+              for (int j = 0; j < a.length(); ++j) {
+                 if (!a.isNull(j)) {
+                    oe = a.get(j);
+                    break;
+                 }
+              }
+              if (oe != null) {
+                 if (oe instanceof JSONObject) {
+                    Bundle[] va = new Bundle[a.length()];
+                    for (int j = 0; j < a.length(); ++j) {
+                       if (a.isNull(j)) {
+                          va[j] = null;
+                       } else {
+                          va[j] = convertToBundle((JSONObject) a
+                                .getJSONObject(j), expander);
+                       }
+                    }
+                    b.putParcelableArray(key, va);
+                 } else if (oe instanceof JSONArray) {
+                    throw new JSONException(
+                          "Unable to convert nested arrays");
+                 } else if (oe instanceof String) {
+                    String[] va = new String[a.length()];
+                    for (int j = 0; j < a.length(); ++j) {
+                       if (a.isNull(j)) {
+                          va[j] = null;
+                       } else {
+                          va[j] = a.getString(j);
+                       }
+                    }
+                    b.putStringArray(key, va);
+                 } else if (oe instanceof Boolean) {
+                    boolean[] va = new boolean[a.length()];
+                    for (int j = 0; j < a.length(); ++j) {
+                       if (a.isNull(j)) {
+                          va[j] = false;
+                       } else {
+                          va[j] = a.getBoolean(j);
+                       }
+                    }
+                    b.putBooleanArray(key, va);
+                 } else if (oe instanceof Integer) {
+                    int[] va = new int[a.length()];
+                    for (int j = 0; j < a.length(); ++j) {
+                       if (a.isNull(j)) {
+                          va[j] = 0;
+                       } else {
+                          va[j] = a.getInt(j);
+                       }
+                    }
+                    b.putIntArray(key, va);
+                 } else if (oe instanceof Long) {
+                    long[] va = new long[a.length()];
+                    for (int j = 0; j < a.length(); ++j) {
+                       if (a.isNull(j)) {
+                          va[j] = 0;
+                       } else {
+                          va[j] = a.getLong(j);
+                       }
+                    }
+                    b.putLongArray(key, va);
+                 } else if (oe instanceof Double) {
+                    double[] va = new double[a.length()];
+                    for (int j = 0; j < a.length(); ++j) {
+                       if (a.isNull(j)) {
+                          va[j] = Double.NaN;
+                       } else {
+                          va[j] = a.getDouble(j);
+                       }
+                    }
+                    b.putDoubleArray(key, va);
+                 }
+              }
+           } else if (o instanceof String) {
+              String v = valueMap.getString(key);
+              if ( expander != null ) {
+                v = expander.expandString(v);
+              }
+              b.putString(key, v);
+           } else if (o instanceof Boolean) {
+              b.putBoolean(key, valueMap.getBoolean(key));
+           } else if (o instanceof Integer) {
+              b.putInt(key, valueMap.getInt(key));
+           } else if (o instanceof Long) {
+              b.putLong(key, valueMap.getLong(key));
+           } else if (o instanceof Double) {
+              b.putDouble(key, valueMap.getDouble(key));
+           }
+        }
+     }
+     return b;
+  }
+
+}

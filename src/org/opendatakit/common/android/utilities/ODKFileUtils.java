@@ -17,6 +17,7 @@ package org.opendatakit.common.android.utilities;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -24,6 +25,8 @@ import java.io.InputStream;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.kxml2.kdom.Node;
@@ -31,6 +34,7 @@ import org.kxml2.kdom.Node;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.Environment;
 import android.util.Log;
 
 /**
@@ -40,6 +44,20 @@ import android.util.Log;
  */
 public class ODKFileUtils {
 	private final static String t = "FileUtils";
+
+   /**
+    * Directories at the application name level that are inaccessible.
+    * e.g., legacy ODK Collect directories.
+    */
+   private static final List<String> LEGACY_DIRECTORIES;
+   static {
+      LEGACY_DIRECTORIES = new ArrayList<String>();
+      LEGACY_DIRECTORIES.add("forms");
+      LEGACY_DIRECTORIES.add("instances");
+      LEGACY_DIRECTORIES.add(".cache");
+      LEGACY_DIRECTORIES.add("metadata");
+      LEGACY_DIRECTORIES.add("config");
+   }
 
 	public static final ObjectMapper mapper = new ObjectMapper();
 
@@ -56,6 +74,20 @@ public class ODKFileUtils {
 	// Used to validate and display valid form names.
 	public static final String VALID_FILENAME = "[ _\\-A-Za-z0-9]*.x[ht]*ml";
 
+	public static void verifyExternalStorageAvailability() {
+     String cardstatus = Environment.getExternalStorageState();
+     if (cardstatus.equals(Environment.MEDIA_REMOVED)
+           || cardstatus.equals(Environment.MEDIA_UNMOUNTABLE)
+           || cardstatus.equals(Environment.MEDIA_UNMOUNTED)
+           || cardstatus.equals(Environment.MEDIA_MOUNTED_READ_ONLY)
+           || cardstatus.equals(Environment.MEDIA_SHARED)) {
+        RuntimeException e = new RuntimeException(
+              "ODK reports :: SDCard error: "
+                    + Environment.getExternalStorageState());
+        throw e;
+     }
+	}
+
 	public static boolean createFolder(String path) {
 		boolean made = true;
 		File dir = new File(path);
@@ -65,17 +97,125 @@ public class ODKFileUtils {
 		return made;
 	}
 
-	public static String getInstanceFolder(String instancesPath, String tableId, String instanceId) {
+	public static String getOdkFolder() {
+     String path = Environment.getExternalStorageDirectory()
+         + File.separator
+         + "odk";
+     return path;
+	}
+
+	public static boolean isValidAppName(String name) {
+	  return !LEGACY_DIRECTORIES.contains(name);
+	}
+
+	public static File[] getAppFolders() {
+	  File odk = new File(getOdkFolder());
+
+	  File[] results = odk.listFiles(new FileFilter() {
+
+      @Override
+      public boolean accept(File pathname) {
+        if ( !pathname.isDirectory() ) return false;
+        return !LEGACY_DIRECTORIES.contains(pathname.getName());
+      }});
+
+	  return results;
+	}
+
+	public static File fromAppPath( String appPath ) {
+     String[] terms = appPath.split(File.separator);
+     if ( terms == null || terms.length < 1 ) {
+       return null;
+     }
+     // exclude LEGACY_DIRECTORIES...
+     if ( LEGACY_DIRECTORIES.contains(terms[0]) ) {
+       return null;
+     }
+	  File f = new File(new File(getOdkFolder()), appPath);
+	  return f;
+	}
+
+	public static String toAppPath(String fullpath) {
+	  String path = getOdkFolder() + File.separator;
+	  if ( fullpath.startsWith(path) ) {
+	    String partialPath = fullpath.substring(path.length());
+	    String[] app = partialPath.split(File.separator);
+	    if ( app == null || app.length < 1 ) {
+	      return null;
+	    }
+	    if ( LEGACY_DIRECTORIES.contains(app[0]) ) {
+	      return null;
+	    }
+       return partialPath;
+	  }
+	  return null;
+	}
+
+	public static String getAppFolder( String appName ) {
+     String path = getOdkFolder()
+         + File.separator + appName;
+     return path;
+	}
+
+	public static String getFormsFolder( String appName ) {
+	  String path = getAppFolder(appName)
+         + File.separator + "forms";
+	  return path;
+	}
+
+	public static String getStaleFormsFolder( String appName ) {
+     String path = getAppFolder(appName)
+         + File.separator + "forms.old";
+     return path;
+   }
+
+   public static String getLoggingFolder( String appName ) {
+     String path = getAppFolder(appName)
+         + File.separator + "logging";
+     return path;
+   }
+
+   public static String getMetadataFolder( String appName ) {
+     String path = getAppFolder(appName)
+         + File.separator + "metadata";
+     return path;
+   }
+
+   public static String getAppCacheFolder( String appName ) {
+     String path = getMetadataFolder(appName)
+         + File.separator + "appCache";
+     return path;
+   }
+
+   public static String getGeoCacheFolder( String appName ) {
+     String path = getMetadataFolder(appName)
+         + File.separator + "geoCache";
+     return path;
+   }
+
+   public static String getWebDbFolder( String appName ) {
+     String path = getMetadataFolder(appName)
+         + File.separator + "webDb";
+     return path;
+   }
+
+	public static String getInstanceFolder(String appName, String tableId, String instanceId) {
 		if (instanceId == null || tableId == null) {
-			return instancesPath + File.separator + "bogus";
+         String path = getAppFolder(appName) +
+             File.separator + "instances.undef";
+         return path;
 		} else {
 			String instanceFolder = instanceId.replaceAll(
 					"[\\p{Punct}\\p{Space}]", "_");
 			String tableFolder = tableId.replaceAll("[\\p{Punct}\\p{Space}]",
 					"_");
 
-			File f = new File(new File(new File(instancesPath),
-					tableFolder), instanceFolder);
+	      String path = getAppFolder(appName) +
+	          File.separator + "instances" +
+	          File.separator + tableFolder +
+	          File.separator + instanceFolder;
+
+			File f = new File(path);
 			f.mkdirs();
 			return f.getAbsolutePath();
 		}
