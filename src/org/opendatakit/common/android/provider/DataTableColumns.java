@@ -18,8 +18,16 @@ public class DataTableColumns implements BaseColumns {
   public static final String SYNC_TAG = "sync_tag";
   public static final String SYNC_STATE = "sync_state";
   public static final String TRANSACTIONING = "transactioning";
+
+  /**
+   * (timestamp, saved, form_id) are the tuple written and managed by ODK Survey
+   * when a record is updated.  ODK Tables needs to update these appropriately
+   * when a cell is directly edited based upon whether or not the table is
+   * 'form-managed' or not.
+   */
   public static final String TIMESTAMP = "timestamp";
   public static final String SAVED = "saved";
+  public static final String FORM_ID = "form_id";
   /*
    * For ODKTables generated rows (as opposed to ODK Collect), the thought is
    * that this instance name would just be the iso86 pretty print date of

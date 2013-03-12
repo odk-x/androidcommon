@@ -27,6 +27,7 @@ import java.util.Locale;
 import org.apache.commons.io.FileUtils;
 import org.opendatakit.common.android.R;
 import org.opendatakit.common.android.database.DataModelDatabaseHelper;
+import org.opendatakit.common.android.database.DataModelDatabaseHelper.IdStruct;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.InstanceColumns;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
@@ -47,6 +48,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
 	private static final String DATA_TABLE_TIMESTAMP_COLUMN = DataTableColumns.TIMESTAMP;
 	private static final String DATA_TABLE_INSTANCE_NAME_COLUMN = DataTableColumns.INSTANCE_NAME;
 	private static final String DATA_TABLE_SAVED_COLUMN = DataTableColumns.SAVED;
+   private static final String DATA_TABLE_FORM_ID_COLUMN = DataTableColumns.FORM_ID;
 	private static final String SAVED_AS_COMPLETE = "COMPLETE";
 
 	private static HashMap<String, String> sInstancesProjectionMap;
@@ -70,44 +72,59 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
 		}
 
 		String appName = segments.get(0);
-		String tableId = segments.get(1);
+		String uriFormId = segments.get(1);
 		// _ID in UPLOADS_TABLE_NAME
 		String instanceId = (segments.size() == 3 ? segments.get(2) : null);
 
 		SQLiteDatabase db = getDbHelper(appName).getReadableDatabase();
 
-		String dbTableName = DataModelDatabaseHelper
-				.getDbTableName(db, tableId);
+		IdStruct ids = DataModelDatabaseHelper.getIds(db, uriFormId);
+
+		if (ids == null) {
+		  throw new IllegalArgumentException(
+		      "Unknown URI (no matching formId) " + uri);
+		}
+		String dbTableName = DataModelDatabaseHelper.getDbTableName(db, ids.tableId);
 		if (dbTableName == null) {
 			throw new IllegalArgumentException(
-					"Unknown URI (no matching tableId) " + uri);
+					"Unknown URI (missing data table for formId) " + uri);
 		}
 
 		dbTableName = "\"" + dbTableName + "\"";
 
 		// ARGH! we must ensure that we have records in our UPLOADS_TABLE_NAME
-		// for every
-		// distinct instance in the data table.
+		// for every distinct instance in the data table.
 		StringBuilder b = new StringBuilder();
 		b.append("INSERT INTO ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append("(")
-				.append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(") ")
+				.append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(",")
+            .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
+            .append(InstanceColumns.XML_PUBLISH_FORM_ID)
+				.append(") ")
 				.append("SELECT ")
-				.append(InstanceColumns.DATA_TABLE_INSTANCE_ID)
+				.append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(",")
+				.append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
+            .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(",")
 				.append(" FROM (").append("SELECT DISTINCT ")
-				.append(DATA_TABLE_ID_COLUMN).append(" as ")
-				.append(InstanceColumns.DATA_TABLE_INSTANCE_ID)
+				.append(DATA_TABLE_ID_COLUMN)
+				   .append(" as ").append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(",")
+            .append("? as ").append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
+            .append("? as ").append(InstanceColumns.XML_PUBLISH_FORM_ID).append(",")
 				.append(" FROM ").append(dbTableName)
 				.append(" EXCEPT SELECT DISTINCT ")
-				.append(InstanceColumns.DATA_TABLE_INSTANCE_ID)
+				.append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(",")
+            .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
+            .append(InstanceColumns.XML_PUBLISH_FORM_ID)
 				.append(" FROM ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(")");
 
-		db.execSQL(b.toString());
+		String[] args = { ids.tableId, ids.formId };
+		db.execSQL(b.toString(), args);
 
-		// First, ensure that
+		// We can now join through and access the data table rows
 
 		b.setLength(0);
 		b.append("SELECT ");
 		b.append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".").append(InstanceColumns._ID)
+		 .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".").append(InstanceColumns.XML_PUBLISH_FORM_ID)
 				.append(",").append(dbTableName).append(".").append("*")
 				.append(",");
 		// b.append(dbTableName).append(".").append(InstanceColumns._ID).append(",");
@@ -128,7 +145,8 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
 				.append(DATA_TABLE_TIMESTAMP_COLUMN).append(" > ")
 				.append(InstanceColumns.XML_PUBLISH_TIMESTAMP)
 				.append(" THEN null").append(" ELSE ")
-				.append(InstanceColumns.XML_PUBLISH_STATUS).append(" END as ")
+				.append(InstanceColumns.XML_PUBLISH_STATUS)
+				.append(" END as ")
 				.append(InstanceColumns.XML_PUBLISH_STATUS).append(",");
 		b.append("CASE WHEN ").append(DATA_TABLE_TIMESTAMP_COLUMN)
 				.append(" IS NULL THEN null").append(" WHEN ")
@@ -137,7 +155,8 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
 				.append(DATA_TABLE_TIMESTAMP_COLUMN).append(" > ")
 				.append(InstanceColumns.XML_PUBLISH_TIMESTAMP)
 				.append(" THEN null").append(" ELSE ")
-				.append(InstanceColumns.DISPLAY_SUBTEXT).append(" END as ")
+				.append(InstanceColumns.DISPLAY_SUBTEXT)
+				.append(" END as ")
 				.append(InstanceColumns.DISPLAY_SUBTEXT).append(",");
 		b.append(DATA_TABLE_INSTANCE_NAME_COLUMN).append(" as ")
 				.append(InstanceColumns.DISPLAY_NAME);
@@ -146,43 +165,52 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
 				.append(DATA_TABLE_ID_COLUMN).append(" HAVING ")
 				.append(DATA_TABLE_TIMESTAMP_COLUMN).append(" = MAX(")
 				.append(DATA_TABLE_TIMESTAMP_COLUMN).append(")")
-				.append(" AND ").append(DATA_TABLE_SAVED_COLUMN).append("= '")
-				.append(SAVED_AS_COMPLETE).append("'").append(") as ")
+				.append(") as ")
 				.append(dbTableName);
 		b.append(" JOIN ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(" ON ")
 				.append(dbTableName).append(".").append(DATA_TABLE_ID_COLUMN)
 				.append("=").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
-				.append(InstanceColumns.DATA_TABLE_INSTANCE_ID);
+				.append(InstanceColumns.DATA_TABLE_INSTANCE_ID)
+				.append(" AND ")
+				.append("? =").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+				.append(InstanceColumns.DATA_TABLE_TABLE_ID)
+            .append(" AND ")
+            .append("? =").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+            .append(InstanceColumns.XML_PUBLISH_FORM_ID);
+		b.append(" WHERE ")
+       .append(DATA_TABLE_SAVED_COLUMN).append("=?")
+       ;
 
-		if (selection != null || instanceId != null) {
-			b.append(" WHERE ");
-			if (selection != null) {
-				b.append("(").append(selection).append(")");
-			}
-			if (instanceId != null) {
-				if (selection != null) {
-					b.append(" AND ");
-					if (selectionArgs != null) {
-						String[] args = new String[selectionArgs.length];
-						for (int i = 0; i < selectionArgs.length; ++i) {
-							args[i] = selectionArgs[i];
-						}
-						args[selectionArgs.length] = instanceId;
-						selectionArgs = args;
-					} else {
-						selectionArgs = new String[] { instanceId };
-					}
-				} else {
-					selectionArgs = new String[] { instanceId };
-				}
-				b.append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
-						.append(InstanceColumns._ID).append("=?");
-			}
+		String filterArgs[];
+		if ( instanceId != null ) {
+		  b.append(" AND ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+          .append(InstanceColumns._ID).append("=?");
+		    String tempArgs[] = { ids.tableId, ids.formId, InstanceColumns.STATUS_COMPLETE, instanceId };
+		    filterArgs = tempArgs;
+	   } else {
+	     String tempArgs[] = { ids.tableId, ids.formId, InstanceColumns.STATUS_COMPLETE };
+        filterArgs = tempArgs;
+	   }
+
+		if ( selection != null ) {
+        b.append(" AND (").append(selection).append(")");
 		}
+
+		if (selectionArgs != null) {
+			String[] tempArgs = new String[filterArgs.length+selectionArgs.length];
+         for (int i = 0; i < filterArgs.length; ++i) {
+           tempArgs[i] = filterArgs[i];
+        }
+			for (int i = 0; i < selectionArgs.length; ++i) {
+			  tempArgs[filterArgs.length+i] = selectionArgs[i];
+			}
+			filterArgs = tempArgs;
+		}
+
 		if (sortOrder != null) {
 			b.append(" ORDER BY ").append(sortOrder);
 		}
-		Cursor c = db.rawQuery(b.toString(), selectionArgs);
+		Cursor c = db.rawQuery(b.toString(), filterArgs);
 		// Tell the cursor what uri to watch, so it knows when its source data
 		// changes
 		c.setNotificationUri(getContext().getContentResolver(), uri);

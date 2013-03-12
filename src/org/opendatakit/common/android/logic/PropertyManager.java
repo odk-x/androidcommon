@@ -38,6 +38,8 @@ public class PropertyManager {
 
     String getUserEmail();
 
+    String getAppName();
+
     String getInstanceDirectory();
 
     String getNewInstanceFile(String extension);
@@ -68,6 +70,7 @@ public class PropertyManager {
   // email -- current account email
   public final static String EMAIL = "email";
   public final static String OR_EMAIL = "uri:email";
+  public final static String APP_NAME = "appName";
   // instanceDirectory -- directory containing media files for current instance
   public final static String INSTANCE_DIRECTORY = "instancedirectory";
   // asFile:ext -- the full path to a non-existent file with the given extension
@@ -161,6 +164,11 @@ public class PropertyManager {
       if (value == null)
         return null;
       return "mailto:" + value;
+    } else if (APP_NAME.equals(propertyName)) {
+      String value = callback.getAppName();
+      if ( value == null)
+        return null;
+      return value;
     } else if (INSTANCE_DIRECTORY.equals(propertyName)) {
       String value = callback.getInstanceDirectory();
       if (value == null)

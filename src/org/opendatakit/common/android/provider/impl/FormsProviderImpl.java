@@ -23,7 +23,6 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Stack;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -39,7 +38,6 @@ import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
-import android.os.FileObserver;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -47,107 +45,12 @@ import android.util.Log;
  *
  */
 public abstract class FormsProviderImpl extends CommonContentProvider {
-  private static final String t = "FormsProvider";
+  static final String t = "FormsProvider";
 
   public abstract String getFormsAuthority();
 
-  /**
-   * Changes in the odk folder tree may trigger a rescan of the forms
-   *
-   * @author mitchellsundt@gmail.com
-   *
-   */
-  private static class AppFoldersObserver extends FileObserver {
-
-    private static final int ALL_CHANGES = FileObserver.CREATE | FileObserver.ATTRIB |
-        FileObserver.CLOSE_WRITE | FileObserver.MODIFY |
-        FileObserver.MOVED_FROM | FileObserver.MOVED_TO | FileObserver.DELETE |
-        FileObserver.DELETE_SELF | FileObserver.MOVE_SELF;
-
-    FormsProviderImpl self;
-
-    public AppFoldersObserver(FormsProviderImpl self) {
-      super(ODKFileUtils.getOdkFolder(), ALL_CHANGES);
-      this.self = self;
-    }
-
-    @Override
-    public void onEvent(int event, String path) {
-      Log.i(t, "AppFoldersObserver fired: " + path);
-
-
-      // push this file and all parents on ancestry stack
-      File changed = new File(path);
-      Stack<File> ancestry = new Stack<File>();
-      while ( changed != null ) {
-        ancestry.add(changed);
-        changed = changed.getParentFile();
-      }
-
-      // push odk root and all parents on ancestry stack
-      File root = new File(ODKFileUtils.getOdkFolder());
-      Stack<File> rootAncestry = new Stack<File>();
-      while ( root != null ) {
-        rootAncestry.add(root);
-        root = root.getParentFile();
-      }
-
-      // pop off so that we are at the app level
-      while ( !ancestry.isEmpty() && !rootAncestry.isEmpty() ) {
-        changed = ancestry.pop();
-        root = rootAncestry.pop();
-        if ( !changed.equals(root) ) {
-          throw new IllegalStateException("Unexpected divergence in paths");
-        }
-      }
-
-      if ( ancestry.isEmpty() ) {
-        // we have changes to the ODKRoot directory
-        if ( event == FileObserver.MOVE_SELF || event == FileObserver.DELETE_SELF ) {
-          super.stopWatching();
-          appFolderObserver = null;
-          bInitialScan = false;
-        }
-        Log.i(t, "AppFoldersObserver changes to ODKRoot: " + path);
-        return;
-      }
-
-      // we now have the changed root
-      changed = ancestry.pop();
-      String appName = changed.getName();
-
-      if ( !ODKFileUtils.isValidAppName(appName) ) {
-        Log.i(t, "AppFoldersObserver changes are not for a valid appName: " + path);
-        return;
-      }
-
-      File formsFolder = new File(ODKFileUtils.getFormsFolder(appName));
-
-      if ( ancestry.isEmpty() ) {
-        // OK the app directory might be new...
-        if ( formsFolder.exists() && formsFolder.isDirectory() ) {
-          FormsDiscoveryRunnable fd = new FormsDiscoveryRunnable( self, appName);
-          executor.execute(fd);
-          Log.i(t, "AppFoldersObserver changes are at the app level: " + path);
-          return;
-        }
-      }
-
-      // get the forms directory...
-      changed = ancestry.pop();
-      if ( formsFolder.equals(changed) ) {
-        // OK the change is in the forms directory...
-        FormsDiscoveryRunnable fd = new FormsDiscoveryRunnable( self, appName);
-        executor.execute(fd);
-        Log.i(t, "AppFoldersObserver changes are within the forms directory: " + path);
-        return;
-      }
-    }
-  }
-
-  @SuppressWarnings("unused")
-  private static AppFoldersObserver appFolderObserver = null; // for debugging
-  private static ExecutorService executor = Executors.newFixedThreadPool(1);
+  private static ODKFolderObserver observer = null;
+  static ExecutorService executor = Executors.newFixedThreadPool(1);
   private static boolean bInitialScan = false; // set to true during first scan
 
   /**
@@ -159,19 +62,23 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
    *
    * @param self
    */
-  private static synchronized void doInitialAppsScan(FormsProviderImpl self) {
+  private static synchronized void doInitialAppsScan(final FormsProviderImpl self) {
     if ( !bInitialScan ) {
-      appFolderObserver = new AppFoldersObserver(self);
-      File[] apps = ODKFileUtils.getAppFolders();
-      if ( apps != null ) {
-        for ( int i = 0 ; i < apps.length ; ++i ) {
-          File app = apps[i];
-          FormsDiscoveryRunnable fd = new FormsDiscoveryRunnable( self, app.getName());
-          executor.execute(fd);
-        }
+      // observer will start monitoring and trigger forms discovery
+      try {
+        bInitialScan = true;
+        observer = new ODKFolderObserver(self);
+      } catch ( Exception e ) {
+        Log.e(t, "Exception: " + e.toString());
+        bInitialScan = false;
+        stopScan();
       }
-      bInitialScan = true;
     }
+  }
+
+  static synchronized void stopScan() {
+    observer.stopWatching();
+    bInitialScan = false;
   }
 
   @Override

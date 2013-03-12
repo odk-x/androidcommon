@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.apache.commons.lang3.StringUtils;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.opendatakit.common.android.provider.ColumnDefinitionsColumns;
@@ -132,6 +133,50 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
 			}
 		}
 		return null;
+	}
+
+	public static final class IdStruct {
+     public final int _id;
+	  public final String formId;
+	  public final String tableId;
+
+	  public IdStruct(int _id, String formId, String tableId) {
+	    this._id = _id;
+	    this.formId = formId;
+	    this.tableId = tableId;
+	  }
+	}
+
+	/**
+	 * Accessor to retrieve the database tableId given a formId
+	 *
+	 * @param db
+	 * @param formId -- either the integer _ID or the textual form_id
+	 * @return
+	 */
+	public static IdStruct getIds(SQLiteDatabase db, String formId) {
+	  boolean isNumericId = StringUtils.isNumeric(formId);
+
+	  Cursor c = null;
+	  try {
+	    c = db.query(FORMS_TABLE_NAME,
+	          new String[] { FormsColumns._ID, FormsColumns.FORM_ID, FormsColumns.TABLE_ID },
+	          (isNumericId ? FormsColumns._ID : FormsColumns.FORM_ID) + "=?", new String[] { formId }, null,
+	          null, null);
+
+	    if ( c.moveToFirst()) {
+         int idxId = c.getColumnIndex(FormsColumns._ID);
+         int idxFormId = c.getColumnIndex(FormsColumns.FORM_ID);
+	      int idxTableId = c.getColumnIndex(FormsColumns.TABLE_ID);
+
+	      return new IdStruct(c.getInt(idxId), c.getString(idxFormId), c.getString(idxTableId));
+	    }
+	  } finally {
+	    if (c != null && !c.isClosed()) {
+	      c.close();
+	    }
+	  }
+	  return null;
 	}
 
 	public static class Join {
