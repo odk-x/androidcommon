@@ -305,6 +305,11 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
           Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()),
               appName), values.getAsString(FormsColumns.FORM_ID));
       getContext().getContentResolver().notifyChange(formUri, null);
+      Uri idUri = Uri.withAppendedPath(
+          Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()),
+              appName), Long.toString(rowId));
+      getContext().getContentResolver().notifyChange(idUri, null);
+
       return formUri;
     }
 
@@ -430,11 +435,15 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
 
     SQLiteDatabase db = getDbHelper(appName).getWritableDatabase();
     Cursor del = null;
+    Integer idValue = null;
+    String formIdValue = null;
     HashSet<File> mediaDirs = new HashSet<File>();
     try {
       del = this.query(uri, null, whereId, whereIdArgs, null);
       del.moveToPosition(-1);
       while (del.moveToNext()) {
+        idValue = del.getInt(del.getColumnIndex(FormsColumns._ID));
+        formIdValue = del.getString(del.getColumnIndex(FormsColumns.FORM_ID));
         File mediaDir = new File(del.getString(del.getColumnIndex(FormsColumns.FORM_MEDIA_PATH)));
         mediaDirs.add(mediaDir);
       }
@@ -457,7 +466,18 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       }
     }
 
-    getContext().getContentResolver().notifyChange(uri, null);
+    if ( count == 1 ) {
+      Uri formUri = Uri.withAppendedPath(
+          Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()),
+              appName), formIdValue);
+      getContext().getContentResolver().notifyChange(formUri, null);
+      Uri idUri = Uri.withAppendedPath(
+          Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()),
+              appName), Long.toString(idValue));
+      getContext().getContentResolver().notifyChange(idUri, null);
+    } else {
+      getContext().getContentResolver().notifyChange(uri, null);
+    }
     return count;
   }
 
@@ -529,6 +549,8 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
      * tuple, and the update specifies a FORM_MEDIA_PATH, move all the
      * non-matching directories elsewhere.
      */
+    Integer idValue = null;
+    String formIdValue = null;
     HashSet<File> mediaDirs = new HashSet<File>();
     boolean multiset = false;
     Cursor c = null;
@@ -539,6 +561,8 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
         FormIdVersion ref = null;
         c.moveToPosition(-1);
         while (c.moveToNext()) {
+          idValue = c.getInt(c.getColumnIndex(FormsColumns._ID));
+          formIdValue = c.getString(c.getColumnIndex(FormsColumns.FORM_ID));
           String formId = c.getString(c.getColumnIndex(FormsColumns.FORM_ID));
           String formVersion = c.getString(c.getColumnIndex(FormsColumns.FORM_VERSION));
           FormIdVersion cur = new FormIdVersion(formId, formVersion);
@@ -603,7 +627,18 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
 
     int count = db.update(DataModelDatabaseHelper.FORMS_TABLE_NAME, values, whereId, whereIdArgs);
 
-    getContext().getContentResolver().notifyChange(uri, null);
+    if ( count == 1 ) {
+      Uri formUri = Uri.withAppendedPath(
+          Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()),
+              appName), formIdValue);
+      getContext().getContentResolver().notifyChange(formUri, null);
+      Uri idUri = Uri.withAppendedPath(
+          Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()),
+              appName), Long.toString(idValue));
+      getContext().getContentResolver().notifyChange(idUri, null);
+    } else {
+      getContext().getContentResolver().notifyChange(uri, null);
+    }
     return count;
   }
 }
