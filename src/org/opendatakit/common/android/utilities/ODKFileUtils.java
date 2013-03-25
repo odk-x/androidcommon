@@ -207,6 +207,12 @@ public class ODKFileUtils {
     return path;
   }
 
+  public static String getAndroidObbFolder(String packageName) {
+    String path = Environment.getExternalStorageDirectory() + File.separator +
+        "Android" + File.separator + "obb" + File.separator + packageName;
+    return path;
+  }
+
   public static String getRelativeFormPath(String appName, File formDefFile) {
 
     // compute FORM_PATH...
