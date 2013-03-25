@@ -166,7 +166,7 @@ public class PropertyManager {
       return "mailto:" + value;
     } else if (APP_NAME.equals(propertyName)) {
       String value = callback.getAppName();
-      if ( value == null)
+      if (value == null)
         return null;
       return value;
     } else if (INSTANCE_DIRECTORY.equals(propertyName)) {

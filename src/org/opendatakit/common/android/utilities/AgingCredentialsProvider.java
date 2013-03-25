@@ -31,37 +31,36 @@ import org.opendatakit.httpclientandroidlib.impl.client.BasicCredentialsProvider
  */
 public class AgingCredentialsProvider implements CredentialsProvider {
 
-	private final BasicCredentialsProvider provider = new BasicCredentialsProvider();
-	private final long expiryInterval;
+  private final BasicCredentialsProvider provider = new BasicCredentialsProvider();
+  private final long expiryInterval;
 
-	private long nextClearTimestamp;
+  private long nextClearTimestamp;
 
-	public AgingCredentialsProvider(int expiryInterval) {
-		this.expiryInterval = expiryInterval;
-		nextClearTimestamp = System.currentTimeMillis() + expiryInterval;
-	}
+  public AgingCredentialsProvider(int expiryInterval) {
+    this.expiryInterval = expiryInterval;
+    nextClearTimestamp = System.currentTimeMillis() + expiryInterval;
+  }
 
-	@Override
-	public synchronized void clear() {
-		provider.clear();
-	}
+  @Override
+  public synchronized void clear() {
+    provider.clear();
+  }
 
-	@Override
-	public synchronized Credentials getCredentials(AuthScope authscope) {
-		if (nextClearTimestamp < System.currentTimeMillis()) {
-			clear();
-		}
-		nextClearTimestamp = System.currentTimeMillis() + expiryInterval;
-		return provider.getCredentials(authscope);
-	}
+  @Override
+  public synchronized Credentials getCredentials(AuthScope authscope) {
+    if (nextClearTimestamp < System.currentTimeMillis()) {
+      clear();
+    }
+    nextClearTimestamp = System.currentTimeMillis() + expiryInterval;
+    return provider.getCredentials(authscope);
+  }
 
-	@Override
-	public synchronized void setCredentials(AuthScope authscope,
-			Credentials credentials) {
-		if (nextClearTimestamp < System.currentTimeMillis()) {
-			clear();
-		}
-		nextClearTimestamp = System.currentTimeMillis() + expiryInterval;
-		provider.setCredentials(authscope, credentials);
-	}
+  @Override
+  public synchronized void setCredentials(AuthScope authscope, Credentials credentials) {
+    if (nextClearTimestamp < System.currentTimeMillis()) {
+      clear();
+    }
+    nextClearTimestamp = System.currentTimeMillis() + expiryInterval;
+    provider.setCredentials(authscope, credentials);
+  }
 }

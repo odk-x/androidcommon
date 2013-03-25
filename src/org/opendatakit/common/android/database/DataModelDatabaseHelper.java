@@ -38,362 +38,351 @@ import android.database.sqlite.SQLiteDatabase;
  */
 public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
 
-	static final String APP_KEY = "org.opendatakit.common";
-	static final int APP_VERSION = 1;
+  static final String APP_KEY = "org.opendatakit.common";
+  static final int APP_VERSION = 1;
 
-	/**
-	 * key-value store table
-	 */
+  /**
+   * key-value store table
+   */
 
-	// tablenames for the various key value stores
-	public static final String KEY_VALUE_STORE_DEFAULT_TABLE_NAME = "key_value_store_default";
-	public static final String KEY_VALUE_STORE_ACTIVE_TABLE_NAME = "key_value_store_active";
-	public static final String KEY_VALUE_STORE_SERVER_TABLE_NAME = "key_value_store_server";
-	public static final String KEY_VALULE_STORE_SYNC_TABLE_NAME = "key_value_store_sync";
+  // tablenames for the various key value stores
+  public static final String KEY_VALUE_STORE_DEFAULT_TABLE_NAME = "key_value_store_default";
+  public static final String KEY_VALUE_STORE_ACTIVE_TABLE_NAME = "key_value_store_active";
+  public static final String KEY_VALUE_STORE_SERVER_TABLE_NAME = "key_value_store_server";
+  public static final String KEY_VALULE_STORE_SYNC_TABLE_NAME = "key_value_store_sync";
 
-	/**
-	 * table definitions table
-	 */
+  /**
+   * table definitions table
+   */
 
-	// only one of these...
-	private static final String TABLE_DEFS_TABLE_NAME = "table_definitions";
-	/**
-	 * column definitions table
-	 */
+  // only one of these...
+  private static final String TABLE_DEFS_TABLE_NAME = "table_definitions";
+  /**
+   * column definitions table
+   */
 
-	// only one of these...
-	private static final String COLUMN_DEFINITIONS_TABLE_NAME = "column_definitions";
-	/**
-	 * For ODK Survey (only)
-	 *
-	 * Tracks which rows have been sent to the server.
-	 * TODO: rework to accommodate publishing to multiple formids for a given table row
-	 */
+  // only one of these...
+  private static final String COLUMN_DEFINITIONS_TABLE_NAME = "column_definitions";
 
-	public static final String UPLOADS_TABLE_NAME = "uploads";
+  /**
+   * For ODK Survey (only)
+   *
+   * Tracks all the forms present in the forms directory.
+   */
+  public static final String SURVEY_CONFIGURATION_TABLE_NAME = "survey_configuration";
 
-	/**
-    * For ODK Survey (only)
-    *
-    * Tracks all the forms present in the forms directory.
-    */
+  /**
+   * For ODK Survey (only)
+   *
+   * Tracks which rows have been sent to the server. TODO: rework to accommodate
+   * publishing to multiple formids for a given table row
+   */
 
-	public static final String FORMS_TABLE_NAME = "formDefs";
+  public static final String UPLOADS_TABLE_NAME = "uploads";
 
+  /**
+   * For ODK Survey (only)
+   *
+   * Tracks all the forms present in the forms directory.
+   */
 
-	public DataModelDatabaseHelper(String dbPath, String databaseName) {
-		super(dbPath, databaseName, null, APP_KEY, APP_VERSION);
-	}
+  public static final String FORMS_TABLE_NAME = "formDefs";
 
-	private void commonTableDefn(SQLiteDatabase db) {
-		db.execSQL(InstanceColumns.getTableCreateSql(UPLOADS_TABLE_NAME));
-		db.execSQL(FormsColumns.getTableCreateSql(FORMS_TABLE_NAME));
-      db.execSQL(ColumnDefinitionsColumns.getTableCreateSql(COLUMN_DEFINITIONS_TABLE_NAME));
-      db.execSQL(KeyValueStoreColumns.getTableCreateSql(KEY_VALUE_STORE_DEFAULT_TABLE_NAME));
-      db.execSQL(KeyValueStoreColumns.getTableCreateSql(KEY_VALUE_STORE_ACTIVE_TABLE_NAME));
-      db.execSQL(KeyValueStoreColumns.getTableCreateSql(KEY_VALUE_STORE_SERVER_TABLE_NAME));
-      db.execSQL(KeyValueStoreColumns.getTableCreateSql(KEY_VALULE_STORE_SYNC_TABLE_NAME));
-      db.execSQL(TableDefinitionsColumns.getTableCreateSql(TABLE_DEFS_TABLE_NAME));
-	}
+  public DataModelDatabaseHelper(String dbPath, String databaseName) {
+    super(dbPath, databaseName, null, APP_KEY, APP_VERSION);
+  }
 
-	@Override
-	public void onCreateAppVersion(SQLiteDatabase db) {
-		commonTableDefn(db);
-	}
+  private void commonTableDefn(SQLiteDatabase db) {
+    // db.execSQL(SurveyConfigurationColumns.getTableCreateSql(SURVEY_CONFIGURATION_TABLE_NAME));
+    db.execSQL(InstanceColumns.getTableCreateSql(UPLOADS_TABLE_NAME));
+    db.execSQL(FormsColumns.getTableCreateSql(FORMS_TABLE_NAME));
+    db.execSQL(ColumnDefinitionsColumns.getTableCreateSql(COLUMN_DEFINITIONS_TABLE_NAME));
+    db.execSQL(KeyValueStoreColumns.getTableCreateSql(KEY_VALUE_STORE_DEFAULT_TABLE_NAME));
+    db.execSQL(KeyValueStoreColumns.getTableCreateSql(KEY_VALUE_STORE_ACTIVE_TABLE_NAME));
+    db.execSQL(KeyValueStoreColumns.getTableCreateSql(KEY_VALUE_STORE_SERVER_TABLE_NAME));
+    db.execSQL(KeyValueStoreColumns.getTableCreateSql(KEY_VALULE_STORE_SYNC_TABLE_NAME));
+    db.execSQL(TableDefinitionsColumns.getTableCreateSql(TABLE_DEFS_TABLE_NAME));
+  }
 
-	@Override
-	public void onUpgradeAppVersion(SQLiteDatabase db, int oldVersion,
-			int newVersion) {
-		// for now, upgrade and creation use the same codepath...
-		commonTableDefn(db);
-	}
+  @Override
+  public void onCreateAppVersion(SQLiteDatabase db) {
+    commonTableDefn(db);
+  }
 
-	/**
-	 * Accessor to retrieve the database table name given the tableId
-	 *
-	 * @param db
-	 * @param tableId
-	 * @return
-	 */
-	public static String getDbTableName(SQLiteDatabase db, String tableId) {
-		Cursor c = null;
-		try {
-			c = db.query(TABLE_DEFS_TABLE_NAME,
-					new String[] { TableDefinitionsColumns.DB_TABLE_NAME },
-					TableDefinitionsColumns.TABLE_ID + "=?", new String[] { tableId }, null,
-					null, null);
+  @Override
+  public void onUpgradeAppVersion(SQLiteDatabase db, int oldVersion, int newVersion) {
+    // for now, upgrade and creation use the same codepath...
+    commonTableDefn(db);
+  }
 
-			if (c.moveToFirst()) {
-				int idx = c.getColumnIndex(TableDefinitionsColumns.DB_TABLE_NAME);
-				return c.getString(idx);
-			}
-		} finally {
-			if (c != null && !c.isClosed()) {
-				c.close();
-			}
-		}
-		return null;
-	}
+  /**
+   * Accessor to retrieve the database table name given the tableId
+   *
+   * @param db
+   * @param tableId
+   * @return
+   */
+  public static String getDbTableName(SQLiteDatabase db, String tableId) {
+    Cursor c = null;
+    try {
+      c = db.query(TABLE_DEFS_TABLE_NAME, new String[] { TableDefinitionsColumns.DB_TABLE_NAME },
+          TableDefinitionsColumns.TABLE_ID + "=?", new String[] { tableId }, null, null, null);
 
-	public static final class IdStruct {
-     public final int _id;
-	  public final String formId;
-	  public final String tableId;
+      if (c.moveToFirst()) {
+        int idx = c.getColumnIndex(TableDefinitionsColumns.DB_TABLE_NAME);
+        return c.getString(idx);
+      }
+    } finally {
+      if (c != null && !c.isClosed()) {
+        c.close();
+      }
+    }
+    return null;
+  }
 
-	  public IdStruct(int _id, String formId, String tableId) {
-	    this._id = _id;
-	    this.formId = formId;
-	    this.tableId = tableId;
-	  }
-	}
+  public static final class IdStruct {
+    public final int _id;
+    public final String formId;
+    public final String tableId;
 
-	/**
-	 * Accessor to retrieve the database tableId given a formId
-	 *
-	 * @param db
-	 * @param formId -- either the integer _ID or the textual form_id
-	 * @return
-	 */
-	public static IdStruct getIds(SQLiteDatabase db, String formId) {
-	  boolean isNumericId = StringUtils.isNumeric(formId);
+    public IdStruct(int _id, String formId, String tableId) {
+      this._id = _id;
+      this.formId = formId;
+      this.tableId = tableId;
+    }
+  }
 
-	  Cursor c = null;
-	  try {
-	    c = db.query(FORMS_TABLE_NAME,
-	          new String[] { FormsColumns._ID, FormsColumns.FORM_ID, FormsColumns.TABLE_ID },
-	          (isNumericId ? FormsColumns._ID : FormsColumns.FORM_ID) + "=?", new String[] { formId }, null,
-	          null, null);
+  /**
+   * Accessor to retrieve the database tableId given a formId
+   *
+   * @param db
+   * @param formId
+   *          -- either the integer _ID or the textual form_id
+   * @return
+   */
+  public static IdStruct getIds(SQLiteDatabase db, String formId) {
+    boolean isNumericId = StringUtils.isNumeric(formId);
 
-	    if ( c.moveToFirst()) {
-         int idxId = c.getColumnIndex(FormsColumns._ID);
-         int idxFormId = c.getColumnIndex(FormsColumns.FORM_ID);
-	      int idxTableId = c.getColumnIndex(FormsColumns.TABLE_ID);
+    Cursor c = null;
+    try {
+      c = db.query(FORMS_TABLE_NAME, new String[] { FormsColumns._ID, FormsColumns.FORM_ID,
+          FormsColumns.TABLE_ID }, (isNumericId ? FormsColumns._ID : FormsColumns.FORM_ID) + "=?",
+          new String[] { formId }, null, null, null);
 
-	      return new IdStruct(c.getInt(idxId), c.getString(idxFormId), c.getString(idxTableId));
-	    }
-	  } finally {
-	    if (c != null && !c.isClosed()) {
-	      c.close();
-	    }
-	  }
-	  return null;
-	}
+      if (c.moveToFirst()) {
+        int idxId = c.getColumnIndex(FormsColumns._ID);
+        int idxFormId = c.getColumnIndex(FormsColumns.FORM_ID);
+        int idxTableId = c.getColumnIndex(FormsColumns.TABLE_ID);
 
-	public static class Join {
-		public final String tableId;
-		public final String elementKey;
+        return new IdStruct(c.getInt(idxId), c.getString(idxFormId), c.getString(idxTableId));
+      }
+    } finally {
+      if (c != null && !c.isClosed()) {
+        c.close();
+      }
+    }
+    return null;
+  }
 
-		Join(String tableId, String elementKey) {
-			this.tableId = tableId;
-			this.elementKey = elementKey;
-		}
-	};
+  public static class Join {
+    public final String tableId;
+    public final String elementKey;
 
-	public static class ColumnDefinition {
-		public final String elementKey;
-		public final String elementName;
-		public final String elementType;
-		public final boolean isPersisted;
+    Join(String tableId, String elementKey) {
+      this.tableId = tableId;
+      this.elementKey = elementKey;
+    }
+  };
 
-		public final ArrayList<ColumnDefinition> children = new ArrayList<ColumnDefinition>();
-		public final ArrayList<Join> joins = new ArrayList<Join>();
-		public ColumnDefinition parent = null;
+  public static class ColumnDefinition {
+    public final String elementKey;
+    public final String elementName;
+    public final String elementType;
+    public final boolean isPersisted;
 
-		ColumnDefinition(String elementKey, String elementName,
-				String elementType, boolean isPersisted) {
-			this.elementKey = elementKey;
-			this.elementName = elementName;
-			this.elementType = elementType;
-			this.isPersisted = isPersisted;
-		}
+    public final ArrayList<ColumnDefinition> children = new ArrayList<ColumnDefinition>();
+    public final ArrayList<Join> joins = new ArrayList<Join>();
+    public ColumnDefinition parent = null;
 
-		private void setParent(ColumnDefinition parent) {
-			this.parent = parent;
-		}
+    ColumnDefinition(String elementKey, String elementName, String elementType, boolean isPersisted) {
+      this.elementKey = elementKey;
+      this.elementName = elementName;
+      this.elementType = elementType;
+      this.isPersisted = isPersisted;
+    }
 
-		void addJoin(Join j) {
-			joins.add(j);
-		}
+    private void setParent(ColumnDefinition parent) {
+      this.parent = parent;
+    }
 
-		void addChild(ColumnDefinition child) {
-			child.setParent(this);
-			children.add(child);
-		}
-	};
+    void addJoin(Join j) {
+      joins.add(j);
+    }
 
-	private static class ColumnContainer {
-		public ColumnDefinition defn = null;
-		public ArrayList<String> children = null;
-	};
+    void addChild(ColumnDefinition child) {
+      child.setParent(this);
+      children.add(child);
+    }
+  };
 
-	/**
-	 * Covert the ColumnDefinition map into a JSON schema.
-	 *
-	 * @param defns
-	 * @return
-	 */
-	public static TreeMap<String, Object> getDataModel(
-			Map<String, ColumnDefinition> defns) {
-		TreeMap<String, Object> model = new TreeMap<String, Object>();
+  private static class ColumnContainer {
+    public ColumnDefinition defn = null;
+    public ArrayList<String> children = null;
+  };
 
-		for (ColumnDefinition c : defns.values()) {
-			if (c.parent == null) {
-				model.put(c.elementName, new TreeMap<String, Object>());
-				@SuppressWarnings("unchecked")
-				TreeMap<String, Object> jsonSchema = (TreeMap<String, Object>) model
-						.get(c.elementName);
-				getDataModelHelper(jsonSchema, c);
-			}
-		}
-		return model;
-	}
+  /**
+   * Covert the ColumnDefinition map into a JSON schema.
+   *
+   * @param defns
+   * @return
+   */
+  public static TreeMap<String, Object> getDataModel(Map<String, ColumnDefinition> defns) {
+    TreeMap<String, Object> model = new TreeMap<String, Object>();
 
-	private static void getDataModelHelper(TreeMap<String, Object> jsonSchema,
-			ColumnDefinition c) {
-		if (c.elementType.equals("string")) {
-			jsonSchema.put("type", "string");
-			jsonSchema.put("elementKey", c.elementKey);
-			jsonSchema.put("isPersisted", c.isPersisted);
-		} else if (c.elementType.equals("number")) {
-			jsonSchema.put("type", "number");
-			jsonSchema.put("elementKey", c.elementKey);
-			jsonSchema.put("isPersisted", c.isPersisted);
-		} else if (c.elementType.equals("integer")) {
-			jsonSchema.put("type", "integer");
-			jsonSchema.put("elementKey", c.elementKey);
-			jsonSchema.put("isPersisted", c.isPersisted);
-		} else if (c.elementType.equals("boolean")) {
-			jsonSchema.put("type", "boolean");
-			jsonSchema.put("elementKey", c.elementKey);
-			jsonSchema.put("isPersisted", c.isPersisted);
-		} else if (c.elementType.equals("array")) {
-			jsonSchema.put("type", "array");
-			jsonSchema.put("elementKey", c.elementKey);
-			jsonSchema.put("isPersisted", c.isPersisted);
-			ColumnDefinition ch = c.children.get(0);
-			jsonSchema.put("items", new TreeMap<String, Object>());
-			@SuppressWarnings("unchecked")
-			TreeMap<String, Object> itemSchema = (TreeMap<String, Object>) jsonSchema
-					.get("items");
-			getDataModelHelper(itemSchema, ch); // recursion...
-		} else {
-			jsonSchema.put("type", "object");
-			if (!c.elementType.equals("object")) {
-				jsonSchema.put("elementType", c.elementType);
-			}
-			jsonSchema.put("elementKey", c.elementKey);
-			jsonSchema.put("isPersisted", c.isPersisted);
-			jsonSchema.put("properties", new TreeMap<String, Object>());
-			@SuppressWarnings("unchecked")
-			TreeMap<String, Object> propertiesSchema = (TreeMap<String, Object>) jsonSchema
-					.get("properties");
-			for (ColumnDefinition ch : c.children) {
-				propertiesSchema.put(c.elementName,
-						new TreeMap<String, Object>());
-				@SuppressWarnings("unchecked")
-				TreeMap<String, Object> itemSchema = (TreeMap<String, Object>) propertiesSchema
-						.get(c.elementName);
-				getDataModelHelper(itemSchema, ch); // recursion...
-			}
-		}
-	}
+    for (ColumnDefinition c : defns.values()) {
+      if (c.parent == null) {
+        model.put(c.elementName, new TreeMap<String, Object>());
+        @SuppressWarnings("unchecked")
+        TreeMap<String, Object> jsonSchema = (TreeMap<String, Object>) model.get(c.elementName);
+        getDataModelHelper(jsonSchema, c);
+      }
+    }
+    return model;
+  }
 
-	/**
-	 * Return a map of (elementKey -> ColumnDefinition)
-	 *
-	 * @param db
-	 * @param tableId
-	 * @return
-	 * @throws JsonParseException
-	 * @throws JsonMappingException
-	 * @throws IOException
-	 */
-	public static Map<String, ColumnDefinition> getColumnDefinitions(
-			SQLiteDatabase db, String tableId) throws JsonParseException,
-			JsonMappingException, IOException {
-		Map<String, ColumnDefinition> defn = new HashMap<String, ColumnDefinition>();
+  private static void getDataModelHelper(TreeMap<String, Object> jsonSchema, ColumnDefinition c) {
+    if (c.elementType.equals("string")) {
+      jsonSchema.put("type", "string");
+      jsonSchema.put("elementKey", c.elementKey);
+      jsonSchema.put("isPersisted", c.isPersisted);
+    } else if (c.elementType.equals("number")) {
+      jsonSchema.put("type", "number");
+      jsonSchema.put("elementKey", c.elementKey);
+      jsonSchema.put("isPersisted", c.isPersisted);
+    } else if (c.elementType.equals("integer")) {
+      jsonSchema.put("type", "integer");
+      jsonSchema.put("elementKey", c.elementKey);
+      jsonSchema.put("isPersisted", c.isPersisted);
+    } else if (c.elementType.equals("boolean")) {
+      jsonSchema.put("type", "boolean");
+      jsonSchema.put("elementKey", c.elementKey);
+      jsonSchema.put("isPersisted", c.isPersisted);
+    } else if (c.elementType.equals("array")) {
+      jsonSchema.put("type", "array");
+      jsonSchema.put("elementKey", c.elementKey);
+      jsonSchema.put("isPersisted", c.isPersisted);
+      ColumnDefinition ch = c.children.get(0);
+      jsonSchema.put("items", new TreeMap<String, Object>());
+      @SuppressWarnings("unchecked")
+      TreeMap<String, Object> itemSchema = (TreeMap<String, Object>) jsonSchema.get("items");
+      getDataModelHelper(itemSchema, ch); // recursion...
+    } else {
+      jsonSchema.put("type", "object");
+      if (!c.elementType.equals("object")) {
+        jsonSchema.put("elementType", c.elementType);
+      }
+      jsonSchema.put("elementKey", c.elementKey);
+      jsonSchema.put("isPersisted", c.isPersisted);
+      jsonSchema.put("properties", new TreeMap<String, Object>());
+      @SuppressWarnings("unchecked")
+      TreeMap<String, Object> propertiesSchema = (TreeMap<String, Object>) jsonSchema
+          .get("properties");
+      for (ColumnDefinition ch : c.children) {
+        propertiesSchema.put(c.elementName, new TreeMap<String, Object>());
+        @SuppressWarnings("unchecked")
+        TreeMap<String, Object> itemSchema = (TreeMap<String, Object>) propertiesSchema
+            .get(c.elementName);
+        getDataModelHelper(itemSchema, ch); // recursion...
+      }
+    }
+  }
 
-		Cursor c = null;
-		try {
-			c = db.query(COLUMN_DEFINITIONS_TABLE_NAME, null,
-					ColumnDefinitionsColumns.TABLE_ID + "=?",
-					new String[] { tableId }, null, null, null);
+  /**
+   * Return a map of (elementKey -> ColumnDefinition)
+   *
+   * @param db
+   * @param tableId
+   * @return
+   * @throws JsonParseException
+   * @throws JsonMappingException
+   * @throws IOException
+   */
+  public static Map<String, ColumnDefinition> getColumnDefinitions(SQLiteDatabase db, String tableId)
+      throws JsonParseException, JsonMappingException, IOException {
+    Map<String, ColumnDefinition> defn = new HashMap<String, ColumnDefinition>();
 
-			if (c.moveToFirst()) {
-				int idxEK = c.getColumnIndex(ColumnDefinitionsColumns.ELEMENT_KEY);
-				int idxEN = c.getColumnIndex(ColumnDefinitionsColumns.ELEMENT_NAME);
-				int idxET = c.getColumnIndex(ColumnDefinitionsColumns.ELEMENT_TYPE);
-				int idxIP = c.getColumnIndex(ColumnDefinitionsColumns.IS_PERSISTED);
-				int idxLIST = c
-						.getColumnIndex(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS);
-				int idxJOINS = c.getColumnIndex(ColumnDefinitionsColumns.JOINS);
-				HashMap<String, ColumnContainer> ref = new HashMap<String, ColumnContainer>();
+    Cursor c = null;
+    try {
+      c = db.query(COLUMN_DEFINITIONS_TABLE_NAME, null, ColumnDefinitionsColumns.TABLE_ID + "=?",
+          new String[] { tableId }, null, null, null);
 
-				do {
-					String elementKey = c.getString(idxEK);
-					String elementName = c.getString(idxEN);
-					String elementType = c.getString(idxET);
-					boolean isPersisted = (c.getInt(idxIP) != 0);
-					String childrenString = c.isNull(idxLIST) ? null : c
-							.getString(idxLIST);
-					String joinsString = c.isNull(idxJOINS) ? null : c
-							.getString(idxJOINS);
-					ColumnContainer ctn = new ColumnContainer();
-					ctn.defn = new ColumnDefinition(elementKey, elementName,
-							elementType, isPersisted);
+      if (c.moveToFirst()) {
+        int idxEK = c.getColumnIndex(ColumnDefinitionsColumns.ELEMENT_KEY);
+        int idxEN = c.getColumnIndex(ColumnDefinitionsColumns.ELEMENT_NAME);
+        int idxET = c.getColumnIndex(ColumnDefinitionsColumns.ELEMENT_TYPE);
+        int idxIP = c.getColumnIndex(ColumnDefinitionsColumns.IS_PERSISTED);
+        int idxLIST = c.getColumnIndex(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS);
+        int idxJOINS = c.getColumnIndex(ColumnDefinitionsColumns.JOINS);
+        HashMap<String, ColumnContainer> ref = new HashMap<String, ColumnContainer>();
 
-					if (childrenString != null) {
-						@SuppressWarnings("unchecked")
-						ArrayList<String> l = ODKFileUtils.mapper.readValue(
-								childrenString, ArrayList.class);
-						ctn.children = l;
-					}
+        do {
+          String elementKey = c.getString(idxEK);
+          String elementName = c.getString(idxEN);
+          String elementType = c.getString(idxET);
+          boolean isPersisted = (c.getInt(idxIP) != 0);
+          String childrenString = c.isNull(idxLIST) ? null : c.getString(idxLIST);
+          String joinsString = c.isNull(idxJOINS) ? null : c.getString(idxJOINS);
+          ColumnContainer ctn = new ColumnContainer();
+          ctn.defn = new ColumnDefinition(elementKey, elementName, elementType, isPersisted);
 
-					if (joinsString != null) {
-						@SuppressWarnings("unchecked")
-						ArrayList<Object> joins = ODKFileUtils.mapper
-								.readValue(joinsString, ArrayList.class);
-						for (Object o : joins) {
-							@SuppressWarnings("unchecked")
-							Map<String, Object> m = (Map<String, Object>) o;
-							String tId = (String) m.get("table_id");
-							String tEK = (String) m.get("element_key");
+          if (childrenString != null) {
+            @SuppressWarnings("unchecked")
+            ArrayList<String> l = ODKFileUtils.mapper.readValue(childrenString, ArrayList.class);
+            ctn.children = l;
+          }
 
-							Join j = new Join(tId, tEK);
-							ctn.defn.addJoin(j);
-						}
-					}
+          if (joinsString != null) {
+            @SuppressWarnings("unchecked")
+            ArrayList<Object> joins = ODKFileUtils.mapper.readValue(joinsString, ArrayList.class);
+            for (Object o : joins) {
+              @SuppressWarnings("unchecked")
+              Map<String, Object> m = (Map<String, Object>) o;
+              String tId = (String) m.get("table_id");
+              String tEK = (String) m.get("element_key");
 
-					ref.put(elementKey, ctn);
-				} while (c.moveToNext());
+              Join j = new Join(tId, tEK);
+              ctn.defn.addJoin(j);
+            }
+          }
 
-				// OK now connect all the children...
+          ref.put(elementKey, ctn);
+        } while (c.moveToNext());
 
-				for (ColumnContainer ctn : ref.values()) {
-					if (ctn.children != null) {
-						for (String ek : ctn.children) {
-							ColumnContainer child = ref.get(ek);
-							if (child == null) {
-								throw new IllegalArgumentException(
-										"Unexpected missing child element: "
-												+ ek);
-							}
-							ctn.defn.addChild(child.defn);
-						}
-					}
-				}
+        // OK now connect all the children...
 
-				// and construct the list of entries...
-				for (ColumnContainer ctn : ref.values()) {
-					defn.put(ctn.defn.elementKey, ctn.defn);
-				}
-				return defn;
-			}
-		} finally {
-			if (c != null && !c.isClosed()) {
-				c.close();
-			}
-		}
-		return null;
-	}
+        for (ColumnContainer ctn : ref.values()) {
+          if (ctn.children != null) {
+            for (String ek : ctn.children) {
+              ColumnContainer child = ref.get(ek);
+              if (child == null) {
+                throw new IllegalArgumentException("Unexpected missing child element: " + ek);
+              }
+              ctn.defn.addChild(child.defn);
+            }
+          }
+        }
+
+        // and construct the list of entries...
+        for (ColumnContainer ctn : ref.values()) {
+          defn.put(ctn.defn.elementKey, ctn.defn);
+        }
+        return defn;
+      }
+    } finally {
+      if (c != null && !c.isClosed()) {
+        c.close();
+      }
+    }
+    return null;
+  }
 }

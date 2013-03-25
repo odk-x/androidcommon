@@ -1,3 +1,17 @@
+/*
+ * Copyright (C) 2013 University of Washington
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
+
 package org.opendatakit.common.android.provider.impl;
 
 import java.io.File;
@@ -45,8 +59,8 @@ public final class FormsDiscoveryRunnable implements Runnable {
   }
 
   /**
-   * Remove definitions from the Forms database
-   * that are no longer present on disk.
+   * Remove definitions from the Forms database that are no longer present on
+   * disk.
    */
   private final void removeStaleFormInfo() {
     Log.i(t, "[" + instanceCounter + "] removeStaleFormInfo " + appName + " begin");
@@ -71,7 +85,8 @@ public final class FormsDiscoveryRunnable implements Runnable {
         } while (c.moveToNext());
       }
     } catch (Exception e) {
-      Log.e(t,
+      Log.e(
+          t,
           "[" + instanceCounter + "] removeStaleFormInfo " + appName + " exception: "
               + e.toString());
       e.printStackTrace();
@@ -94,12 +109,45 @@ public final class FormsDiscoveryRunnable implements Runnable {
   }
 
   /**
-   * Scan the given formDir and update the Forms database.
-   * @param mediaPath -- full formDir
+   * Construct a directory name that is unused in the stale path and move
+   * mediaPath there.
+   *
+   * @param mediaPath
+   * @param baseStaleMediaPath
+   *          -- the stale directory corresponding to the mediaPath container
+   * @return the directory within the stale directory that the mediaPath was
+   *         renamed to.
+   * @throws IOException
    */
-  private final void updateFormDir(File mediaPath) {
-    Log.i(t, "[" + instanceCounter + "] updateFormInfo: " + mediaPath.getName());
-    String appName = mediaPath.getParentFile()/* forms folder */.getParentFile()/* app */.getName();
+  private final File moveToStaleDirectory(File mediaPath, String baseStaleMediaPath)
+      throws IOException {
+    // we have a 'default' form in the forms directory.
+    // Move it to the stale directory.
+    // Delete all records referring to this directory.
+    int i = 0;
+    File tempMediaPath = new File(baseStaleMediaPath + mediaPath.getName() + "_"
+        + Integer.toString(i));
+    while (tempMediaPath.exists()) {
+      ++i;
+      tempMediaPath = new File(baseStaleMediaPath + mediaPath.getName() + "_" + Integer.toString(i));
+    }
+    FileUtils.moveDirectory(mediaPath, tempMediaPath);
+    return tempMediaPath;
+  }
+
+  /**
+   * Scan the given formDir and update the Forms database. If it is the
+   * formsFolder, then any 'default' forms should be forbidden. If it is not the
+   * formsFolder, only 'default' forms should be allowed
+   *
+   * @param mediaPath
+   *          -- full formDir
+   * @param isFormsFolder
+   * @param baseStaleMediaPath
+   *          -- path prefix to the stale forms/framework directory.
+   */
+  private final void updateFormDir(File mediaPath, boolean isFormsFolder, String baseStaleMediaPath) {
+    Log.i(t, "[" + instanceCounter + "] updateFormInfo: " + mediaPath.getAbsolutePath());
 
     boolean needUpdate = true;
     FormInfo fi = null;
@@ -119,15 +167,7 @@ public final class FormsDiscoveryRunnable implements Runnable {
         // we have multiple records for this one directory.
         // Rename the directory. Delete the records, and move the
         // directory back.
-        int i = 0;
-        File tempMediaPath = new File(ODKFileUtils.getStaleFormsFolder(appName),
-            mediaPath.getName() + "_" + Integer.toString(i));
-        while (tempMediaPath.exists()) {
-          ++i;
-          tempMediaPath = new File(ODKFileUtils.getStaleFormsFolder(appName), mediaPath.getName()
-              + "_" + Integer.toString(i));
-        }
-        FileUtils.moveDirectory(mediaPath, tempMediaPath);
+        File tempMediaPath = moveToStaleDirectory(mediaPath, baseStaleMediaPath);
         context.getContentResolver().delete(Uri.withAppendedPath(formsProviderContentUri, appName),
             selection, selectionArgs);
         FileUtils.moveDirectory(tempMediaPath, mediaPath);
@@ -140,7 +180,8 @@ public final class FormsDiscoveryRunnable implements Runnable {
         uri = Uri.withAppendedPath(Uri.withAppendedPath(formsProviderContentUri, appName), id);
         Long lastModificationDate = c.getLong(c.getColumnIndex(FormsColumns.DATE));
         if (lastModificationDate.compareTo(formDef.lastModified()) == 0) {
-          Log.i(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getName() + " formDef unchanged");
+          Log.i(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getAbsolutePath()
+              + " formDef unchanged");
           fi = new FormInfo(c, false);
           needUpdate = false;
         } else {
@@ -151,24 +192,56 @@ public final class FormsDiscoveryRunnable implements Runnable {
         fi = new FormInfo(context, formDef);
       }
 
+      // Enforce that a formId == FormsColumns.COMMON_BASE_FORM_ID can only be
+      // in the Framework directory
+      // and that no other formIds can be in that directory. If this is not the
+      // case, ensure that
+      // this record is moved to the stale directory.
+
+      if (fi.formId.equals(FormsColumns.COMMON_BASE_FORM_ID)) {
+        if (isFormsFolder) {
+          // we have a 'default' form in the forms directory.
+          // Move it to the stale directory.
+          // Delete all records referring to this directory.
+          moveToStaleDirectory(mediaPath, baseStaleMediaPath);
+          context.getContentResolver().delete(
+              Uri.withAppendedPath(formsProviderContentUri, appName), selection, selectionArgs);
+          return;
+        }
+      } else {
+        if (!isFormsFolder) {
+          // we have a non-'default' form in the framework directory.
+          // Move it to the stale directory.
+          // Delete all records referring to this directory.
+          moveToStaleDirectory(mediaPath, baseStaleMediaPath);
+          context.getContentResolver().delete(
+              Uri.withAppendedPath(formsProviderContentUri, appName), selection, selectionArgs);
+          return;
+        }
+      }
     } catch (SQLiteException e) {
       e.printStackTrace();
-      Log.e(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getName() + " exception: " + e.toString());
+      Log.e(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getAbsolutePath()
+          + " exception: " + e.toString());
       return;
     } catch (IOException e) {
       e.printStackTrace();
-      Log.e(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getName() + " exception: " + e.toString());
+      Log.e(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getAbsolutePath()
+          + " exception: " + e.toString());
       return;
     } catch (IllegalArgumentException e) {
       e.printStackTrace();
-      Log.e(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getName() + " exception: " + e.toString());
+      Log.e(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getAbsolutePath()
+          + " exception: " + e.toString());
       try {
         FileUtils.deleteDirectory(mediaPath);
-        Log.i(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getName() + " Removing -- unable to parse formDef file: " + e.toString());
+        Log.i(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getAbsolutePath()
+            + " Removing -- unable to parse formDef file: " + e.toString());
       } catch (IOException e1) {
         e1.printStackTrace();
-        Log.i(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getName() + " Removing -- unable to delete form directory: "
-                + mediaPath.getName() + " error: " + e.toString());
+        Log.i(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getAbsolutePath()
+            + " Removing -- unable to delete form directory: " + mediaPath.getName() + " error: "
+            + e.toString());
       }
       return;
     } finally {
@@ -178,8 +251,7 @@ public final class FormsDiscoveryRunnable implements Runnable {
     }
 
     // Delete any entries matching this FORM_ID, but not the same directory and
-    // which
-    // have a version that is equal to or older than this version.
+    // which have a version that is equal to or older than this version.
     String selection;
     String[] selectionArgs;
     if (fi.formVersion == null) {
@@ -189,7 +261,8 @@ public final class FormsDiscoveryRunnable implements Runnable {
       selectionArgs = temp;
     } else {
       selection = FormsColumns.FORM_MEDIA_PATH + "!=? AND " + FormsColumns.FORM_ID + "=? AND "
-          + FormsColumns.FORM_VERSION + " <=?";
+          + "( " + FormsColumns.FORM_VERSION + " IS NULL" + " OR " + FormsColumns.FORM_VERSION
+          + " <=?" + " )";
       String[] temp = { mediaPath.getAbsolutePath(), fi.formId, fi.formVersion };
       selectionArgs = temp;
     }
@@ -218,24 +291,18 @@ public final class FormsDiscoveryRunnable implements Runnable {
       if (c.moveToFirst()) {
         // the directory we are processing is stale -- move it to stale
         // directory
-        int i = 0;
-        File tempMediaPath = new File(ODKFileUtils.getStaleFormsFolder(appName),
-            mediaPath.getName() + "_" + Integer.toString(i));
-        while (tempMediaPath.exists()) {
-          ++i;
-          tempMediaPath = new File(ODKFileUtils.getStaleFormsFolder(appName), mediaPath.getName()
-              + "_" + Integer.toString(i));
-        }
-        FileUtils.moveDirectory(mediaPath, tempMediaPath);
+        moveToStaleDirectory(mediaPath, baseStaleMediaPath);
         return;
       }
     } catch (SQLiteException e) {
       e.printStackTrace();
-      Log.e(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getName() + " exception: " + e.toString());
+      Log.e(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getAbsolutePath()
+          + " exception: " + e.toString());
       return;
     } catch (IOException e) {
       e.printStackTrace();
-      Log.e(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getName() + " exception: " + e.toString());
+      Log.e(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getAbsolutePath()
+          + " exception: " + e.toString());
       return;
     } finally {
       if (c != null && !c.isClosed()) {
@@ -258,27 +325,35 @@ public final class FormsDiscoveryRunnable implements Runnable {
 
       if (uri != null) {
         int count = context.getContentResolver().update(uri, v, null, null);
-        Log.i(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getName() + " " + count + " records successfully updated");
+        Log.i(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getAbsolutePath() + " "
+            + count + " records successfully updated");
       } else {
         context.getContentResolver().insert(Uri.withAppendedPath(formsProviderContentUri, appName),
             v);
-        Log.i(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getName() + " one record successfully inserted");
+        Log.i(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getAbsolutePath()
+            + " one record successfully inserted");
       }
 
     } catch (SQLiteException ex) {
       ex.printStackTrace();
-      Log.e(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getName() + " exception: " + ex.toString());
+      Log.e(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getAbsolutePath()
+          + " exception: " + ex.toString());
       return;
     }
   }
 
   /**
-   * Scan for new forms directories and add them to Forms database.
+   * Scan for new directories in the given formsDir and add them to the
+   * database. If it is the formsFolder, then any 'default' forms should be
+   * forbidden. If it is not the formsFolder, only 'default' forms should be
+   * allowed
+   *
+   * @param formsDir
+   * @param isFormsFolder
+   * @param baseStaleMediaPath
    */
-  private final void updateFormInfo() {
-    Log.i(t, "[" + instanceCounter + "] updateFormInfo: " + appName + " begin");
-
-    File formsDir = new File(ODKFileUtils.getFormsFolder(appName));
+  private final void updateFormInfoCommon(File formsDir, boolean isFormsFolder,
+      String baseStaleMediaPath) {
 
     File[] candidates = formsDir.listFiles(new FileFilter() {
 
@@ -307,18 +382,36 @@ public final class FormsDiscoveryRunnable implements Runnable {
       public int compare(File lhs, File rhs) {
         File lhf = new File(lhs, ODKFileUtils.FORMDEF_JSON_FILENAME);
         File rhf = new File(rhs, ODKFileUtils.FORMDEF_JSON_FILENAME);
-        if ( !rhs.exists() || !rhf.exists() ) return -1;
-        if ( !lhs.exists() || !lhf.exists() ) return 1;
+        if (!rhs.exists() || !rhf.exists())
+          return -1;
+        if (!lhs.exists() || !lhf.exists())
+          return 1;
 
-        return (lhf.lastModified() > rhf.lastModified()) ? -1 :
-            ((lhf.lastModified() == rhf.lastModified()) ? 0 : 1);
+        return (lhf.lastModified() > rhf.lastModified()) ? -1 : ((lhf.lastModified() == rhf
+            .lastModified()) ? 0 : 1);
       }
     });
 
     for (File f : formDirs) {
-      Log.i(t, "[" + instanceCounter + "] updateFormInfo: " + appName + " form: " + f.getName());
-      updateFormDir(f);
+      Log.i(t, "[" + instanceCounter + "] updateFormInfo: " + f.getAbsolutePath());
+      updateFormDir(f, isFormsFolder, baseStaleMediaPath);
     }
+  }
+
+  /**
+   * Scan for new forms directories in both the forms and framework areas and
+   * add them to Forms database.
+   */
+  private final void updateFormInfo() {
+    Log.i(t, "[" + instanceCounter + "] updateFormInfo: " + appName + " begin");
+
+    File formsDir = new File(ODKFileUtils.getFormsFolder(appName));
+    updateFormInfoCommon(formsDir, true, ODKFileUtils.getStaleFormsFolder(appName) + File.separator);
+
+    File frameworkDir = new File(ODKFileUtils.getFrameworkFolder(appName));
+    updateFormInfoCommon(frameworkDir, false, ODKFileUtils.getStaleFrameworkFolder(appName)
+        + File.separator);
+
     Log.i(t, "[" + instanceCounter + "] updateFormInfo: " + appName + " end");
   }
 

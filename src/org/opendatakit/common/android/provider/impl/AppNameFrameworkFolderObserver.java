@@ -28,22 +28,22 @@ import android.util.Log;
 
 /**
  * Monitor changes to the forms folder within an appName, i.e.,
- * /odk/appName/forms
+ * /odk/appName/framework
  *
  * @author mitchellsundt@gmail.com
  *
  */
-class AppNameFormsFolderObserver extends FileObserver {
+class AppNameFrameworkFolderObserver extends FileObserver {
   private static final String t = "AppNameFormsObserver";
 
   private AppNameFolderObserver parent;
   private boolean active = true;
   private String appName;
 
-  Map<String, AppNameFormsFormDirObserver> formDirsWatch = new HashMap<String, AppNameFormsFormDirObserver>();
+  Map<String, AppNameFrameworkFormDirObserver> formDirsWatch = new HashMap<String, AppNameFrameworkFormDirObserver>();
 
-  public AppNameFormsFolderObserver(AppNameFolderObserver parent, String appName) {
-    super(ODKFileUtils.getFormsFolder(appName), ODKFolderObserver.LIKELY_CHANGE_OF_SUBDIR);
+  public AppNameFrameworkFolderObserver(AppNameFolderObserver parent, String appName) {
+    super(ODKFileUtils.getFrameworkFolder(appName), ODKFolderObserver.LIKELY_CHANGE_OF_SUBDIR);
     this.appName = appName;
     this.parent = parent;
     this.startWatching();
@@ -52,12 +52,12 @@ class AppNameFormsFolderObserver extends FileObserver {
   }
 
   public String getFormDirPath(String formDirName) {
-    return ODKFileUtils.getFormsFolder(appName) + File.separator + formDirName;
+    return ODKFileUtils.getFrameworkFolder(appName) + File.separator + formDirName;
   }
 
   private void update() {
 
-    File formsFolder = new File(ODKFileUtils.getFormsFolder(appName));
+    File formsFolder = new File(ODKFileUtils.getFrameworkFolder(appName));
 
     File[] formDirs = formsFolder.listFiles(new FileFilter() {
 
@@ -99,27 +99,27 @@ class AppNameFormsFolderObserver extends FileObserver {
     active = false;
     this.stopWatching();
     // remove watches on the formDef files...
-    for (AppNameFormsFormDirObserver fdo : formDirsWatch.values()) {
+    for (AppNameFrameworkFormDirObserver fdo : formDirsWatch.values()) {
       fdo.stop();
     }
     formDirsWatch.clear();
-    Log.i(t, "stop() " + ODKFileUtils.getFormsFolder(appName));
+    Log.i(t, "stop() " + ODKFileUtils.getFrameworkFolder(appName));
   }
 
   public void addFormDirWatch(String formDir) {
     if (!active)
       return;
-    AppNameFormsFormDirObserver v = formDirsWatch.get(formDir);
+    AppNameFrameworkFormDirObserver v = formDirsWatch.get(formDir);
     if (v != null) {
       v.stop();
     }
-    formDirsWatch.put(formDir, new AppNameFormsFormDirObserver(this, appName, formDir));
+    formDirsWatch.put(formDir, new AppNameFrameworkFormDirObserver(this, appName, formDir));
   }
 
   public void removeFormDirWatch(String formDir) {
     if (!active)
       return;
-    AppNameFormsFormDirObserver v = formDirsWatch.get(formDir);
+    AppNameFrameworkFormDirObserver v = formDirsWatch.get(formDir);
     if (v != null) {
       formDirsWatch.remove(formDir);
       v.stop();
@@ -135,13 +135,13 @@ class AppNameFormsFolderObserver extends FileObserver {
 
     if ((event & FileObserver.DELETE_SELF) != 0) {
       stop();
-      parent.removeFormsFolderWatch();
+      parent.removeFrameworkFolderWatch();
       return;
     }
 
     if ((event & FileObserver.MOVE_SELF) != 0) {
       stop();
-      parent.removeFormsFolderWatch();
+      parent.removeFrameworkFolderWatch();
       return;
     }
 

@@ -25,20 +25,20 @@ import android.util.Log;
  * Monitor changes to a specific form's folder within an appName. Only pay
  * attention to changes to the existence of the formDef.json file.
  *
- * i.e., /odk/appName/forms/formDirName
+ * i.e., /odk/appName/framework/formDirName
  *
  * @author mitchellsundt@gmail.com
  *
  */
-class AppNameFormsFormDirObserver extends FileObserver {
+class AppNameFrameworkFormDirObserver extends FileObserver {
   private static final String t = "AppNameFormsObserver";
 
-  private AppNameFormsFolderObserver parent;
+  private AppNameFrameworkFolderObserver parent;
   private boolean active = true;
   private String formDirName;
-  private AppNameFormsFormDefJsonObserver formDefJsonWatch = null;
+  private AppNameFrameworkFormDefJsonObserver formDefJsonWatch = null;
 
-  public AppNameFormsFormDirObserver(AppNameFormsFolderObserver parent, String appName,
+  public AppNameFrameworkFormDirObserver(AppNameFrameworkFolderObserver parent, String appName,
       String formDir) {
     super(parent.getFormDirPath(formDir), ODKFolderObserver.LIKELY_CHANGE_OF_SUBDIR);
     this.formDirName = formDir;
@@ -82,7 +82,7 @@ class AppNameFormsFormDirObserver extends FileObserver {
     if (formDefJsonWatch != null) {
       formDefJsonWatch.stop();
     }
-    formDefJsonWatch = new AppNameFormsFormDefJsonObserver(this);
+    formDefJsonWatch = new AppNameFrameworkFormDefJsonObserver(this);
   }
 
   public void removeFormDefJsonWatch() {

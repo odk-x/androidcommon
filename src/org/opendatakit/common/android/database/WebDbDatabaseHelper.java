@@ -28,93 +28,90 @@ import android.database.sqlite.SQLiteDatabase;
  */
 public class WebDbDatabaseHelper extends ODKSQLiteOpenHelper {
 
-	// private static final String t = "WebDbDatabaseHelper";
+  // private static final String t = "WebDbDatabaseHelper";
 
-	static final String WEBDB_DATABASE_NAME = "Databases.db";
-	static final String WEBDB_DATABASES_TABLE = "Databases";
-	static final String WEBDB_ORIGINS_TABLE = "Origins";
+  static final String WEBDB_DATABASE_NAME = "Databases.db";
+  static final String WEBDB_DATABASES_TABLE = "Databases";
+  static final String WEBDB_ORIGINS_TABLE = "Origins";
 
-	public static final String WEBDB_INSTANCE_DB_SHORT_NAME = "odk";
-	public static final String WEBDB_INSTANCE_DB_DISPLAY_NAME = "ODK Instances Database";
-	public static final Integer WEBDB_INSTANCE_DB_ESTIMATED_SIZE = 65536;
-	public static final Integer WEBDB_INSTANCE_DB_VERSION = 1;
-	static final int WEBDB_VERSION = 1;
+  public static final String WEBDB_INSTANCE_DB_SHORT_NAME = "odk";
+  public static final String WEBDB_INSTANCE_DB_DISPLAY_NAME = "ODK Instances Database";
+  public static final Integer WEBDB_INSTANCE_DB_ESTIMATED_SIZE = 65536;
+  public static final Integer WEBDB_INSTANCE_DB_VERSION = 1;
+  static final int WEBDB_VERSION = 1;
 
-	static final String COMMON_ORIGIN = "origin";
+  static final String COMMON_ORIGIN = "origin";
 
-	static final String DATABASES_GUID = "guid";
-	static final String DATABASES_NAME = "name";
-	static final String DATABASES_DISPLAY_NAME = "displayName";
-	static final String DATABASES_ESTIMATED_SIZE = "estimatedSize";
-	static final String DATABASES_PATH = "path";
+  static final String DATABASES_GUID = "guid";
+  static final String DATABASES_NAME = "name";
+  static final String DATABASES_DISPLAY_NAME = "displayName";
+  static final String DATABASES_ESTIMATED_SIZE = "estimatedSize";
+  static final String DATABASES_PATH = "path";
 
-	static final String ORIGINS_QUOTA = "quota";
+  static final String ORIGINS_QUOTA = "quota";
 
-	public static String dbPath(String path) {
-		ODKFileUtils.createFolder(path);
-		return path;
-	}
+  public static String dbPath(String path) {
+    ODKFileUtils.createFolder(path);
+    return path;
+  }
 
-	public WebDbDatabaseHelper(String path) {
-		super(dbPath(path), WEBDB_DATABASE_NAME, null, WEBDB_VERSION);
-	}
+  public WebDbDatabaseHelper(String path) {
+    super(dbPath(path), WEBDB_DATABASE_NAME, null, WEBDB_VERSION);
+  }
 
-	/**
-	 * Called when the database is created for the first time. This is where the
-	 * creation of tables and the initial population of the tables should
-	 * happen.
-	 *
-	 * @param db
-	 *            The database.
-	 */
-	@Override
-	public void onCreate(SQLiteDatabase db) {
-		db.execSQL("CREATE TABLE IF NOT EXISTS " + WEBDB_ORIGINS_TABLE + " ("
-				+ COMMON_ORIGIN + " text, " + ORIGINS_QUOTA + " integer );");
+  /**
+   * Called when the database is created for the first time. This is where the
+   * creation of tables and the initial population of the tables should happen.
+   *
+   * @param db
+   *          The database.
+   */
+  @Override
+  public void onCreate(SQLiteDatabase db) {
+    db.execSQL("CREATE TABLE IF NOT EXISTS " + WEBDB_ORIGINS_TABLE + " (" + COMMON_ORIGIN
+        + " text, " + ORIGINS_QUOTA + " integer );");
 
-		db.execSQL("CREATE TABLE IF NOT EXISTS " + WEBDB_DATABASES_TABLE + " ("
-				+ DATABASES_GUID + " integer primary key, " + COMMON_ORIGIN
-				+ " text, " + DATABASES_NAME + " text, "
-				+ DATABASES_DISPLAY_NAME + " text, " + DATABASES_ESTIMATED_SIZE
-				+ " integer, " + DATABASES_PATH + " text );");
+    db.execSQL("CREATE TABLE IF NOT EXISTS " + WEBDB_DATABASES_TABLE + " (" + DATABASES_GUID
+        + " integer primary key, " + COMMON_ORIGIN + " text, " + DATABASES_NAME + " text, "
+        + DATABASES_DISPLAY_NAME + " text, " + DATABASES_ESTIMATED_SIZE + " integer, "
+        + DATABASES_PATH + " text );");
 
-		ContentValues ov = new ContentValues();
-		ov.put(COMMON_ORIGIN, FileProvider.getFileOriginString());
-		ov.put(ORIGINS_QUOTA, 262144);
-		db.insert(WEBDB_ORIGINS_TABLE, null, ov);
+    ContentValues ov = new ContentValues();
+    ov.put(COMMON_ORIGIN, FileProvider.getFileOriginString());
+    ov.put(ORIGINS_QUOTA, 262144);
+    db.insert(WEBDB_ORIGINS_TABLE, null, ov);
 
-		ContentValues v = new ContentValues();
-		v.put(DATABASES_GUID, 1);
-		v.put(COMMON_ORIGIN, FileProvider.getFileOriginString());
-		v.put(DATABASES_NAME, WEBDB_INSTANCE_DB_SHORT_NAME);
-		v.put(DATABASES_DISPLAY_NAME, WEBDB_INSTANCE_DB_DISPLAY_NAME);
-		v.put(DATABASES_ESTIMATED_SIZE, WEBDB_INSTANCE_DB_ESTIMATED_SIZE);
-		v.put(DATABASES_PATH,
-				String.format("%1$016d.db", WEBDB_INSTANCE_DB_VERSION));
-		db.insert("Databases", null, v);
+    ContentValues v = new ContentValues();
+    v.put(DATABASES_GUID, 1);
+    v.put(COMMON_ORIGIN, FileProvider.getFileOriginString());
+    v.put(DATABASES_NAME, WEBDB_INSTANCE_DB_SHORT_NAME);
+    v.put(DATABASES_DISPLAY_NAME, WEBDB_INSTANCE_DB_DISPLAY_NAME);
+    v.put(DATABASES_ESTIMATED_SIZE, WEBDB_INSTANCE_DB_ESTIMATED_SIZE);
+    v.put(DATABASES_PATH, String.format("%1$016d.db", WEBDB_INSTANCE_DB_VERSION));
+    db.insert("Databases", null, v);
 
-	}
+  }
 
-	/**
-	 * Called when the database needs to be upgraded. The implementation should
-	 * use this method to drop tables, add tables, or do anything else it needs
-	 * to upgrade to the new schema version.
-	 * <p>
-	 * The SQLite ALTER TABLE documentation can be found <a
-	 * href="http://sqlite.org/lang_altertable.html">here</a>. If you add new
-	 * columns you can use ALTER TABLE to insert them into a live table. If you
-	 * rename or remove columns you can use ALTER TABLE to rename the old table,
-	 * then create the new table and then populate the new table with the
-	 * contents of the old table.
-	 *
-	 * @param db
-	 *            The database.
-	 * @param oldVersion
-	 *            The old database version.
-	 * @param newVersion
-	 *            The new database version.
-	 */
-	@Override
-	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-	}
+  /**
+   * Called when the database needs to be upgraded. The implementation should
+   * use this method to drop tables, add tables, or do anything else it needs to
+   * upgrade to the new schema version.
+   * <p>
+   * The SQLite ALTER TABLE documentation can be found <a
+   * href="http://sqlite.org/lang_altertable.html">here</a>. If you add new
+   * columns you can use ALTER TABLE to insert them into a live table. If you
+   * rename or remove columns you can use ALTER TABLE to rename the old table,
+   * then create the new table and then populate the new table with the contents
+   * of the old table.
+   *
+   * @param db
+   *          The database.
+   * @param oldVersion
+   *          The old database version.
+   * @param newVersion
+   *          The new database version.
+   */
+  @Override
+  public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+  }
 }

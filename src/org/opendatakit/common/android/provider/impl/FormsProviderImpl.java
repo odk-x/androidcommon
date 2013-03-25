@@ -18,7 +18,6 @@ package org.opendatakit.common.android.provider.impl;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -54,21 +53,20 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
   private static boolean bInitialScan = false; // set to true during first scan
 
   /**
-   * During initialization, a pool of content providers are created.
-   * We only need to fire off one initial app scan. Use this synchronized
-   * method to do that one scan and to set up the single FileObserver
-   * that listens for changes to the odk tree and fires off subsequent
-   * scans.
+   * During initialization, a pool of content providers are created. We only
+   * need to fire off one initial app scan. Use this synchronized method to do
+   * that one scan and to set up the single FileObserver that listens for
+   * changes to the odk tree and fires off subsequent scans.
    *
    * @param self
    */
   private static synchronized void doInitialAppsScan(final FormsProviderImpl self) {
-    if ( !bInitialScan ) {
+    if (!bInitialScan) {
       // observer will start monitoring and trigger forms discovery
       try {
         bInitialScan = true;
         observer = new ODKFolderObserver(self);
-      } catch ( Exception e ) {
+      } catch (Exception e) {
         Log.e(t, "Exception: " + e.toString());
         bInitialScan = false;
         stopScan();
@@ -89,7 +87,8 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       @Override
       public void run() {
         doInitialAppsScan(self);
-      }};
+      }
+    };
     r.start();
     return true;
   }
@@ -118,16 +117,17 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       whereId = where;
       whereIdArgs = whereArgs;
     } else {
-      if ( TextUtils.isEmpty(where) ) {
+      if (TextUtils.isEmpty(where)) {
         whereId = (isNumericId ? FormsColumns._ID : FormsColumns.FORM_ID) + "=?";
         whereIdArgs = new String[1];
         whereIdArgs[0] = uriFormId;
       } else {
-        whereId = (isNumericId ? FormsColumns._ID : FormsColumns.FORM_ID) + "=? AND (" + where + ")";
-        whereIdArgs = new String[whereArgs.length+1];
+        whereId = (isNumericId ? FormsColumns._ID : FormsColumns.FORM_ID) + "=? AND (" + where
+            + ")";
+        whereIdArgs = new String[whereArgs.length + 1];
         whereIdArgs[0] = uriFormId;
-        for ( int i = 0 ; i < whereArgs.length ; ++i ) {
-          whereIdArgs[i+1] = whereArgs[i];
+        for (int i = 0; i < whereArgs.length; ++i) {
+          whereIdArgs[i + 1] = whereArgs[i];
         }
       }
     }
@@ -135,9 +135,11 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     SQLiteDatabase db = getDbHelper(appName).getReadableDatabase();
 
     // Get the database and run the query
-    Cursor c = db.query(DataModelDatabaseHelper.FORMS_TABLE_NAME, projection, whereId, whereIdArgs, null, null, sortOrder);
+    Cursor c = db.query(DataModelDatabaseHelper.FORMS_TABLE_NAME, projection, whereId, whereIdArgs,
+        null, null, sortOrder);
 
-    // Tell the cursor what uri to watch, so it knows when its source data changes
+    // Tell the cursor what uri to watch, so it knows when its source data
+    // changes
     c.setNotificationUri(getContext().getContentResolver(), uri);
     return c;
   }
@@ -151,7 +153,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     }
     String uriFormId = ((segments.size() == 2) ? segments.get(1) : null);
 
-    if ( uriFormId == null ) {
+    if (uriFormId == null) {
       return FormsColumns.CONTENT_TYPE;
     } else {
       return FormsColumns.CONTENT_ITEM_TYPE;
@@ -195,7 +197,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     }
 
     String mediaAppName = mediaPath.getParentFile()/* forms folder */.getParentFile()
-        /* app */.getName();
+    /* app */.getName();
     if (!appName.equals(mediaAppName)) {
       throw new IllegalArgumentException(
           "Form definition is not contained within the application: " + appName);
@@ -221,7 +223,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     }
 
     // compute FORM_PATH...
-    String formPath = relativeFormDefPath(appName, formDefFile);
+    String formPath = ODKFileUtils.getRelativeFormPath(appName, formDefFile);
     values.put(FormsColumns.FORM_PATH, formPath);
 
     String md5;
@@ -302,12 +304,12 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     long rowId = db.insert(DataModelDatabaseHelper.FORMS_TABLE_NAME, null, values);
     if (rowId > 0) {
       Uri formUri = Uri.withAppendedPath(
-          Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()),
-              appName), values.getAsString(FormsColumns.FORM_ID));
+          Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()), appName),
+          values.getAsString(FormsColumns.FORM_ID));
       getContext().getContentResolver().notifyChange(formUri, null);
       Uri idUri = Uri.withAppendedPath(
-          Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()),
-              appName), Long.toString(rowId));
+          Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()), appName),
+          Long.toString(rowId));
       getContext().getContentResolver().notifyChange(idUri, null);
 
       return formUri;
@@ -316,74 +318,54 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     throw new SQLException("Failed to insert row into " + uri);
   }
 
-  private String relativeFormDefPath(String appName, File formDefFile) {
-
-    // compute FORM_PATH...
-    File parentDir = new File(ODKFileUtils.getFormsFolder(appName));
-
-    ArrayList<String> pathElements = new ArrayList<String>();
-
-    File f = formDefFile.getParentFile();
-
-    while (f != null && !f.equals(parentDir)) {
-      pathElements.add(f.getName());
-      f = f.getParentFile();
-    }
-
-    StringBuilder b = new StringBuilder();
-    if (f == null) {
-      // OK we have had to go all the way up to /
-      b.append("..");
-      b.append(File.separator); // to get from ./default to parentDir
-
-      while (parentDir != null) {
-        b.append("..");
-        b.append(File.separator);
-        parentDir = parentDir.getParentFile();
-      }
-
-    } else {
-      b.append("..");
-      b.append(File.separator);
-    }
-
-    for (int i = pathElements.size() - 1; i >= 0; --i) {
-      String element = pathElements.get(i);
-      b.append(element);
-      b.append(File.separator);
-    }
-    return b.toString();
-  }
+  /** used only within moveDirectory */
+  static enum DirType {
+    FORMS, FRAMEWORK, OTHER
+  };
 
   private void moveDirectory(String appName, File mediaDirectory) throws IOException {
-    if (mediaDirectory.getParentFile().getAbsolutePath()
-        .equals(ODKFileUtils.getFormsFolder(appName))
-        && mediaDirectory.exists()) {
-      // it is a directory under our control -- move it to the stale forms
-      // path...
-      // otherwise, it is not where we will look for it, so we can ignore
-      // it
-      // (once the record is gone from our FormsProvider, we will not
-      // accidentally
-      // DiskSync and locate it).
+    String formsOrFrameworkDirectory = mediaDirectory.getParentFile().getAbsolutePath();
+    DirType mediaType = DirType.OTHER;
+    if (formsOrFrameworkDirectory.equals(ODKFileUtils.getFormsFolder(appName))) {
+      mediaType = DirType.FORMS;
+    } else if (formsOrFrameworkDirectory.equals(ODKFileUtils.getFrameworkFolder(appName))) {
+      mediaType = DirType.FRAMEWORK;
+    }
+
+    if (mediaDirectory.exists() && mediaType != DirType.OTHER) {
+      // it is a directory under our control
+      // -- move it to the stale forms or framework path...
+      // otherwise, it is not where we will look for it,
+      // so we can ignore it (once the record is gone
+      // from our FormsProvider, we will not accidentally
+      // detect it).
       String rootName = mediaDirectory.getName();
       int rev = 2;
-      String staleMediaPathName = ODKFileUtils.getStaleFormsFolder(appName) + File.separator
-          + rootName;
+      String staleMediaPathBase;
+      if (mediaType == DirType.FORMS) {
+        staleMediaPathBase = ODKFileUtils.getStaleFormsFolder(appName) + File.separator;
+      } else {
+        staleMediaPathBase = ODKFileUtils.getStaleFrameworkFolder(appName) + File.separator;
+      }
+
+      String staleMediaPathName = staleMediaPathBase + rootName;
       File staleMediaPath = new File(staleMediaPathName);
 
       while (staleMediaPath.exists()) {
         try {
           if (staleMediaPath.exists()) {
             FileUtils.deleteDirectory(staleMediaPath);
+            if (!staleMediaPath.exists()) {
+              // we successfully deleted an older directory -- reuse it...
+              break;
+            }
           }
           Log.i(t, "Successful delete of stale directory: " + staleMediaPathName);
         } catch (IOException ex) {
           ex.printStackTrace();
           Log.i(t, "Unable to delete stale directory: " + staleMediaPathName);
         }
-        staleMediaPathName = ODKFileUtils.getFormsFolder(appName) + File.separator + rootName + "_"
-            + rev;
+        staleMediaPathName = staleMediaPathBase + rootName + "_" + rev;
         staleMediaPath = new File(staleMediaPathName);
         rev++;
       }
@@ -419,16 +401,17 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       whereId = where;
       whereIdArgs = whereArgs;
     } else {
-      if ( TextUtils.isEmpty(where) ) {
+      if (TextUtils.isEmpty(where)) {
         whereId = (isNumericId ? FormsColumns._ID : FormsColumns.FORM_ID) + "=?";
         whereIdArgs = new String[1];
         whereIdArgs[0] = uriFormId;
       } else {
-        whereId = (isNumericId ? FormsColumns._ID : FormsColumns.FORM_ID) + "=? AND (" + where + ")";
-        whereIdArgs = new String[whereArgs.length+1];
+        whereId = (isNumericId ? FormsColumns._ID : FormsColumns.FORM_ID) + "=? AND (" + where
+            + ")";
+        whereIdArgs = new String[whereArgs.length + 1];
         whereIdArgs[0] = uriFormId;
-        for ( int i = 0 ; i < whereArgs.length ; ++i ) {
-          whereIdArgs[i+1] = whereArgs[i];
+        for (int i = 0; i < whereArgs.length; ++i) {
+          whereIdArgs[i + 1] = whereArgs[i];
         }
       }
     }
@@ -466,14 +449,15 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       }
     }
 
-    if ( count == 1 ) {
-      Uri formUri = Uri.withAppendedPath(
-          Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()),
-              appName), formIdValue);
+    if (count == 1) {
+      Uri formUri = Uri
+          .withAppendedPath(
+              Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()), appName),
+              formIdValue);
       getContext().getContentResolver().notifyChange(formUri, null);
       Uri idUri = Uri.withAppendedPath(
-          Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()),
-              appName), Long.toString(idValue));
+          Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()), appName),
+          Long.toString(idValue));
       getContext().getContentResolver().notifyChange(idUri, null);
     } else {
       getContext().getContentResolver().notifyChange(uri, null);
@@ -526,16 +510,17 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       whereId = where;
       whereIdArgs = whereArgs;
     } else {
-      if ( TextUtils.isEmpty(where) ) {
+      if (TextUtils.isEmpty(where)) {
         whereId = (isNumericId ? FormsColumns._ID : FormsColumns.FORM_ID) + "=?";
         whereIdArgs = new String[1];
         whereIdArgs[0] = uriFormId;
       } else {
-        whereId = (isNumericId ? FormsColumns._ID : FormsColumns.FORM_ID) + "=? AND (" + where + ")";
-        whereIdArgs = new String[whereArgs.length+1];
+        whereId = (isNumericId ? FormsColumns._ID : FormsColumns.FORM_ID) + "=? AND (" + where
+            + ")";
+        whereIdArgs = new String[whereArgs.length + 1];
         whereIdArgs[0] = uriFormId;
-        for ( int i = 0 ; i < whereArgs.length ; ++i ) {
-          whereIdArgs[i+1] = whereArgs[i];
+        for (int i = 0; i < whereArgs.length; ++i) {
+          whereIdArgs[i + 1] = whereArgs[i];
         }
       }
     }
@@ -627,14 +612,15 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
 
     int count = db.update(DataModelDatabaseHelper.FORMS_TABLE_NAME, values, whereId, whereIdArgs);
 
-    if ( count == 1 ) {
-      Uri formUri = Uri.withAppendedPath(
-          Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()),
-              appName), formIdValue);
+    if (count == 1) {
+      Uri formUri = Uri
+          .withAppendedPath(
+              Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()), appName),
+              formIdValue);
       getContext().getContentResolver().notifyChange(formUri, null);
       Uri idUri = Uri.withAppendedPath(
-          Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()),
-              appName), Long.toString(idValue));
+          Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()), appName),
+          Long.toString(idValue));
       getContext().getContentResolver().notifyChange(idUri, null);
     } else {
       getContext().getContentResolver().notifyChange(uri, null);
