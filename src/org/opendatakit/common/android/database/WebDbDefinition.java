@@ -23,16 +23,15 @@ import java.io.File;
  *
  */
 public class WebDbDefinition {
-	public final String shortName;
-	public final String displayName;
-	public final Integer estimatedSize;
-	public final File dbFile;
+  public final String shortName;
+  public final String displayName;
+  public final Integer estimatedSize;
+  public final File dbFile;
 
-	WebDbDefinition(String shortName, String displayName,
-			Integer estimatedSize, File dbFile) {
-		this.shortName = shortName;
-		this.displayName = displayName;
-		this.estimatedSize = estimatedSize;
-		this.dbFile = dbFile;
-	}
+  WebDbDefinition(String shortName, String displayName, Integer estimatedSize, File dbFile) {
+    this.shortName = shortName;
+    this.displayName = displayName;
+    this.estimatedSize = estimatedSize;
+    this.dbFile = dbFile;
+  }
 }

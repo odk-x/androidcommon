@@ -18,70 +18,60 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
 public class WebSqlDatabaseHelper {
-	private static final String t = "WebSqlDatabaseHelper";
+  private static final String t = "WebSqlDatabaseHelper";
 
-	private WebDbDatabaseHelper mWebDb;
-	private List<WebDbDefinition> webDatabasePaths;
+  private List<WebDbDefinition> webDatabasePaths;
 
-	public WebSqlDatabaseHelper(String path) {
-		mWebDb = new WebDbDatabaseHelper(path);
+  public WebSqlDatabaseHelper(String path) {
+    WebDbDatabaseHelper mWebDb = new WebDbDatabaseHelper(path);
 
-		List<WebDbDefinition> dbCandidates = new ArrayList<WebDbDefinition>();
+    List<WebDbDefinition> dbCandidates = new ArrayList<WebDbDefinition>();
 
-		SQLiteDatabase db = null;
-		Cursor c = null;
-		try {
-			db = mWebDb.getWritableDatabase();
-			c = db.query(WebDbDatabaseHelper.WEBDB_DATABASES_TABLE, null, null,
-					null, null, null, null);
+    SQLiteDatabase db = null;
+    Cursor c = null;
+    try {
+      db = mWebDb.getWritableDatabase();
+      c = db.query(WebDbDatabaseHelper.WEBDB_DATABASES_TABLE, null, null, null, null, null, null);
 
-			if (c.moveToFirst()) {
-				do {
-					String shortName = c
-							.getString(c
-									.getColumnIndex(WebDbDatabaseHelper.DATABASES_NAME));
-					String displayName = c
-							.getString(c
-									.getColumnIndex(WebDbDatabaseHelper.DATABASES_DISPLAY_NAME));
-					String relPath = c.getString(c
-							.getColumnIndex(WebDbDatabaseHelper.COMMON_ORIGIN));
-					String dbName = c
-							.getString(c
-									.getColumnIndex(WebDbDatabaseHelper.DATABASES_PATH));
-					Integer estimatedSize = c
-							.getInt(c
-									.getColumnIndex(WebDbDatabaseHelper.DATABASES_ESTIMATED_SIZE));
+      if (c.moveToFirst()) {
+        do {
+          String shortName = c.getString(c.getColumnIndex(WebDbDatabaseHelper.DATABASES_NAME));
+          String displayName = c.getString(c
+              .getColumnIndex(WebDbDatabaseHelper.DATABASES_DISPLAY_NAME));
+          String relPath = c.getString(c.getColumnIndex(WebDbDatabaseHelper.COMMON_ORIGIN));
+          String dbName = c.getString(c.getColumnIndex(WebDbDatabaseHelper.DATABASES_PATH));
+          Integer estimatedSize = c.getInt(c
+              .getColumnIndex(WebDbDatabaseHelper.DATABASES_ESTIMATED_SIZE));
 
-					dbCandidates.add(new WebDbDefinition(shortName,
-							displayName, estimatedSize,
-							new File(path + File.separator
-									+ relPath + File.separator + dbName)));
-				} while (c.moveToNext());
-			}
-		} finally {
-			if (c != null) {
-				c.close();
-			}
-		}
+          dbCandidates.add(new WebDbDefinition(shortName, displayName, estimatedSize, new File(path
+              + File.separator + relPath + File.separator + dbName)));
+        } while (c.moveToNext());
+      }
+    } finally {
+      if (c != null) {
+        c.close();
+      }
+      if (db != null) {
+        db.close();
+      }
+    }
 
-		webDatabasePaths = dbCandidates;
-		Log.i(t, "Number of web databases found: " + webDatabasePaths.size());
-	}
+    webDatabasePaths = dbCandidates;
+    Log.i(t, "Number of web databases found: " + webDatabasePaths.size());
+  }
 
-	public WebDbDefinition getWebKitDatabaseInfoHelper() {
-		for (WebDbDefinition defn : webDatabasePaths) {
-			if (defn.shortName
-					.equalsIgnoreCase(WebDbDatabaseHelper.WEBDB_INSTANCE_DB_SHORT_NAME)) {
-				return defn;
-			}
-		}
-		return null;
-	}
+  public WebDbDefinition getWebKitDatabaseInfoHelper() {
+    for (WebDbDefinition defn : webDatabasePaths) {
+      if (defn.shortName.equalsIgnoreCase(WebDbDatabaseHelper.WEBDB_INSTANCE_DB_SHORT_NAME)) {
+        return defn;
+      }
+    }
+    return null;
+  }
 
 }
