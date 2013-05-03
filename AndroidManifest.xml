@@ -21,6 +21,7 @@
 	<!--  FileProvider provides read-only access to files specified by: appName/filepath -->
     <provider
         android:name="org.opendatakit.common.android.provider.FileProvider"
-        android:authorities="org.opendatakit.common.android.provider.file" />
+        android:authorities="org.opendatakit.common.android.provider.file"
+        android:exported="true" />
 
 </manifest>
