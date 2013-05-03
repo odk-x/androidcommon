@@ -75,7 +75,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     // _ID in UPLOADS_TABLE_NAME
     String instanceId = (segments.size() == 3 ? segments.get(2) : null);
 
-    SQLiteDatabase db = getDbHelper(appName).getReadableDatabase();
+    SQLiteDatabase db = getDbHelper(getContext(), appName).getReadableDatabase();
 
     IdStruct ids = DataModelDatabaseHelper.getIds(db, uriFormId);
 
@@ -244,7 +244,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     // _ID in UPLOADS_TABLE_NAME
     String instanceId = (segments.size() == 3 ? segments.get(2) : null);
 
-    SQLiteDatabase db = getDbHelper(appName).getWritableDatabase();
+    SQLiteDatabase db = getDbHelper(getContext(), appName).getWritableDatabase();
 
     String dbTableName = DataModelDatabaseHelper.getDbTableName(db, tableId);
     if (dbTableName == null) {
@@ -318,7 +318,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     String instanceId = segments.get(2);
     // TODO: should we do something to ensure instanceId is the one updated?
 
-    SQLiteDatabase db = getDbHelper(appName).getWritableDatabase();
+    SQLiteDatabase db = getDbHelper(getContext(), appName).getWritableDatabase();
 
     String dbTableName = DataModelDatabaseHelper.getDbTableName(db, tableId);
     if (dbTableName == null) {

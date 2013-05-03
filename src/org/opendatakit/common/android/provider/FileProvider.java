@@ -24,6 +24,7 @@ import org.opendatakit.common.android.utilities.ODKFileUtils;
 import android.content.ContentProvider;
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
@@ -42,11 +43,27 @@ import android.os.ParcelFileDescriptor;
  */
 public class FileProvider extends ContentProvider {
   public static final String CONTENT_ITEM_TYPE = "vnd.android.cursor.item/vnd.opendatakit.file";
-  public static final String FILE_AUTHORITY = "org.opendatakit.common.android.provider.file";
-  public static final Uri CONTENT_URI = Uri.parse("content://" + FILE_AUTHORITY + "/");
 
-  public static String getFileOriginString() {
-    return ContentResolver.SCHEME_CONTENT + "_" + FILE_AUTHORITY + "_0";
+  public static String getApkPart(Context c) {
+	    String pkgName = c.getApplicationInfo().packageName;
+	    String trailing = pkgName.substring(pkgName.lastIndexOf('.')+1);
+	    if ( trailing.equals("android") ) {
+	    	pkgName = pkgName.substring(0,pkgName.lastIndexOf('.'));
+	    }
+	    trailing = pkgName.substring(pkgName.lastIndexOf('.')+1);
+	    return trailing;
+  }
+
+  public static String getFileAuthority(Context c) {
+	  return "org.opendatakit." + getApkPart(c) + ".android.provider.file";
+  }
+
+  public static Uri getContentUri(Context c) {
+	  return Uri.parse("content://" + getFileAuthority(c) + "/");
+  }
+
+  public static String getFileOriginString(Context c) {
+    return ContentResolver.SCHEME_CONTENT + "_" + getFileAuthority(c) + "_0";
   }
 
   /**
@@ -63,12 +80,13 @@ public class FileProvider extends ContentProvider {
    * Internal routine that does not require that the returned File exists or is
    * of a particular type.
    *
+   * @param context
    * @param uriString
    * @return File corresponding to the specified uri
    */
-  private static File getAsFileObject(String uriString) {
+  private static File getAsFileObject(Context context, String uriString) {
     Uri uri = Uri.parse(uriString);
-    if (!uri.getAuthority().equals(FILE_AUTHORITY)) {
+    if (!uri.getAuthority().equals(getFileAuthority(context))) {
       throw new IllegalArgumentException("Not a valid uri: " + uriString);
     }
     List<String> segments = uri.getPathSegments();
@@ -94,8 +112,8 @@ public class FileProvider extends ContentProvider {
     return f;
   }
 
-  public static File getAsDirectory(String uriString) {
-    File f = getAsFileObject(uriString);
+  public static File getAsDirectory(Context context, String uriString) {
+    File f = getAsFileObject(context, uriString);
     if (!f.exists() || !f.isDirectory()) {
       throw new IllegalArgumentException("Not a valid uri: " + uriString
           + " file does not exist or is not a valid directory.");
@@ -103,8 +121,8 @@ public class FileProvider extends ContentProvider {
     return f;
   }
 
-  public static File getAsFile(String uriString) {
-    File f = getAsFileObject(uriString);
+  public static File getAsFile(Context context, String uriString) {
+    File f = getAsFileObject(context, uriString);
     if (!f.exists() || !f.isFile()) {
       throw new IllegalArgumentException("Not a valid uri: " + uriString
           + " file does not exist or is not a valid file.");
@@ -119,7 +137,7 @@ public class FileProvider extends ContentProvider {
    * @param filePath
    * @return Url that this content provider can process to return the file.
    */
-  public static String getAsUrl(File filePath) {
+  public static String getAsUrl(Context context, File filePath) {
 
     String fullPath = filePath.getAbsolutePath();
     String relativePath = ODKFileUtils.toAppPath(fullPath);
@@ -129,7 +147,7 @@ public class FileProvider extends ContentProvider {
 
     // we need to escape the segments.
     String[] segments = relativePath.split(File.separator);
-    Uri u = FileProvider.CONTENT_URI;
+    Uri u = FileProvider.getContentUri(context);
     for (String s : segments) {
       u = Uri.withAppendedPath(u, Uri.encode(s));
     }
@@ -139,8 +157,7 @@ public class FileProvider extends ContentProvider {
   @Override
   public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
     String path = uri.getPath();
-
-    if (!uri.getAuthority().equalsIgnoreCase(FILE_AUTHORITY)) {
+    if (!uri.getAuthority().equalsIgnoreCase(getFileAuthority(getContext()))) {
       throw new FileNotFoundException("Not a valid uri: " + uri
           + " file does not exists or is not a file.");
     }

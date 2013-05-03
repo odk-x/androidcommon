@@ -18,6 +18,7 @@ import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.provider.FileProvider;
 
 import android.content.ContentValues;
+import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 
 /**
@@ -50,13 +51,16 @@ public class WebDbDatabaseHelper extends ODKSQLiteOpenHelper {
 
   static final String ORIGINS_QUOTA = "quota";
 
+  final Context context;
+
   public static String dbPath(String path) {
     ODKFileUtils.createFolder(path);
     return path;
   }
 
-  public WebDbDatabaseHelper(String path) {
+  public WebDbDatabaseHelper(Context context, String path) {
     super(dbPath(path), WEBDB_DATABASE_NAME, null, WEBDB_VERSION);
+    this.context = context;
   }
 
   /**
@@ -77,13 +81,13 @@ public class WebDbDatabaseHelper extends ODKSQLiteOpenHelper {
         + DATABASES_PATH + " text );");
 
     ContentValues ov = new ContentValues();
-    ov.put(COMMON_ORIGIN, FileProvider.getFileOriginString());
+    ov.put(COMMON_ORIGIN, FileProvider.getFileOriginString(context));
     ov.put(ORIGINS_QUOTA, 262144);
     db.insert(WEBDB_ORIGINS_TABLE, null, ov);
 
     ContentValues v = new ContentValues();
     v.put(DATABASES_GUID, 1);
-    v.put(COMMON_ORIGIN, FileProvider.getFileOriginString());
+    v.put(COMMON_ORIGIN, FileProvider.getFileOriginString(context));
     v.put(DATABASES_NAME, WEBDB_INSTANCE_DB_SHORT_NAME);
     v.put(DATABASES_DISPLAY_NAME, WEBDB_INSTANCE_DB_DISPLAY_NAME);
     v.put(DATABASES_ESTIMATED_SIZE, WEBDB_INSTANCE_DB_ESTIMATED_SIZE);

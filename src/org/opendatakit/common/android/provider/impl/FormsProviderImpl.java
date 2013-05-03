@@ -132,7 +132,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       }
     }
 
-    SQLiteDatabase db = getDbHelper(appName).getReadableDatabase();
+    SQLiteDatabase db = getDbHelper(getContext(), appName).getReadableDatabase();
 
     // Get the database and run the query
     Cursor c = db.query(DataModelDatabaseHelper.FORMS_TABLE_NAME, projection, whereId, whereIdArgs,
@@ -245,7 +245,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
 
     String appName = segments.get(0);
 
-    SQLiteDatabase db = getDbHelper(appName).getWritableDatabase();
+    SQLiteDatabase db = getDbHelper(getContext(), appName).getWritableDatabase();
 
     ContentValues values;
     if (initialValues != null) {
@@ -416,7 +416,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       }
     }
 
-    SQLiteDatabase db = getDbHelper(appName).getWritableDatabase();
+    SQLiteDatabase db = getDbHelper(getContext(), appName).getWritableDatabase();
     Cursor del = null;
     Integer idValue = null;
     String formIdValue = null;
@@ -525,7 +525,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       }
     }
 
-    SQLiteDatabase db = getDbHelper(appName).getWritableDatabase();
+    SQLiteDatabase db = getDbHelper(getContext(), appName).getWritableDatabase();
 
     /*
      * First, find out what records match this query, and if they refer to two

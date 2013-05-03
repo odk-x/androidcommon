@@ -140,14 +140,45 @@ public class ODKFileUtils {
       String partialPath = fullpath.substring(path.length());
       String[] app = partialPath.split(File.separator);
       if (app == null || app.length < 1) {
+        Log.w(t, "Missing file path (nothing under odk): " + fullpath);
         return null;
       }
       if (LEGACY_DIRECTORIES.contains(app[0])) {
+        Log.w(t, "File path detected as legacy directory: " + fullpath);
         return null;
       }
       return partialPath;
+    } else {
+
+    	String[] parts = fullpath.split(File.separator);
+    	int i = 0;
+    	while ( parts.length > i && !parts[i].equals("odk") ) {
+    		++i;
+    	}
+    	if ( i == parts.length ) {
+            Log.w(t, "File path is not under expected Odk Folder (" + path + ") conversion failed for: " + fullpath);
+    		return null;
+    	}
+    	int len = 0; // trailing slash
+    	while ( i >= 0 ) {
+    		len += parts[i].length() + 1;
+    		--i;
+    	}
+
+    	String partialPath = fullpath.substring(len);
+        String[] app = partialPath.split(File.separator);
+        if (app == null || app.length < 1) {
+          Log.w(t, "File path is not under expected Odk Folder (" + path + ") missing file path (nothing under odk): " + fullpath);
+          return null;
+        }
+        if (LEGACY_DIRECTORIES.contains(app[0])) {
+          Log.w(t, "File path is not under expected Odk Folder (" + path + ") detected as legacy directory: " + fullpath);
+          return null;
+        }
+
+        Log.w(t, "File path is not under expected Odk Folder -- remapped " + fullpath + " as: " + path + partialPath);
+        return partialPath;
     }
-    return null;
   }
 
   public static String getAppFolder(String appName) {
