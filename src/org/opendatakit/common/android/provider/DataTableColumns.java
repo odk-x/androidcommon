@@ -28,7 +28,6 @@ public class DataTableColumns implements BaseColumns {
   public static final String ID = "id";
   public static final String ROW_ID = "id";
   public static final String URI_USER = "uri_user";
-  public static final String LAST_MODIFIED_TIME = "last_mod_time";
   public static final String SYNC_TAG = "sync_tag";
   public static final String SYNC_STATE = "sync_state";
   public static final String TRANSACTIONING = "transactioning";
@@ -38,6 +37,9 @@ public class DataTableColumns implements BaseColumns {
    * when a record is updated. ODK Tables needs to update these appropriately
    * when a cell is directly edited based upon whether or not the table is
    * 'form-managed' or not.
+   *
+   * timestamp and last_mod_time are the same field. last_mod_time is simply
+   * a well-formatted text representation of the timestamp value.
    */
   public static final String TIMESTAMP = "timestamp";
   public static final String SAVED = "saved";
