@@ -51,6 +51,14 @@ public class DataTableColumns implements BaseColumns {
    */
   public static final String INSTANCE_NAME = "instance_name";
   public static final String LOCALE = "locale";
+  
+  // These are the default values that will be set to the database in case 
+  // there is nothing included. This has been a problem when downloading a 
+  // table from the server.
+  public static final String DEFAULT_INSTANCE_NAME = "";
+  public static final String DEFAULT_LOCALE= "";
+  public static final String DEFAULT_URI_USER = "";
+  public static final String DEFAULT_SYNC_TAG = "";
 
   // This class cannot be instantiated
   private DataTableColumns() {
