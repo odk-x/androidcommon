@@ -22,6 +22,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.os.Bundle;
+import android.util.Log;
 
 /**
  * Utilities for converting a Bundle to and from a JSON serialization for
@@ -31,6 +32,7 @@ import android.os.Bundle;
  *
  */
 public class AndroidUtils {
+  private static final String tag = "AndroidUtils";
 
   public static interface MacroStringExpander {
     public String expandString(String value);
@@ -97,12 +99,20 @@ public class AndroidUtils {
             ja.put((a[i] == null) ? JSONObject.NULL : a[i]);
           }
           jo.put(key, ja);
+        } else if (t.equals(String.class)) {
+            String[] a = (String[]) o;
+            for (int i = 0; i < a.length; ++i) {
+              ja.put((a[i] == null) ? JSONObject.NULL : a[i]);
+            }
+            jo.put(key, ja);
         } else if (t.equals(Bundle.class) || Bundle.class.isAssignableFrom(t)) {
           Bundle[] a = (Bundle[]) o;
           for (int i = 0; i < a.length; ++i) {
             ja.put((a[i] == null) ? JSONObject.NULL : convertFromBundle(a[i]));
           }
           jo.put(key, ja);
+        } else if (t.equals(byte.class)) {
+       	  Log.w(tag, "byte array returned -- ignoring");
         } else {
           throw new JSONException("unrecognized class");
         }
