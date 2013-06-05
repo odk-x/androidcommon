@@ -41,7 +41,7 @@ import android.os.ParcelFileDescriptor;
  * @author mitchellsundt@gmail.com
  *
  */
-public class FileProvider extends ContentProvider {
+public abstract class FileProvider extends ContentProvider {
   public static final String CONTENT_ITEM_TYPE = "vnd.android.cursor.item/vnd.opendatakit.file";
 
   public static String getApkPart(Context c) {
