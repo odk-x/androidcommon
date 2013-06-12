@@ -61,7 +61,8 @@ public class PropertyManager {
 
   /**
    * These properties are dynamic and accessed through the
-   * DynamicPropertiesInterface
+   * DynamicPropertiesInterface. As with all property names,
+   * they are compared in a case-insensitive manner.
    */
 
   // username -- current username
@@ -73,8 +74,8 @@ public class PropertyManager {
   public final static String APP_NAME = "appName";
   // instanceDirectory -- directory containing media files for current instance
   public final static String INSTANCE_DIRECTORY = "instancedirectory";
-  // asFile:ext -- the full path to a non-existent file with the given extension
-  public final static String NEW_FILE_WITHOUT_COLON = "newFile";
+  // newfile -- the full path to a non-existent file with the given extension
+  public final static String NEW_FILE_WITHOUT_COLON = "newfile";
   public final static String NEW_FILE = NEW_FILE_WITHOUT_COLON + ":";
 
   /**
