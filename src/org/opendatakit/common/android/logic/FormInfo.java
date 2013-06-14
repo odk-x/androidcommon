@@ -17,7 +17,6 @@ package org.opendatakit.common.android.logic;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Locale;
@@ -25,9 +24,9 @@ import java.util.Map;
 
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
+import org.opendatakit.common.android.R;
 import org.opendatakit.common.android.provider.FormsColumns;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
-import org.opendatakit.common.android.R;
 
 import android.content.Context;
 import android.database.Cursor;
@@ -42,7 +41,12 @@ import android.database.Cursor;
  */
 public class FormInfo {
 
-  public final String formPath;
+  private static final String FORMDEF_TITLE_ELEMENT = "title";
+private static final String FORMDEF_DISPLAY_ELEMENT = "display";
+private static final String FORMDEF_SURVEY_SETTINGS = "survey";
+private static final String FORMDEF_SETTINGS_SUBSECTION = "settings";
+private static final String FORMDEF_LOGIC_FLOW_SECTION = "logic_flow";
+public final String formPath;
   public final String formFilePath;
   public final String formMediaPath;
   public final long lastModificationDate;
@@ -71,7 +75,7 @@ public class FormInfo {
 
   static final String FORMDEF_XML_DEVICE_ID_PROPERTY_NAME = "xml_device_id_property_name";
 
-  static final String FORMDEF_XML_USER_ID_PROPERTY_NAME = "xml_user_id_property_name";
+  static final String FORMDEF_XML_ACCESS_ID_PROPERTY_NAME = "xml_access_id_property_name";
 
   static final String FORMDEF_BASE64_RSA_PUBLIC_KEY = "xml_base64_rsa_public_key";
 
@@ -142,15 +146,6 @@ public class FormInfo {
       }
     }
     return ret;
-  }
-
-  private Map<String, Object> getSetting(String settingName, ArrayList<Map<String, Object>> settings) {
-    for (Map<String, Object> o : settings) {
-      if (settingName.equals(o.get("setting"))) {
-        return o;
-      }
-    }
-    return null;
   }
 
   /**
@@ -262,17 +257,22 @@ public class FormInfo {
     // TODO: DEPENDENCY ALERT!!!
     // THIS ASSUMES A CERTAIN STRUCTURE FOR THE formDef.json
     // file...
+    Map<String, Object> logicFlow = (Map<String, Object>) formDef
+            .get(FORMDEF_LOGIC_FLOW_SECTION);
+    if (logicFlow == null) {
+        throw new IllegalArgumentException("File is not a formdef json file! No logic_flow element."
+            + formDefFile.getAbsolutePath());
+      }
 
-    ArrayList<Map<String, Object>> settings = (ArrayList<Map<String, Object>>) formDef
-        .get("settings");
+    Map<String, Object> settings = (Map<String, Object>) logicFlow
+        .get(FORMDEF_SETTINGS_SUBSECTION);
     if (settings == null) {
-      throw new IllegalArgumentException("File is not a formdef json file! "
+      throw new IllegalArgumentException("File is not a formdef json file! No settings section inside logic_flow element."
           + formDefFile.getAbsolutePath());
-
     }
     Map<String, Object> setting = null;
 
-    setting = getSetting(FORMDEF_FORM_ID, settings);
+    setting = (Map<String, Object>) settings.get(FORMDEF_FORM_ID);
     if (setting != null) {
       Object o = setting.get(FORMDEF_VALUE);
       if (o == null || !(o instanceof String)) {
@@ -288,7 +288,7 @@ public class FormInfo {
 
     String fallbackLanguage = "default";
     String defaultLanguage;
-    setting = getSetting(FORMDEF_DEFAULT_LOCALE, settings);
+    setting = (Map<String, Object>) settings.get(FORMDEF_DEFAULT_LOCALE);
     if (setting != null) {
       Object o = setting.get(FORMDEF_VALUE);
       if (o == null) {
@@ -304,47 +304,53 @@ public class FormInfo {
     }
 
     Map<String, Object> formDefStruct = null;
-    setting = getSetting(FORMDEF_FORM_TITLE, settings);
-    if (setting != null) {
-      Object o = setting.get(FORMDEF_VALUE);
-      if (o == null) {
-        throw new IllegalArgumentException("formTitle is not specified in the formdef json file! "
-            + formDefFile.getAbsolutePath());
-      }
-      if (o instanceof String) {
-        language = (defaultLanguage != null) ? defaultLanguage : fallbackLanguage;
-        formTitle = (String) o;
+    setting = (Map<String, Object>) settings.get(FORMDEF_SURVEY_SETTINGS);
+    if ( setting != null ) {
+      setting = (Map<String, Object>) setting.get(FORMDEF_DISPLAY_ELEMENT);
+      if ( setting != null ) {
+        Object o = setting.get(FORMDEF_TITLE_ELEMENT);
+        if (o == null) {
+	      throw new IllegalArgumentException("title is not specified in the display section of the survey settings of the formdef json file! "
+	          + formDefFile.getAbsolutePath());
+	    }
+	    if (o instanceof String) {
+	      language = (defaultLanguage != null) ? defaultLanguage : fallbackLanguage;
+	      formTitle = (String) o;
+	    } else {
+	      try {
+	        formDefStruct = (Map<String, Object>) o;
+
+	        if (formDefStruct == null || formDefStruct.size() == 0) {
+	          throw new IllegalArgumentException(
+	              "title is not specified in the display section of the survey settings of the formdef json file! "
+	                  + formDefFile.getAbsolutePath());
+	        }
+
+	        if (defaultLanguage == null || !formDefStruct.containsKey(defaultLanguage)) {
+	          String[] values = formDefStruct.keySet().toArray(new String[formDefStruct.size()]);
+	          Arrays.sort(values, 0, values.length);
+	          defaultLanguage = values[0];
+	        }
+
+	        language = (defaultLanguage != null) ? defaultLanguage : fallbackLanguage;
+	        // just get the one title string from the file...
+	        formTitle = (String) formDefStruct.get(language);
+	      } catch (ClassCastException e) {
+	        e.printStackTrace();
+	        throw new IllegalArgumentException("formTitle is invalid in the formdef json file! "
+	            + formDefFile.getAbsolutePath());
+	      }
+	    }
       } else {
-        try {
-          formDefStruct = (Map<String, Object>) o;
+	    throw new IllegalArgumentException("display entry is not specified in the survey section of the settings of formdef json file! "
+	            + formDefFile.getAbsolutePath());
+	  }
+	} else {
+	    throw new IllegalArgumentException("survey entry is not specified in the settings of formdef json file! "
+	            + formDefFile.getAbsolutePath());
+	}
 
-          if (formDefStruct == null || formDefStruct.size() == 0) {
-            throw new IllegalArgumentException(
-                "formTitle is not specified in the formdef json file! "
-                    + formDefFile.getAbsolutePath());
-          }
-
-          if (!formDefStruct.containsKey(defaultLanguage)) {
-            String[] values = formDefStruct.keySet().toArray(new String[formDefStruct.size()]);
-            Arrays.sort(values, 0, values.length);
-            defaultLanguage = values[0];
-          }
-
-          language = (defaultLanguage != null) ? defaultLanguage : fallbackLanguage;
-          // just get the one title string from the file...
-          formTitle = (String) formDefStruct.get(language);
-        } catch (ClassCastException e) {
-          e.printStackTrace();
-          throw new IllegalArgumentException("formTitle is invalid in the formdef json file! "
-              + formDefFile.getAbsolutePath());
-        }
-      }
-    } else {
-      throw new IllegalArgumentException("formTitle is not specified in the formdef json file! "
-          + formDefFile.getAbsolutePath());
-    }
-
-    setting = getSetting(FORMDEF_FORM_VERSION, settings);
+    setting = (Map<String, Object>) settings.get(FORMDEF_FORM_VERSION);
     if (setting != null) {
       Object o = setting.get(FORMDEF_VALUE);
       if (o == null) {
@@ -358,7 +364,7 @@ public class FormInfo {
       formVersion = null;
     }
 
-    setting = getSetting(FORMDEF_TABLE_ID, settings);
+    setting = (Map<String, Object>) settings.get(FORMDEF_TABLE_ID);
     if (setting != null) {
       Object o = setting.get(FORMDEF_VALUE);
       if (o == null) {
@@ -372,7 +378,7 @@ public class FormInfo {
       tableId = formId;
     }
 
-    setting = getSetting(FORMDEF_XML_SUBMISSION_URL, settings);
+    setting = (Map<String, Object>) settings.get(FORMDEF_XML_SUBMISSION_URL);
     if (setting != null) {
       Object o = setting.get(FORMDEF_VALUE);
       if (o == null) {
@@ -386,7 +392,7 @@ public class FormInfo {
       xmlSubmissionUrl = null;
     }
 
-    setting = getSetting(FORMDEF_BASE64_RSA_PUBLIC_KEY, settings);
+    setting = (Map<String, Object>) settings.get(FORMDEF_BASE64_RSA_PUBLIC_KEY);
     if (setting != null) {
       Object o = setting.get(FORMDEF_VALUE);
       if (o == null) {
@@ -400,7 +406,7 @@ public class FormInfo {
       xmlBase64RsaPublicKey = null;
     }
 
-    setting = getSetting(FORMDEF_XML_ROOT_ELEMENT_NAME, settings);
+    setting = (Map<String, Object>) settings.get(FORMDEF_XML_ROOT_ELEMENT_NAME);
     if (setting != null) {
       Object o = setting.get(FORMDEF_VALUE);
       if (o == null) {
@@ -414,7 +420,7 @@ public class FormInfo {
       xmlRootElementName = "data";
     }
 
-    setting = getSetting(FORMDEF_XML_DEVICE_ID_PROPERTY_NAME, settings);
+    setting = (Map<String, Object>) settings.get(FORMDEF_XML_DEVICE_ID_PROPERTY_NAME);
     if (setting != null) {
       Object o = setting.get(FORMDEF_VALUE);
       if (o == null) {
@@ -429,7 +435,7 @@ public class FormInfo {
       xmlDeviceIdPropertyName = null;
     }
 
-    setting = getSetting(FORMDEF_XML_USER_ID_PROPERTY_NAME, settings);
+    setting = (Map<String, Object>) settings.get(FORMDEF_XML_ACCESS_ID_PROPERTY_NAME);
     if (setting != null) {
       Object o = setting.get(FORMDEF_VALUE);
       if (o == null) {
@@ -437,7 +443,7 @@ public class FormInfo {
       } else if (o instanceof String) {
         xmlUserIdPropertyName = (String) o;
       } else {
-        throw new IllegalArgumentException("Invalid value for " + FORMDEF_XML_USER_ID_PROPERTY_NAME);
+        throw new IllegalArgumentException("Invalid value for " + FORMDEF_XML_ACCESS_ID_PROPERTY_NAME);
       }
     } else {
       xmlUserIdPropertyName = null;

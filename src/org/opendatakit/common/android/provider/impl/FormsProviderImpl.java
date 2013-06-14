@@ -205,16 +205,16 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
 
     values.put(FormsColumns.FORM_MEDIA_PATH, mediaPath.getAbsolutePath());
 
-    // date is the last modification date of the media folder
-    Long now = mediaPath.lastModified();
-    values.put(FormsColumns.DATE, now);
-
     // require that it contain a formDef file
     File formDefFile = new File(mediaPath, ODKFileUtils.FORMDEF_JSON_FILENAME);
     if (!formDefFile.exists()) {
       throw new IllegalArgumentException(ODKFileUtils.FORMDEF_JSON_FILENAME
           + " does not exist in: " + mediaPath.getAbsolutePath());
     }
+
+    // date is the last modification date of the formDef file
+    Long now = formDefFile.lastModified();
+    values.put(FormsColumns.DATE, now);
 
     // ODK2: FILENAME_XFORMS_XML may not exist if non-ODK1 fetch path...
     File xformsFile = new File(mediaPath, ODKFileUtils.FILENAME_XFORMS_XML);
