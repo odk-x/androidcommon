@@ -179,7 +179,8 @@ public final class FormsDiscoveryRunnable implements Runnable {
         String id = c.getString(c.getColumnIndex(FormsColumns.FORM_ID));
         uri = Uri.withAppendedPath(Uri.withAppendedPath(formsProviderContentUri, appName), id);
         Long lastModificationDate = c.getLong(c.getColumnIndex(FormsColumns.DATE));
-        if (lastModificationDate.compareTo(formDef.lastModified()) == 0) {
+        Long formDefModified = formDef.lastModified();
+        if (lastModificationDate.compareTo(formDefModified) == 0) {
           Log.i(t, "[" + instanceCounter + "] updateFormDir: " + mediaPath.getAbsolutePath()
               + " formDef unchanged");
           fi = new FormInfo(c, false);

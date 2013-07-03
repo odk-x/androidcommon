@@ -23,6 +23,7 @@ import org.opendatakit.common.android.database.WebSqlDatabaseHelper;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 
 import android.content.ContentProvider;
+import android.content.Context;
 
 /**
  * Common base class for content providers. This holds the access logic to the
@@ -43,13 +44,13 @@ public abstract class CommonContentProvider extends ContentProvider {
    * @param appName
    * @return an entry in dbHelpers
    */
-  public synchronized static DataModelDatabaseHelper getDbHelper(String appName) {
+  public synchronized static DataModelDatabaseHelper getDbHelper(Context context, String appName) {
 
     DataModelDatabaseHelper dbHelper = dbHelpers.get(appName);
     if (dbHelper == null) {
       String path = ODKFileUtils.getWebDbFolder(appName);
       WebSqlDatabaseHelper h;
-      h = new WebSqlDatabaseHelper(path);
+      h = new WebSqlDatabaseHelper(context, path);
       WebDbDefinition defn = h.getWebKitDatabaseInfoHelper();
       if (defn != null) {
         defn.dbFile.getParentFile().mkdirs();

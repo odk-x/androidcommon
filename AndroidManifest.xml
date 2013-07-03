@@ -18,9 +18,8 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 	<uses-permission android:name="com.android.vending.CHECK_LICENSE"/>
 
-	<!--  FileProvider provides read-only access to files specified by: appName/filepath -->
-    <provider
-        android:name="org.opendatakit.common.android.provider.FileProvider"
-        android:authorities="org.opendatakit.common.android.provider.file" />
+    <uses-library
+        android:name="com.google.android.maps"
+        android:required="false" />
 
 </manifest>

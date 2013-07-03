@@ -18,6 +18,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
@@ -27,8 +28,8 @@ public class WebSqlDatabaseHelper {
 
   private List<WebDbDefinition> webDatabasePaths;
 
-  public WebSqlDatabaseHelper(String path) {
-    WebDbDatabaseHelper mWebDb = new WebDbDatabaseHelper(path);
+  public WebSqlDatabaseHelper(Context context, String path) {
+    WebDbDatabaseHelper mWebDb = new WebDbDatabaseHelper(context, path);
 
     List<WebDbDefinition> dbCandidates = new ArrayList<WebDbDefinition>();
 

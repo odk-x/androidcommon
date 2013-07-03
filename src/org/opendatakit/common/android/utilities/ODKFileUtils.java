@@ -140,14 +140,49 @@ public class ODKFileUtils {
       String partialPath = fullpath.substring(path.length());
       String[] app = partialPath.split(File.separator);
       if (app == null || app.length < 1) {
+        Log.w(t, "Missing file path (nothing under odk): " + fullpath);
         return null;
       }
       if (LEGACY_DIRECTORIES.contains(app[0])) {
+        Log.w(t, "File path detected as legacy directory: " + fullpath);
         return null;
       }
       return partialPath;
+    } else {
+
+      String[] parts = fullpath.split(File.separator);
+      int i = 0;
+      while (parts.length > i && !parts[i].equals("odk")) {
+        ++i;
+      }
+      if (i == parts.length) {
+        Log.w(t, "File path is not under expected Odk Folder (" + path
+            + ") conversion failed for: " + fullpath);
+        return null;
+      }
+      int len = 0; // trailing slash
+      while (i >= 0) {
+        len += parts[i].length() + 1;
+        --i;
+      }
+
+      String partialPath = fullpath.substring(len);
+      String[] app = partialPath.split(File.separator);
+      if (app == null || app.length < 1) {
+        Log.w(t, "File path is not under expected Odk Folder (" + path
+            + ") missing file path (nothing under odk): " + fullpath);
+        return null;
+      }
+      if (LEGACY_DIRECTORIES.contains(app[0])) {
+        Log.w(t, "File path is not under expected Odk Folder (" + path
+            + ") detected as legacy directory: " + fullpath);
+        return null;
+      }
+
+      Log.w(t, "File path is not under expected Odk Folder -- remapped " + fullpath + " as: "
+          + path + partialPath);
+      return partialPath;
     }
-    return null;
   }
 
   public static String getAppFolder(String appName) {
@@ -208,8 +243,8 @@ public class ODKFileUtils {
   }
 
   public static String getAndroidObbFolder(String packageName) {
-    String path = Environment.getExternalStorageDirectory() + File.separator +
-        "Android" + File.separator + "obb" + File.separator + packageName;
+    String path = Environment.getExternalStorageDirectory() + File.separator + "Android"
+        + File.separator + "obb" + File.separator + packageName;
     return path;
   }
 
@@ -234,7 +269,8 @@ public class ODKFileUtils {
     if (f == null) {
       // OK we have had to go all the way up to /
       b.append("..");
-      b.append(File.separator); // to get from ./framework/defaultDir to appName
+      b.append(File.separator); // to get from ./framework/defaultDir to
+      // appName
       b.append("..");
       b.append(File.separator);
 
@@ -246,7 +282,8 @@ public class ODKFileUtils {
 
     } else {
       b.append("..");
-      b.append(File.separator); // to get from ./framework/defaultDir to appName
+      b.append(File.separator); // to get from ./framework/defaultDir to
+      // appName
       b.append("..");
       b.append(File.separator);
     }
@@ -259,21 +296,35 @@ public class ODKFileUtils {
     return b.toString();
   }
 
+  public static String getTablesFolder(String appName, String tableId) {
+    String path;
+    if (tableId == null) {
+      path = getAppFolder(appName) + File.separator + "tables.undef";
+    } else {
+      String tableFolder = tableId.replaceAll("[\\p{Punct}\\p{Space}]", "_");
+
+      path = getAppFolder(appName) + File.separator + "tables" + File.separator + tableFolder;
+    }
+    File f = new File(path);
+    f.mkdirs();
+    return f.getAbsolutePath();
+  }
+
   public static String getInstanceFolder(String appName, String tableId, String instanceId) {
+    String path;
     if (instanceId == null || tableId == null) {
-      String path = getAppFolder(appName) + File.separator + "instances.undef";
-      return path;
+      path = getAppFolder(appName) + File.separator + "instances.undef";
     } else {
       String instanceFolder = instanceId.replaceAll("[\\p{Punct}\\p{Space}]", "_");
       String tableFolder = tableId.replaceAll("[\\p{Punct}\\p{Space}]", "_");
 
-      String path = getAppFolder(appName) + File.separator + "instances" + File.separator
-          + tableFolder + File.separator + instanceFolder;
-
-      File f = new File(path);
-      f.mkdirs();
-      return f.getAbsolutePath();
+      path = getAppFolder(appName) + File.separator + "instances" + File.separator + tableFolder
+          + File.separator + instanceFolder;
     }
+
+    File f = new File(path);
+    f.mkdirs();
+    return f.getAbsolutePath();
   }
 
   public static byte[] getFileAsBytes(File file) {
