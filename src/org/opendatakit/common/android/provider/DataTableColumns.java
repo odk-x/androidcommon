@@ -33,7 +33,7 @@ public class DataTableColumns implements BaseColumns {
   // tablename is chosen by user...
   public static final String ID = TableConstants.ID;
   public static final String ROW_ID = TableConstants.ID;
-  public static final String URI_USER = TableConstants.URI_USER;
+  public static final String URI_ACCESS_CONTROL = TableConstants.URI_ACCESS_CONTROL;
   public static final String SYNC_TAG = TableConstants.SYNC_TAG;
   public static final String SYNC_STATE = TableConstants.SYNC_STATE;
   public static final String TRANSACTIONING = TableConstants.TRANSACTIONING;
