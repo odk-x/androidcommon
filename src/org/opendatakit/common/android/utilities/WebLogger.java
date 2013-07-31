@@ -14,13 +14,12 @@
 
 package org.opendatakit.common.android.utilities;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileFilter;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -38,6 +37,7 @@ import android.util.Log;
  */
 public class WebLogger {
   private static long MILLISECONDS_DAY = 86400000L;
+  private static long FLUSH_INTERVAL = 12000L; // 5 times a minute
 
   private static final int ASSERT = 1;
   private static final int VERBOSE = 2;
@@ -61,11 +61,14 @@ public class WebLogger {
   private String dateStamp = null;
   // opened stream
   private OutputStreamWriter logFile = null;
+  // the last time we flushed our output stream
+  private long lastFlush = 0L;
 
   public synchronized static WebLogger getLogger(String appName) {
     WebLogger logger = loggers.get(appName);
     if (logger == null) {
-      logger = new WebLogger(ODKFileUtils.getLoggingFolder(appName));
+      logger = new WebLogger(appName);
+      loggers.put(appName, logger);
     }
 
     long now = System.currentTimeMillis();
@@ -128,25 +131,49 @@ public class WebLogger {
 
       String loggingPath = ODKFileUtils.getLoggingFolder(appName);
       File loggingDirectory = new File(loggingPath);
-      loggingDirectory.mkdirs();
+      if (!loggingDirectory.exists()) {
+        if (!loggingDirectory.mkdirs()) {
+          Log.e("WebLogger", "Unable to create logging directory");
+          return;
+        }
+      }
 
-      File f = new File(loggingPath + File.separator + curDateStamp + ".log");
+      if (!loggingDirectory.isDirectory()) {
+        Log.e("WebLogger", "Logging Directory exists but is not a directory!");
+        return;
+      }
+
+      File f = new File(loggingDirectory, curDateStamp + ".log");
       try {
         FileOutputStream fo = new FileOutputStream(f, true);
-        logFile = new OutputStreamWriter(fo, "UTF-8");
+        logFile = new OutputStreamWriter(new BufferedOutputStream(fo), "UTF-8");
         dateStamp = curDateStamp;
-      } catch (FileNotFoundException e) {
+        // if we see a lot of these being logged, we have a problem
+        logFile.write("---- starting ----\n");
+      } catch (Exception e) {
         e.printStackTrace();
-        throw new IllegalStateException(e.toString());
-      } catch (UnsupportedEncodingException e) {
-        e.printStackTrace();
-        throw new IllegalStateException(e.toString());
+        Log.e("WebLogger", "Unexpected exception while opening logging file: " + e.toString());
+        try {
+          if ( logFile != null ) {
+            logFile.close();
+          }
+        } catch (Exception ex) {
+          // ignore
+        }
+        logFile = null;
+        return;
       }
     }
 
     if ( logFile != null ) {
       logFile.write(logMsg + "\n");
+    }
+
+    if ( lastFlush + WebLogger.FLUSH_INTERVAL < System.currentTimeMillis() ) {
+      // log when we are explicitly flushing, just to have a record of that in the log
+      logFile.write("---- flushing ----\n");
       logFile.flush();
+      lastFlush = System.currentTimeMillis();
     }
   }
 
