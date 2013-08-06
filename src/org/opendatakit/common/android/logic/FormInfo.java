@@ -449,7 +449,7 @@ public final String formPath;
       xmlUserIdPropertyName = null;
     }
 
-    lastModificationDate = formDefFile.lastModified();
+    lastModificationDate = ODKFileUtils.getMostRecentlyModifiedDate(formDefFile.getParentFile());
 
     formPath = ODKFileUtils.getRelativeFormPath(appName, formDefFile);
 
