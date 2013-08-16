@@ -26,8 +26,10 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
+import org.apache.commons.io.FileUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.kxml2.kdom.Node;
 
@@ -388,6 +390,25 @@ public class ODKFileUtils {
 
   public static String getMd5Hash(File file) {
     return MD5_COLON_PREFIX + getNakedMd5Hash(file);
+  }
+
+  /**
+   * Recursively traverse the directory to find the most recently modified
+   * file within it.
+   *
+   * @param formDir
+   * @return lastModifiedDate of the most recently modified file.
+   */
+  public static long getMostRecentlyModifiedDate(File formDir) {
+    long lastModifiedDate = formDir.lastModified();
+    Iterator<File> allFiles = FileUtils.iterateFiles(formDir, null, true);
+    while (allFiles.hasNext()) {
+      File f = allFiles.next();
+      if (f.lastModified() > lastModifiedDate) {
+        lastModifiedDate = f.lastModified();
+      }
+    }
+    return lastModifiedDate;
   }
 
   public static String getNakedMd5Hash(File file) {

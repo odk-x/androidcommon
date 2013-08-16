@@ -92,22 +92,24 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     // ARGH! we must ensure that we have records in our UPLOADS_TABLE_NAME
     // for every distinct instance in the data table.
     StringBuilder b = new StringBuilder();
+    //@formatter:off
     b.append("INSERT INTO ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append("(")
         .append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(",")
         .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
         .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(") ").append("SELECT ")
         .append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(",")
         .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
-        .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(",").append(" FROM (")
-        .append("SELECT DISTINCT ").append(DATA_TABLE_ID_COLUMN).append(" as ")
-        .append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(",").append("? as ")
-        .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",").append("? as ")
-        .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(",").append(" FROM ")
-        .append(dbTableName).append(" EXCEPT SELECT DISTINCT ")
-        .append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(",")
-        .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
-        .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(" FROM ")
-        .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(")");
+        .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(" FROM (")
+          .append("SELECT DISTINCT ").append(DATA_TABLE_ID_COLUMN).append(" as ")
+          .append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(",").append("? as ")
+          .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",").append("? as ")
+          .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(" FROM ")
+          .append(dbTableName).append(" EXCEPT SELECT DISTINCT ")
+          .append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(",")
+          .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
+          .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(" FROM ")
+          .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(")");
+    //@formatter:on
 
     String[] args = { ids.tableId, ids.formId };
     db.execSQL(b.toString(), args);
@@ -115,10 +117,13 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     // We can now join through and access the data table rows
 
     b.setLength(0);
+    // @formatter:off
     b.append("SELECT ");
-    b.append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".").append(InstanceColumns._ID)
-        .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
-        .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(",").append(dbTableName).append(".")
+    b.append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+        .append(InstanceColumns._ID).append(",")
+     .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+        .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(",")
+     .append(dbTableName).append(".")
         .append("*").append(",");
     // b.append(dbTableName).append(".").append(InstanceColumns._ID).append(",");
     b.append("CASE WHEN ").append(DATA_TABLE_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
@@ -154,6 +159,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
         .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
         .append(InstanceColumns.XML_PUBLISH_FORM_ID);
     b.append(" WHERE ").append(DATA_TABLE_SAVED_COLUMN).append("=?");
+    // @formatter:on
 
     String filterArgs[];
     if (instanceId != null) {
