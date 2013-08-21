@@ -37,7 +37,7 @@ public class TableDefinitionsColumns implements BaseColumns {
     //@formatter:off
     String create = "CREATE TABLE IF NOT EXISTS " + tableName + "("
 				+ TABLE_ID + " TEXT NOT NULL PRIMARY KEY, "
-				+ TABLE_KEY	+ " TEXT NOT NULL UNIQUE, "
+				+ TABLE_KEY	+ " TEXT NULL UNIQUE, "
 				+ DB_TABLE_NAME + " TEXT NOT NULL UNIQUE, "
 				+ TYPE + " TEXT NOT NULL, "
 				+ TABLE_ID_ACCESS_CONTROLS + " TEXT NULL, "
