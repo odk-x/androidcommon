@@ -18,16 +18,16 @@ import android.provider.BaseColumns;
 
 public class TableDefinitionsColumns implements BaseColumns {
 
-  public static final String TABLE_ID = "table_id";
-  public static final String TABLE_KEY = "table_key";
-  public static final String DB_TABLE_NAME = "db_table_name";
+  public static final String TABLE_ID = "_table_id";
+  public static final String TABLE_KEY = "_table_key";
+  public static final String DB_TABLE_NAME = "_db_table_name";
   // DB_TYPE entries must be one of the types defined in TableType.
-  public static final String TYPE = "type";
-  public static final String TABLE_ID_ACCESS_CONTROLS = "table_id_access_controls";
-  public static final String SYNC_TAG = "sync_tag";
-  public static final String LAST_SYNC_TIME = "last_sync_time";
-  public static final String SYNC_STATE = "sync_state";
-  public static final String TRANSACTIONING = "transactioning";
+  public static final String TYPE = "_type";
+  public static final String TABLE_ID_ACCESS_CONTROLS = "_table_id_access_controls";
+  public static final String SYNC_TAG = "_sync_tag";
+  public static final String LAST_SYNC_TIME = "_last_sync_time";
+  public static final String SYNC_STATE = "_sync_state";
+  public static final String TRANSACTIONING = "_transactioning";
 
   // This class cannot be instantiated
   private TableDefinitionsColumns() {

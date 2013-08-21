@@ -19,12 +19,12 @@ import android.provider.BaseColumns;
 public class KeyValueStoreColumns implements BaseColumns {
 
   // Names of the columns in the key value store.
-  public static final String TABLE_ID = "table_id";
-  public static final String PARTITION = "partition";
-  public static final String ASPECT = "aspect";
-  public static final String KEY = "key";
-  public static final String VALUE_TYPE = "type";
-  public static final String VALUE = "value";
+  public static final String TABLE_ID = "_table_id";
+  public static final String PARTITION = "_partition";
+  public static final String ASPECT = "_aspect";
+  public static final String KEY = "_key";
+  public static final String VALUE_TYPE = "_type";
+  public static final String VALUE = "_value";
 
   /**
    * The table creation SQL statement for a KeyValueStore table.
