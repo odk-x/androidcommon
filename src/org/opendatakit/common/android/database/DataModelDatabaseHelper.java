@@ -46,30 +46,30 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
    */
 
   // tablenames for the various key value stores
-  public static final String KEY_VALUE_STORE_DEFAULT_TABLE_NAME = "key_value_store_default";
-  public static final String KEY_VALUE_STORE_ACTIVE_TABLE_NAME = "key_value_store_active";
-  public static final String KEY_VALUE_STORE_SERVER_TABLE_NAME = "key_value_store_server";
-  public static final String KEY_VALULE_STORE_SYNC_TABLE_NAME = "key_value_store_sync";
+  public static final String KEY_VALUE_STORE_DEFAULT_TABLE_NAME = "_key_value_store_default";
+  public static final String KEY_VALUE_STORE_ACTIVE_TABLE_NAME = "_key_value_store_active";
+  public static final String KEY_VALUE_STORE_SERVER_TABLE_NAME = "_key_value_store_server";
+  public static final String KEY_VALULE_STORE_SYNC_TABLE_NAME = "_key_value_store_sync";
 
   /**
    * table definitions table
    */
 
   // only one of these...
-  private static final String TABLE_DEFS_TABLE_NAME = "table_definitions";
+  public static final String TABLE_DEFS_TABLE_NAME = "_table_definitions";
   /**
    * column definitions table
    */
 
   // only one of these...
-  private static final String COLUMN_DEFINITIONS_TABLE_NAME = "column_definitions";
+  public static final String COLUMN_DEFINITIONS_TABLE_NAME = "_column_definitions";
 
   /**
    * For ODK Survey (only)
    *
    * Tracks all the forms present in the forms directory.
    */
-  public static final String SURVEY_CONFIGURATION_TABLE_NAME = "survey_configuration";
+  public static final String SURVEY_CONFIGURATION_TABLE_NAME = "_survey_configuration";
 
   /**
    * For ODK Survey (only)
@@ -78,7 +78,7 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
    * publishing to multiple formids for a given table row
    */
 
-  public static final String UPLOADS_TABLE_NAME = "uploads";
+  public static final String UPLOADS_TABLE_NAME = "_uploads";
 
   /**
    * For ODK Survey (only)
@@ -86,7 +86,7 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
    * Tracks all the forms present in the forms directory.
    */
 
-  public static final String FORMS_TABLE_NAME = "formDefs";
+  public static final String FORMS_TABLE_NAME = "_formDefs";
 
   public DataModelDatabaseHelper(String dbPath, String databaseName) {
     super(dbPath, databaseName, null, APP_KEY, APP_VERSION);
