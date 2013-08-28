@@ -36,7 +36,7 @@ public class DataTableColumns implements BaseColumns {
   public static final String URI_ACCESS_CONTROL = TableConstants.URI_ACCESS_CONTROL;
   public static final String SYNC_TAG = TableConstants.SYNC_TAG;
   public static final String SYNC_STATE = TableConstants.SYNC_STATE;
-  public static final String TRANSACTIONING = TableConstants.TRANSACTIONING;
+  public static final String CONFLICT_TYPE = TableConstants.CONFLICT_TYPE;
 
   /**
    * (timestamp, saved, form_id) are the tuple written and managed by ODK Survey
