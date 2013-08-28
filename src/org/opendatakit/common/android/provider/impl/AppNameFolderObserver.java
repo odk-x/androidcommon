@@ -28,14 +28,14 @@ import android.util.Log;
  *
  */
 class AppNameFolderObserver extends FileObserver {
-  private static final String t = "AppNameFormsObserver";
+  private static final String t = "AppNameFolderObserver";
 
   private ODKFolderObserver parent;
   private boolean active = true;
   private String appName;
 
-  // the /odk/appName/forms observer...
-  private AppNameFormsFolderObserver appNameformsWatch = null;
+  // the /odk/appName/tables observer...
+  private AppNameTablesFolderObserver appNameTablesWatch = null;
   // the /odk/appName/framework observer...
   private AppNameFrameworkFolderObserver appNameframeworkWatch = null;
 
@@ -49,14 +49,15 @@ class AppNameFolderObserver extends FileObserver {
   }
 
   private void update() {
-    File formsFolder = new File(ODKFileUtils.getFormsFolder(appName));
 
-    if (formsFolder.exists() && formsFolder.isDirectory()) {
-      if (appNameformsWatch == null) {
-        addFormsFolderWatch();
+    File tablesFolder = new File(ODKFileUtils.getTablesFolder(appName));
+
+    if (tablesFolder.exists() && tablesFolder.isDirectory()) {
+      if (appNameTablesWatch == null) {
+        addTablesFolderWatch();
       }
     } else {
-      removeFormsFolderWatch();
+      removeTablesFolderWatch();
     }
 
     File frameworkFolder = new File(ODKFileUtils.getFrameworkFolder(appName));
@@ -73,11 +74,12 @@ class AppNameFolderObserver extends FileObserver {
   public void stop() {
     active = false;
     this.stopWatching();
-    // remove watches on the forms formDef files...
-    if (appNameformsWatch != null) {
-      appNameformsWatch.stop();
+
+    // remove watches on the tables formDef files...
+    if (appNameTablesWatch != null) {
+      appNameTablesWatch.stop();
     }
-    appNameformsWatch = null;
+    appNameTablesWatch = null;
 
     // remove watches on the framework formDef files...
     if (appNameframeworkWatch != null) {
@@ -88,22 +90,22 @@ class AppNameFolderObserver extends FileObserver {
     Log.i(t, "stop() " + ODKFileUtils.getAppFolder(appName));
   }
 
-  private void addFormsFolderWatch() {
+  private void addTablesFolderWatch() {
     if (!active)
       return;
-    if (appNameformsWatch != null) {
-      appNameformsWatch.stop();
+    if (appNameTablesWatch != null) {
+      appNameTablesWatch.stop();
     }
-    appNameformsWatch = new AppNameFormsFolderObserver(this, appName);
+    appNameTablesWatch = new AppNameTablesFolderObserver(this, appName);
   }
 
-  public void removeFormsFolderWatch() {
+  public void removeTablesFolderWatch() {
     if (!active)
       return;
-    if (appNameformsWatch != null) {
-      appNameformsWatch.stop();
-      appNameformsWatch = null;
-      launchFormsDiscovery("monitoring removed: " + ODKFileUtils.getFormsFolder(appName));
+    if (appNameTablesWatch != null) {
+      appNameTablesWatch.stop();
+      appNameTablesWatch = null;
+      launchFormsDiscovery(null, null, "monitoring removed: " + ODKFileUtils.getTablesFolder(appName));
     }
   }
 
@@ -122,7 +124,7 @@ class AppNameFolderObserver extends FileObserver {
     if (appNameframeworkWatch != null) {
       appNameframeworkWatch.stop();
       appNameframeworkWatch = null;
-      launchFormsDiscovery("monitoring removed: " + ODKFileUtils.getFrameworkFolder(appName));
+      launchFrameworkDiscovery("monitoring removed: " + ODKFileUtils.getFrameworkFolder(appName));
     }
   }
 
@@ -147,7 +149,11 @@ class AppNameFolderObserver extends FileObserver {
     update();
   }
 
-  public void launchFormsDiscovery(String reason) {
-    parent.launchFormsDiscovery(appName, reason);
+  public void launchFormsDiscovery(String tableDir, String formDir, String reason) {
+    parent.launchFormsDiscovery(appName, tableDir, formDir, reason);
+  }
+
+  public void launchFrameworkDiscovery(String reason) {
+    parent.launchFrameworkDiscovery(appName, reason);
   }
 }

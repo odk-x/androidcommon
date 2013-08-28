@@ -230,7 +230,10 @@ public final String formPath;
     formFilePath = parentFile.getAbsolutePath() + File.separator + parentFile.getName() + ".xml";
     formMediaPath = parentFile.getAbsolutePath();
 
-    File appRoot = parentFile.getParentFile() /* forms */.getParentFile(); /* app */
+    File appRoot = parentFile.getParentFile() /* forms */
+        .getParentFile() /* table_id */
+        .getParentFile() /* tables */
+        .getParentFile() /* app */;
     appName = appRoot.getName();
 
     // OK -- parse the formDef file.

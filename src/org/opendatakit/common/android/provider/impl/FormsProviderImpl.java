@@ -19,7 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
@@ -196,8 +196,11 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
           + " directory does not exist: " + mediaPath.getAbsolutePath());
     }
 
-    String mediaAppName = mediaPath.getParentFile()/* forms folder */.getParentFile()
-    /* app */.getName();
+    String mediaAppName = mediaPath.getParentFile()/* forms folder */
+        .getParentFile() /* table_id */
+        .getParentFile() /* tables */
+        .getParentFile() /* app */
+        .getName();
     if (!appName.equals(mediaAppName)) {
       throw new IllegalArgumentException(
           "Form definition is not contained within the application: " + appName);
@@ -323,14 +326,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     FORMS, FRAMEWORK, OTHER
   };
 
-  private void moveDirectory(String appName, File mediaDirectory) throws IOException {
-    String formsOrFrameworkDirectory = mediaDirectory.getParentFile().getAbsolutePath();
-    DirType mediaType = DirType.OTHER;
-    if (formsOrFrameworkDirectory.equals(ODKFileUtils.getFormsFolder(appName))) {
-      mediaType = DirType.FORMS;
-    } else if (formsOrFrameworkDirectory.equals(ODKFileUtils.getFrameworkFolder(appName))) {
-      mediaType = DirType.FRAMEWORK;
-    }
+  private void moveDirectory(String appName, DirType mediaType, File mediaDirectory) throws IOException {
 
     if (mediaDirectory.exists() && mediaType != DirType.OTHER) {
       // it is a directory under our control
@@ -419,16 +415,18 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     SQLiteDatabase db = getDbHelper(getContext(), appName).getWritableDatabase();
     Cursor del = null;
     Integer idValue = null;
+    String tableIdValue = null;
     String formIdValue = null;
-    HashSet<File> mediaDirs = new HashSet<File>();
+    HashMap<File,DirType> mediaDirs = new HashMap<File,DirType>();
     try {
       del = this.query(uri, null, whereId, whereIdArgs, null);
       del.moveToPosition(-1);
       while (del.moveToNext()) {
         idValue = del.getInt(del.getColumnIndex(FormsColumns._ID));
+        tableIdValue = del.getString(del.getColumnIndex(FormsColumns.TABLE_ID));
         formIdValue = del.getString(del.getColumnIndex(FormsColumns.FORM_ID));
         File mediaDir = new File(del.getString(del.getColumnIndex(FormsColumns.FORM_MEDIA_PATH)));
-        mediaDirs.add(mediaDir);
+        mediaDirs.put(mediaDir, (tableIdValue == null) ? DirType.FRAMEWORK : DirType.FORMS );
       }
     } finally {
       if (del != null) {
@@ -440,9 +438,9 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     // and attempt to move these directories to the stale forms location
     // so that they do not immediately get rescanned...
 
-    for (File mediaDir : mediaDirs) {
+    for (HashMap.Entry<File,DirType> entry : mediaDirs.entrySet() ) {
       try {
-        moveDirectory(appName, mediaDir);
+        moveDirectory(appName, entry.getValue(), entry.getKey());
       } catch (IOException e) {
         e.printStackTrace();
         Log.e(t, "Unable to move directory " + e.toString());
@@ -466,10 +464,12 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
   }
 
   static class FormIdVersion {
+    final String tableId;
     final String formId;
     final String formVersion;
 
-    FormIdVersion(String formId, String formVersion) {
+    FormIdVersion(String tableId, String formId, String formVersion) {
+      this.tableId = tableId;
       this.formId = formId;
       this.formVersion = formVersion;
     }
@@ -481,8 +481,9 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       FormIdVersion that = (FormIdVersion) o;
 
       // identical if id and version matches...
-      return formId.equals(that.formId)
-          && ((formVersion == null) ? (that.formVersion == null)
+      return tableId.equals(that.tableId) &&
+          formId.equals(that.formId) &&
+          ((formVersion == null) ? (that.formVersion == null)
               : (that.formVersion != null && formVersion.equals(that.formVersion)));
     }
   }
@@ -535,8 +536,9 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
      * non-matching directories elsewhere.
      */
     Integer idValue = null;
+    String tableIdValue = null;
     String formIdValue = null;
-    HashSet<File> mediaDirs = new HashSet<File>();
+    HashMap<File, DirType> mediaDirs = new HashMap<File, DirType>();
     boolean multiset = false;
     Cursor c = null;
     try {
@@ -547,14 +549,16 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
         c.moveToPosition(-1);
         while (c.moveToNext()) {
           idValue = c.getInt(c.getColumnIndex(FormsColumns._ID));
+          tableIdValue = c.getString(c.getColumnIndex(FormsColumns.TABLE_ID));
           formIdValue = c.getString(c.getColumnIndex(FormsColumns.FORM_ID));
+          String tableId = c.getString(c.getColumnIndex(FormsColumns.TABLE_ID));
           String formId = c.getString(c.getColumnIndex(FormsColumns.FORM_ID));
           String formVersion = c.getString(c.getColumnIndex(FormsColumns.FORM_VERSION));
-          FormIdVersion cur = new FormIdVersion(formId, formVersion);
+          FormIdVersion cur = new FormIdVersion(tableId, formId, formVersion);
 
           String mediaPath = c.getString(c.getColumnIndex(FormsColumns.FORM_MEDIA_PATH));
           if (mediaPath != null) {
-            mediaDirs.add(new File(mediaPath));
+            mediaDirs.put(new File(mediaPath), (tableIdValue == null) ? DirType.FRAMEWORK : DirType.FORMS);
           }
 
           if (ref != null && !ref.equals(cur)) {
@@ -582,10 +586,11 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       // try to move all the existing non-matching media paths to
       // somewhere else...
       File mediaPath = new File(values.getAsString(FormsColumns.FORM_MEDIA_PATH));
-      for (File altPath : mediaDirs) {
+      for (HashMap.Entry<File,DirType> entry : mediaDirs.entrySet()) {
+        File altPath = entry.getKey();
         if (!altPath.equals(mediaPath)) {
           try {
-            moveDirectory(appName, altPath);
+            moveDirectory(appName, entry.getValue(), altPath);
           } catch (IOException e) {
             e.printStackTrace();
             Log.e(t, "Attempt to move " + altPath.getAbsolutePath() + " failed: " + e.toString());

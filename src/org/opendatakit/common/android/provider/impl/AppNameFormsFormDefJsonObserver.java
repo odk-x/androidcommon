@@ -36,7 +36,7 @@ class AppNameFormsFormDefJsonObserver extends FileObserver {
   private long lastModificationTime = -1L;
 
   public AppNameFormsFormDefJsonObserver(AppNameFormsFormDirObserver parent) {
-    super(parent.getFormDirPath() + File.separator + ODKFileUtils.FORMDEF_JSON_FILENAME,
+    super(parent.getFormDefJsonFilePath(),
         ODKFolderObserver.LIKELY_CHANGE_OF_FILE);
     this.parent = parent;
     this.startWatching();
@@ -45,8 +45,7 @@ class AppNameFormsFormDefJsonObserver extends FileObserver {
   }
 
   private void update() {
-    File formDirFolder = new File(parent.getFormDirPath());
-    File formDefJson = new File(formDirFolder, ODKFileUtils.FORMDEF_JSON_FILENAME);
+    File formDefJson = new File(parent.getFormDefJsonFilePath());
 
     if (formDefJson.exists() && formDefJson.isFile()) {
       String action = (lastModificationTime == -1L) ? "monitoring added: " : "changed: ";
@@ -61,8 +60,7 @@ class AppNameFormsFormDefJsonObserver extends FileObserver {
   }
 
   public void stop() {
-    File formDirFolder = new File(parent.getFormDirPath());
-    File formDefJson = new File(formDirFolder, ODKFileUtils.FORMDEF_JSON_FILENAME);
+    File formDefJson = new File(parent.getFormDefJsonFilePath());
 
     active = false;
     this.stopWatching();

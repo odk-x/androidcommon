@@ -84,7 +84,7 @@ public final class FormsColumns implements BaseColumns {
 	            + DISPLAY_NAME + " text not null, "
 	            + DISPLAY_SUBTEXT + " text not null, "
 	            + DESCRIPTION + " text, "
-	            + TABLE_ID + " text not null, "
+	            + TABLE_ID + " text null, " // null if framework
 	            + FORM_VERSION + " text, "
 	            + FORM_FILE_PATH + " text null, "
 	            + FORM_MEDIA_PATH + " text not null, "

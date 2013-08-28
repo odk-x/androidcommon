@@ -15,7 +15,6 @@
 package org.opendatakit.common.android.provider.impl;
 
 import java.io.File;
-import java.io.FileFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,16 +42,32 @@ public final class FormsDiscoveryRunnable implements Runnable {
   private Context context;
   private Uri formsProviderContentUri;
   private String appName;
+  private boolean isFramework = false;
+  private String tableDirName;
+  private String formDirName;
 
   private static synchronized final int getNextCount() {
     int newCount = ++counter;
     return newCount;
   }
 
+  public FormsDiscoveryRunnable(FormsProviderImpl impl, String appName, String tableDirName, String formDirName) {
+    context = impl.getContext();
+    formsProviderContentUri = Uri.parse("content://" + impl.getFormsAuthority());
+    this.appName = appName;
+    this.tableDirName = tableDirName;
+    this.formDirName = formDirName;
+    this.isFramework = false;
+    this.instanceCounter = getNextCount();
+  }
+
   public FormsDiscoveryRunnable(FormsProviderImpl impl, String appName) {
     context = impl.getContext();
     formsProviderContentUri = Uri.parse("content://" + impl.getFormsAuthority());
     this.appName = appName;
+    this.tableDirName = null;
+    this.formDirName = null;
+    this.isFramework = true;
     this.instanceCounter = getNextCount();
   }
 
@@ -355,55 +370,25 @@ public final class FormsDiscoveryRunnable implements Runnable {
   }
 
   /**
-   * Scan for new directories in the given formsDir and add them to the
-   * database. If it is the formsFolder, then any 'default' forms should be
-   * forbidden. If it is not the formsFolder, only 'default' forms should be
-   * allowed
-   *
-   * @param formsDir
-   * @param isFormsFolder
-   * @param baseStaleMediaPath
-   */
-  private final void updateFormInfoCommon(File formsDir, boolean isFormsFolder,
-      String baseStaleMediaPath) {
-
-    File[] candidates = formsDir.listFiles(new FileFilter() {
-
-      @Override
-      public boolean accept(File pathname) {
-        if (!pathname.isDirectory())
-          return false;
-        File f = new File(pathname, ODKFileUtils.FORMDEF_JSON_FILENAME);
-        return (f.exists() && f.isFile());
-      }
-    });
-
-    ArrayList<File> formDirs = new ArrayList<File>();
-    if (candidates != null) {
-      for (File formDir : candidates) {
-        formDirs.add(formDir);
-      }
-    }
-
-    for (File formDir : formDirs) {
-      Log.i(t, "[" + instanceCounter + "] updateFormInfo: " + formDir.getAbsolutePath());
-      updateFormDir(formDir, isFormsFolder, baseStaleMediaPath);
-    }
-  }
-
-  /**
    * Scan for new forms directories in both the forms and framework areas and
    * add them to Forms database.
    */
   private final void updateFormInfo() {
     Log.i(t, "[" + instanceCounter + "] updateFormInfo: " + appName + " begin");
 
-    File formsDir = new File(ODKFileUtils.getFormsFolder(appName));
-    updateFormInfoCommon(formsDir, true, ODKFileUtils.getStaleFormsFolder(appName) + File.separator);
-
-    File frameworkDir = new File(ODKFileUtils.getFrameworkFolder(appName));
-    updateFormInfoCommon(frameworkDir, false, ODKFileUtils.getStaleFrameworkFolder(appName)
-        + File.separator);
+    if ( !isFramework ) {
+      if ( tableDirName != null && formDirName != null ) {
+        // specifically target this form...
+        File formDir = new File(ODKFileUtils.getFormFolder(appName, tableDirName, formDirName));
+        Log.i(t, "[" + instanceCounter + "] updateFormInfo: form: " + formDir.getAbsolutePath());
+        updateFormDir(formDir, true, ODKFileUtils.getStaleFormsFolder(appName) + File.separator);
+      }
+    } else {
+      File frameworkDir = new File(ODKFileUtils.getFrameworkFolder(appName));
+      Log.i(t, "[" + instanceCounter + "] updateFormInfo: framework: " + frameworkDir.getAbsolutePath());
+      updateFormDir(frameworkDir, false, ODKFileUtils.getStaleFrameworkFolder(appName)
+          + File.separator);
+    }
 
     Log.i(t, "[" + instanceCounter + "] updateFormInfo: " + appName + " end");
   }

@@ -45,6 +45,25 @@ import android.util.Log;
  * @author Carl Hartung (carlhartung@gmail.com)
  */
 public class ODKFileUtils {
+  private static final String ODK_FOLDER_NAME = "odk";
+
+  private static final String TABLES_FOLDER_NAME = "tables";
+  private static final String FORMS_FOLDER_NAME = "forms";
+  private static final String INSTANCES_FOLDER_NAME = "instances";
+
+  private static final String METADATA_FOLDER_NAME = "metadata";
+  private static final String WEB_DB_FOLDER_NAME = "webDb";
+  private static final String GEO_CACHE_FOLDER_NAME = "geoCache";
+  private static final String APP_CACHE_FOLDER_NAME = "appCache";
+
+  private static final String LOGGING_FOLDER_NAME = "logging";
+
+  private static final String FRAMEWORK_FOLDER_NAME = "framework";
+
+  private static final String STALE_FRAMEWORK_FOLDER_NAME = "framework.old";
+
+  private static final String STALE_FORMS_FOLDER_NAME = "forms.old";
+
   private final static String t = "FileUtils";
 
   /**
@@ -54,10 +73,10 @@ public class ODKFileUtils {
   private static final List<String> LEGACY_DIRECTORIES;
   static {
     LEGACY_DIRECTORIES = new ArrayList<String>();
-    LEGACY_DIRECTORIES.add("forms");
-    LEGACY_DIRECTORIES.add("instances");
+    LEGACY_DIRECTORIES.add(FORMS_FOLDER_NAME);
+    LEGACY_DIRECTORIES.add(INSTANCES_FOLDER_NAME);
     LEGACY_DIRECTORIES.add(".cache");
-    LEGACY_DIRECTORIES.add("metadata");
+    LEGACY_DIRECTORIES.add(METADATA_FOLDER_NAME);
     LEGACY_DIRECTORIES.add("config");
   }
 
@@ -99,7 +118,7 @@ public class ODKFileUtils {
   }
 
   public static String getOdkFolder() {
-    String path = Environment.getExternalStorageDirectory() + File.separator + "odk";
+    String path = Environment.getExternalStorageDirectory() + File.separator + ODK_FOLDER_NAME;
     return path;
   }
 
@@ -123,6 +142,56 @@ public class ODKFileUtils {
     return results;
   }
 
+  public static void assertDirectoryStructure(String appName) {
+    String[] dirs = { ODKFileUtils.getAppFolder(appName), ODKFileUtils.getTablesFolder(appName),
+        ODKFileUtils.getStaleFormsFolder(appName), ODKFileUtils.getFrameworkFolder(appName),
+        ODKFileUtils.getStaleFrameworkFolder(appName), ODKFileUtils.getLoggingFolder(appName),
+        ODKFileUtils.getMetadataFolder(appName), ODKFileUtils.getAppCacheFolder(appName),
+        ODKFileUtils.getGeoCacheFolder(appName), ODKFileUtils.getWebDbFolder(appName) };
+
+    for (String dirName : dirs) {
+      File dir = new File(dirName);
+      if (!dir.exists()) {
+        if (!dir.mkdirs()) {
+          RuntimeException e = new RuntimeException("Cannot create directory: " + dirName);
+          throw e;
+        }
+      } else {
+        if (!dir.isDirectory()) {
+          RuntimeException e = new RuntimeException(dirName + " exists, but is not a directory");
+          throw e;
+        }
+      }
+    }
+  }
+
+  public static boolean isConfiguredApp(String appName) {
+    File[] files = new File(getTablesFolder(appName)).listFiles(new FileFilter() {
+
+      @Override
+      public boolean accept(File pathname) {
+        if ( !pathname.isDirectory() ) {
+          return false;
+        }
+        File forms = new File(pathname, FORMS_FOLDER_NAME);
+        if ( !forms.exists() || !forms.isDirectory() ) {
+          return false;
+        }
+        File[] formDirs = forms.listFiles(new FileFilter() {
+
+          @Override
+          public boolean accept(File formDirName) {
+            return formDirName.isDirectory()
+                && new File(formDirName, FORMDEF_JSON_FILENAME).exists();
+          }});
+
+        return formDirs.length != 0;
+      }
+    });
+
+    return (files.length != 0);
+  }
+
   public static File fromAppPath(String appPath) {
     String[] terms = appPath.split(File.separator);
     if (terms == null || terms.length < 1) {
@@ -142,7 +211,7 @@ public class ODKFileUtils {
       String partialPath = fullpath.substring(path.length());
       String[] app = partialPath.split(File.separator);
       if (app == null || app.length < 1) {
-        Log.w(t, "Missing file path (nothing under odk): " + fullpath);
+        Log.w(t, "Missing file path (nothing under '" + ODK_FOLDER_NAME + "'): " + fullpath);
         return null;
       }
       if (LEGACY_DIRECTORIES.contains(app[0])) {
@@ -154,12 +223,12 @@ public class ODKFileUtils {
 
       String[] parts = fullpath.split(File.separator);
       int i = 0;
-      while (parts.length > i && !parts[i].equals("odk")) {
+      while (parts.length > i && !parts[i].equals(ODK_FOLDER_NAME)) {
         ++i;
       }
       if (i == parts.length) {
-        Log.w(t, "File path is not under expected Odk Folder (" + path
-            + ") conversion failed for: " + fullpath);
+        Log.w(t, "File path is not under expected '" + ODK_FOLDER_NAME +
+            "' Folder (" + path + ") conversion failed for: " + fullpath);
         return null;
       }
       int len = 0; // trailing slash
@@ -171,18 +240,19 @@ public class ODKFileUtils {
       String partialPath = fullpath.substring(len);
       String[] app = partialPath.split(File.separator);
       if (app == null || app.length < 1) {
-        Log.w(t, "File path is not under expected Odk Folder (" + path
-            + ") missing file path (nothing under odk): " + fullpath);
+        Log.w(t, "File path is not under expected '" + ODK_FOLDER_NAME +
+            "' Folder (" + path + ") missing file path (nothing under '" +
+            ODK_FOLDER_NAME + "'): " + fullpath);
         return null;
       }
       if (LEGACY_DIRECTORIES.contains(app[0])) {
-        Log.w(t, "File path is not under expected Odk Folder (" + path
-            + ") detected as legacy directory: " + fullpath);
+        Log.w(t, "File path is not under expected '" + ODK_FOLDER_NAME +
+            "' Folder (" + path + ") detected as legacy directory: " + fullpath);
         return null;
       }
 
-      Log.w(t, "File path is not under expected Odk Folder -- remapped " + fullpath + " as: "
-          + path + partialPath);
+      Log.w(t, "File path is not under expected '" + ODK_FOLDER_NAME +
+            "' Folder -- remapped " + fullpath + " as: " + path + partialPath);
       return partialPath;
     }
   }
@@ -192,9 +262,58 @@ public class ODKFileUtils {
     return path;
   }
 
-  public static String getFormsFolder(String appName) {
-    String path = getAppFolder(appName) + File.separator + "forms";
+  public static String getTablesFolder(String appName) {
+    String path = getAppFolder(appName) + File.separator + TABLES_FOLDER_NAME;
     return path;
+  }
+
+  public static String getTablesFolder(String appName, String tableId) {
+    String path;
+    if (tableId == null || tableId.length() == 0) {
+      throw new IllegalArgumentException("getTablesFolder: tableId is null or the empty string!");
+    } else {
+      if ( !tableId.matches("^\\p{L}\\p{M}*(\\p{L}\\p{M}*|\\p{Nd}|_)+$") ) {
+        throw new IllegalArgumentException(
+            "getFormFolder: tableId does not begin with a letter and contain only letters, digits or underscores!");
+      }
+      path = getTablesFolder(appName) + File.separator + tableId;
+    }
+    File f = new File(path);
+    f.mkdirs();
+    return f.getAbsolutePath();
+  }
+
+  public static String getFormsFolder(String appName, String tableId) {
+    String path = getTablesFolder(appName, tableId) + File.separator + FORMS_FOLDER_NAME;
+    return path;
+  }
+
+  public static String getFormFolder(String appName, String tableId, String formId) {
+    if (formId == null || formId.length() == 0) {
+      throw new IllegalArgumentException("getFormFolder: formId is null or the empty string!");
+    } else {
+      if ( !formId.matches("^\\p{L}\\p{M}*(\\p{L}\\p{M}*|\\p{Nd}|_)+$") ) {
+        throw new IllegalArgumentException(
+            "getFormFolder: formId does not begin with a letter and contain only letters, digits or underscores!");
+      }
+      String path = getFormsFolder(appName, tableId) + File.separator + formId;
+      return path;
+    }
+  }
+
+  public static String getInstanceFolder(String appName, String tableId, String instanceId) {
+    String path;
+    if (instanceId == null || instanceId.length() == 0) {
+      throw new IllegalArgumentException("getInstanceFolder: instanceId is null or the empty string!");
+    } else {
+      String instanceFolder = instanceId.replaceAll("[\\p{Punct}\\p{Space}]", "_");
+
+      path = getTablesFolder(appName, tableId) + File.separator + INSTANCES_FOLDER_NAME + File.separator + instanceFolder;
+    }
+
+    File f = new File(path);
+    f.mkdirs();
+    return f.getAbsolutePath();
   }
 
   /**
@@ -205,42 +324,42 @@ public class ODKFileUtils {
    * @return
    */
   public static String getFrameworkFolder(String appName) {
-    String path = getAppFolder(appName) + File.separator + "framework";
+    String path = getAppFolder(appName) + File.separator + FRAMEWORK_FOLDER_NAME;
     return path;
   }
 
   public static String getStaleFormsFolder(String appName) {
-    String path = getAppFolder(appName) + File.separator + "forms.old";
+    String path = getAppFolder(appName) + File.separator + STALE_FORMS_FOLDER_NAME;
     return path;
   }
 
   public static String getStaleFrameworkFolder(String appName) {
-    String path = getAppFolder(appName) + File.separator + "framework.old";
+    String path = getAppFolder(appName) + File.separator + STALE_FRAMEWORK_FOLDER_NAME;
     return path;
   }
 
   public static String getLoggingFolder(String appName) {
-    String path = getAppFolder(appName) + File.separator + "logging";
+    String path = getAppFolder(appName) + File.separator + LOGGING_FOLDER_NAME;
     return path;
   }
 
   public static String getMetadataFolder(String appName) {
-    String path = getAppFolder(appName) + File.separator + "metadata";
+    String path = getAppFolder(appName) + File.separator + METADATA_FOLDER_NAME;
     return path;
   }
 
   public static String getAppCacheFolder(String appName) {
-    String path = getMetadataFolder(appName) + File.separator + "appCache";
+    String path = getMetadataFolder(appName) + File.separator + APP_CACHE_FOLDER_NAME;
     return path;
   }
 
   public static String getGeoCacheFolder(String appName) {
-    String path = getMetadataFolder(appName) + File.separator + "geoCache";
+    String path = getMetadataFolder(appName) + File.separator + GEO_CACHE_FOLDER_NAME;
     return path;
   }
 
   public static String getWebDbFolder(String appName) {
-    String path = getMetadataFolder(appName) + File.separator + "webDb";
+    String path = getMetadataFolder(appName) + File.separator + WEB_DB_FOLDER_NAME;
     return path;
   }
 
@@ -270,12 +389,12 @@ public class ODKFileUtils {
     StringBuilder b = new StringBuilder();
     if (f == null) {
       // OK we have had to go all the way up to /
-      b.append("..");
-      b.append(File.separator); // to get from ./framework/defaultDir to
-      // appName
+
+      // to get from ./framework to appName
       b.append("..");
       b.append(File.separator);
 
+      // and then go all the way up to / from our appName
       while (parentDir != null) {
         b.append("..");
         b.append(File.separator);
@@ -283,9 +402,7 @@ public class ODKFileUtils {
       }
 
     } else {
-      b.append("..");
-      b.append(File.separator); // to get from ./framework/defaultDir to
-      // appName
+      // to get from ./framework to appName
       b.append("..");
       b.append(File.separator);
     }
@@ -296,37 +413,6 @@ public class ODKFileUtils {
       b.append(File.separator);
     }
     return b.toString();
-  }
-
-  public static String getTablesFolder(String appName, String tableId) {
-    String path;
-    if (tableId == null) {
-      path = getAppFolder(appName) + File.separator + "tables.undef";
-    } else {
-      String tableFolder = tableId.replaceAll("[\\p{Punct}\\p{Space}]", "_");
-
-      path = getAppFolder(appName) + File.separator + "tables" + File.separator + tableFolder;
-    }
-    File f = new File(path);
-    f.mkdirs();
-    return f.getAbsolutePath();
-  }
-
-  public static String getInstanceFolder(String appName, String tableId, String instanceId) {
-    String path;
-    if (instanceId == null || tableId == null) {
-      path = getAppFolder(appName) + File.separator + "instances.undef";
-    } else {
-      String instanceFolder = instanceId.replaceAll("[\\p{Punct}\\p{Space}]", "_");
-      String tableFolder = tableId.replaceAll("[\\p{Punct}\\p{Space}]", "_");
-
-      path = getAppFolder(appName) + File.separator + "instances" + File.separator + tableFolder
-          + File.separator + instanceFolder;
-    }
-
-    File f = new File(path);
-    f.mkdirs();
-    return f.getAbsolutePath();
   }
 
   public static byte[] getFileAsBytes(File file) {

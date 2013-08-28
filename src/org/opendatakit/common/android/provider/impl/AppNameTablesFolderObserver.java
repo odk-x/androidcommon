@@ -27,41 +27,39 @@ import android.os.FileObserver;
 import android.util.Log;
 
 /**
- * Monitor changes to the forms folder within an appName, i.e.,
- * /odk/appName/tables/tableId/forms
+ * Monitor changes to the tables folder within an appName, i.e.,
+ * /odk/appName/tables
  *
  * @author mitchellsundt@gmail.com
  *
  */
-class AppNameFormsFolderObserver extends FileObserver {
-  private static final String t = "AppNameFormsFolderObserver";
+class AppNameTablesFolderObserver extends FileObserver {
+  private static final String t = "AppNameTablesFolderObserver";
 
-  private AppNameTablesTableDirObserver parent;
+  private AppNameFolderObserver parent;
   private boolean active = true;
   private String appName;
-  private String tableDirName;
 
-  Map<String, AppNameFormsFormDirObserver> formDirsWatch = new HashMap<String, AppNameFormsFormDirObserver>();
+  Map<String, AppNameTablesTableDirObserver> tableDirsWatch = new HashMap<String, AppNameTablesTableDirObserver>();
 
-  public AppNameFormsFolderObserver(AppNameTablesTableDirObserver parent, String appName, String tableDirName) {
-    super(parent.getFormsDirPath(tableDirName), ODKFolderObserver.LIKELY_CHANGE_OF_SUBDIR);
+  public AppNameTablesFolderObserver(AppNameFolderObserver parent, String appName) {
+    super(ODKFileUtils.getTablesFolder(appName), ODKFolderObserver.LIKELY_CHANGE_OF_SUBDIR);
     this.appName = appName;
-    this.tableDirName = tableDirName;
     this.parent = parent;
     this.startWatching();
 
     update();
   }
 
-  public String getFormDirPath(String formDirName) {
-    return parent.getFormsDirPath(tableDirName) + File.separator + formDirName;
+  public String getTableDirPath(String tableDirName) {
+    return ODKFileUtils.getTablesFolder(appName) + File.separator + tableDirName;
   }
 
   private void update() {
 
-    File formsFolder = new File(parent.getFormsDirPath(tableDirName));
+    File tablesFolder = new File(ODKFileUtils.getTablesFolder(appName));
 
-    File[] formDirs = formsFolder.listFiles(new FileFilter() {
+    File[] tableDirs = tablesFolder.listFiles(new FileFilter() {
 
       @Override
       public boolean accept(File pathname) {
@@ -71,28 +69,28 @@ class AppNameFormsFolderObserver extends FileObserver {
 
     // formDirs is the list of forms sub-directories. Monitor these for changes.
 
-    if (formDirs != null) {
+    if (tableDirs != null) {
       // add ones we don't know about
-      for (File f : formDirs) {
-        String formDirName = f.getName();
-        if (!formDirsWatch.containsKey(formDirName)) {
-          addFormDirWatch(formDirName);
+      for (File f : tableDirs) {
+        String tableDirName = f.getName();
+        if (!tableDirsWatch.containsKey(tableDirName)) {
+          addTableDirWatch(tableDirName);
         }
       }
       // find ones to remove...
       Set<String> toRetain = new HashSet<String>();
-      for (File f : formDirs) {
+      for (File f : tableDirs) {
         toRetain.add(f.getName());
       }
       Set<String> toRemove = new HashSet<String>();
-      for (String formDirName : formDirsWatch.keySet()) {
-        if (!toRetain.contains(formDirName)) {
-          toRemove.add(formDirName);
+      for (String tableDirName : tableDirsWatch.keySet()) {
+        if (!toRetain.contains(tableDirName)) {
+          toRemove.add(tableDirName);
         }
       }
       // remove the ones that are no longer present
-      for (String formDirName : toRemove) {
-        removeFormDirWatch(formDirName);
+      for (String tableDirName : toRemove) {
+        removeTableDirWatch(tableDirName);
       }
     }
   }
@@ -101,31 +99,31 @@ class AppNameFormsFolderObserver extends FileObserver {
     active = false;
     this.stopWatching();
     // remove watches on the formDef files...
-    for (AppNameFormsFormDirObserver fdo : formDirsWatch.values()) {
+    for (AppNameTablesTableDirObserver fdo : tableDirsWatch.values()) {
       fdo.stop();
     }
-    formDirsWatch.clear();
-    Log.i(t, "stop() " + parent.getFormsDirPath(tableDirName));
+    tableDirsWatch.clear();
+    Log.i(t, "stop() " + ODKFileUtils.getTablesFolder(appName));
   }
 
-  public void addFormDirWatch(String formDir) {
+  public void addTableDirWatch(String tableDir) {
     if (!active)
       return;
-    AppNameFormsFormDirObserver v = formDirsWatch.get(formDir);
+    AppNameTablesTableDirObserver v = tableDirsWatch.get(tableDir);
     if (v != null) {
       v.stop();
     }
-    formDirsWatch.put(formDir, new AppNameFormsFormDirObserver(this, formDir));
+    tableDirsWatch.put(tableDir, new AppNameTablesTableDirObserver(this, appName, tableDir));
   }
 
-  public void removeFormDirWatch(String formDir) {
+  public void removeTableDirWatch(String tableDir) {
     if (!active)
       return;
-    AppNameFormsFormDirObserver v = formDirsWatch.get(formDir);
+    AppNameTablesTableDirObserver v = tableDirsWatch.get(tableDir);
     if (v != null) {
-      formDirsWatch.remove(formDir);
+      tableDirsWatch.remove(tableDir);
       v.stop();
-      launchFormsDiscovery(null, "monitoring removed: " + getFormDirPath(formDir));
+      launchFormsDiscovery(tableDir, null, "monitoring removed: " + getTableDirPath(tableDir));
     }
   }
 
@@ -137,20 +135,20 @@ class AppNameFormsFolderObserver extends FileObserver {
 
     if ((event & FileObserver.DELETE_SELF) != 0) {
       stop();
-      parent.removeFormsFolderWatch();
+      parent.removeTablesFolderWatch();
       return;
     }
 
     if ((event & FileObserver.MOVE_SELF) != 0) {
       stop();
-      parent.removeFormsFolderWatch();
+      parent.removeTablesFolderWatch();
       return;
     }
 
     update();
   }
 
-  public void launchFormsDiscovery(String formDir, String reason) {
-    parent.launchFormsDiscovery(formDir, reason);
+  public void launchFormsDiscovery(String tableDir, String formDir, String reason) {
+    parent.launchFormsDiscovery(tableDir, formDir, reason);
   }
 }

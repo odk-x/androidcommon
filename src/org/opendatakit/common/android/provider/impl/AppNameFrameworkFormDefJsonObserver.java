@@ -31,12 +31,12 @@ import android.util.Log;
 class AppNameFrameworkFormDefJsonObserver extends FileObserver {
   private static final String t = "AppNameFrameworkFormDefJsonObserver";
 
-  private AppNameFrameworkFormDirObserver parent;
+  private AppNameFrameworkFolderObserver parent;
   private boolean active = true;
   private long lastModificationTime = -1L;
 
-  public AppNameFrameworkFormDefJsonObserver(AppNameFrameworkFormDirObserver parent) {
-    super(parent.getFormDirPath() + File.separator + ODKFileUtils.FORMDEF_JSON_FILENAME,
+  public AppNameFrameworkFormDefJsonObserver(AppNameFrameworkFolderObserver parent) {
+    super(parent.getFrameworkFormDefJsonFilePath(),
         ODKFolderObserver.LIKELY_CHANGE_OF_FILE);
     this.parent = parent;
     this.startWatching();
@@ -45,15 +45,14 @@ class AppNameFrameworkFormDefJsonObserver extends FileObserver {
   }
 
   private void update() {
-    File formDirFolder = new File(parent.getFormDirPath());
-    File formDefJson = new File(formDirFolder, ODKFileUtils.FORMDEF_JSON_FILENAME);
+    File formDefJson = new File(parent.getFrameworkFormDefJsonFilePath());
 
     if (formDefJson.exists() && formDefJson.isFile()) {
       String action = (lastModificationTime == -1L) ? "monitoring added: " : "changed: ";
       long modTime = formDefJson.lastModified();
       if (modTime != lastModificationTime) {
         lastModificationTime = modTime;
-        parent.launchFormsDiscovery(action + formDefJson.getAbsolutePath());
+        parent.launchFrameworkDiscovery(action + formDefJson.getAbsolutePath());
       }
     } else {
       parent.removeFormDefJsonWatch();
@@ -61,8 +60,7 @@ class AppNameFrameworkFormDefJsonObserver extends FileObserver {
   }
 
   public void stop() {
-    File formDirFolder = new File(parent.getFormDirPath());
-    File formDefJson = new File(formDirFolder, ODKFileUtils.FORMDEF_JSON_FILENAME);
+    File formDefJson = new File(parent.getFrameworkFormDefJsonFilePath());
 
     active = false;
     this.stopWatching();

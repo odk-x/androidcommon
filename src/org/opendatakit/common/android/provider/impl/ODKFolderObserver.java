@@ -130,7 +130,14 @@ class ODKFolderObserver extends FileObserver {
     }
   }
 
-  public void launchFormsDiscovery(String appName, String reason) {
+  public void launchFormsDiscovery(String appName, String tableDirName, String formDirName, String reason) {
+    // monitoring changes in the forms folders...
+    FormsDiscoveryRunnable fd = new FormsDiscoveryRunnable(self, appName, tableDirName, formDirName);
+    FormsProviderImpl.executor.execute(fd);
+    Log.i(t, reason);
+  }
+
+  public void launchFrameworkDiscovery(String appName, String reason) {
     // monitoring changes in the forms folders...
     FormsDiscoveryRunnable fd = new FormsDiscoveryRunnable(self, appName);
     FormsProviderImpl.executor.execute(fd);
