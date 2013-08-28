@@ -21,8 +21,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.opendatakit.common.android.utilities.ODKFileUtils;
-
 import android.os.FileObserver;
 import android.util.Log;
 
@@ -37,27 +35,36 @@ class AppNameTablesFolderObserver extends FileObserver {
   private static final String t = "AppNameTablesFolderObserver";
 
   private AppNameFolderObserver parent;
-  private boolean active = true;
-  private String appName;
+  private boolean stopping = false;
 
   Map<String, AppNameTablesTableDirObserver> tableDirsWatch = new HashMap<String, AppNameTablesTableDirObserver>();
 
-  public AppNameTablesFolderObserver(AppNameFolderObserver parent, String appName) {
-    super(ODKFileUtils.getTablesFolder(appName), ODKFolderObserver.LIKELY_CHANGE_OF_SUBDIR);
-    this.appName = appName;
+  public AppNameTablesFolderObserver(AppNameFolderObserver parent) {
+    super(parent.getTablesDirPath(), ODKFolderObserver.LIKELY_CHANGE_OF_SUBDIR);
     this.parent = parent;
-    this.startWatching();
 
+    this.startWatching();
     update();
   }
 
   public String getTableDirPath(String tableDirName) {
-    return ODKFileUtils.getTablesFolder(appName) + File.separator + tableDirName;
+    return parent.getTablesDirPath() + File.separator + tableDirName;
+  }
+
+  public void start() {
+
+    Log.i(t, "start() " + parent.getTablesDirPath());
+
+    for ( AppNameTablesTableDirObserver obs : tableDirsWatch.values() ) {
+      obs.start();
+    }
+
   }
 
   private void update() {
+    if ( stopping ) return;
 
-    File tablesFolder = new File(ODKFileUtils.getTablesFolder(appName));
+    File tablesFolder = new File(parent.getTablesDirPath());
 
     File[] tableDirs = tablesFolder.listFiles(new FileFilter() {
 
@@ -96,29 +103,27 @@ class AppNameTablesFolderObserver extends FileObserver {
   }
 
   public void stop() {
-    active = false;
+    stopping = true;
+
     this.stopWatching();
     // remove watches on the formDef files...
     for (AppNameTablesTableDirObserver fdo : tableDirsWatch.values()) {
       fdo.stop();
     }
     tableDirsWatch.clear();
-    Log.i(t, "stop() " + ODKFileUtils.getTablesFolder(appName));
+    Log.i(t, "stop() " + parent.getTablesDirPath());
   }
 
   public void addTableDirWatch(String tableDir) {
-    if (!active)
-      return;
     AppNameTablesTableDirObserver v = tableDirsWatch.get(tableDir);
     if (v != null) {
+      tableDirsWatch.remove(tableDir);
       v.stop();
     }
-    tableDirsWatch.put(tableDir, new AppNameTablesTableDirObserver(this, appName, tableDir));
+    tableDirsWatch.put(tableDir, new AppNameTablesTableDirObserver(this, tableDir));
   }
 
   public void removeTableDirWatch(String tableDir) {
-    if (!active)
-      return;
     AppNameTablesTableDirObserver v = tableDirsWatch.get(tableDir);
     if (v != null) {
       tableDirsWatch.remove(tableDir);
@@ -130,8 +135,6 @@ class AppNameTablesFolderObserver extends FileObserver {
   @Override
   public void onEvent(int event, String path) {
     Log.i(t, "onEvent: " + path + " event: " + ODKFolderObserver.eventMap(event));
-    if (!active)
-      return;
 
     if ((event & FileObserver.DELETE_SELF) != 0) {
       stop();

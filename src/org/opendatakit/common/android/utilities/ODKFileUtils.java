@@ -48,7 +48,7 @@ public class ODKFileUtils {
   private static final String ODK_FOLDER_NAME = "odk";
 
   private static final String TABLES_FOLDER_NAME = "tables";
-  private static final String FORMS_FOLDER_NAME = "forms";
+  public static final String FORMS_FOLDER_NAME = "forms";
   private static final String INSTANCES_FOLDER_NAME = "instances";
 
   private static final String METADATA_FOLDER_NAME = "metadata";
@@ -367,6 +367,17 @@ public class ODKFileUtils {
     String path = Environment.getExternalStorageDirectory() + File.separator + "Android"
         + File.separator + "obb" + File.separator + packageName;
     return path;
+  }
+
+  public static boolean isPathUnderAppName(String appName, File path) {
+
+    File parentDir = new File(ODKFileUtils.getAppFolder(appName));
+
+    while (path != null && !path.equals(parentDir)) {
+      path = path.getParentFile();
+    }
+
+    return (path != null);
   }
 
   public static String getRelativeFormPath(String appName, File formDefFile) {

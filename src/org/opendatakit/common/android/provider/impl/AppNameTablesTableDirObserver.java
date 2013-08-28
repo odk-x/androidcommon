@@ -32,27 +32,35 @@ class AppNameTablesTableDirObserver extends FileObserver {
   private static final String t = "AppNameTablesTableDirObserver";
 
   private AppNameTablesFolderObserver parent;
-  private boolean active = true;
-  private String appName;
   private String tableDirName;
   private AppNameFormsFolderObserver formsWatch = null;
+  private boolean stopping = false;
 
-  public AppNameTablesTableDirObserver(AppNameTablesFolderObserver parent, String appName,
-      String tableDir) {
+  public AppNameTablesTableDirObserver(AppNameTablesFolderObserver parent, String tableDir) {
     super(parent.getTableDirPath(tableDir), ODKFolderObserver.LIKELY_CHANGE_OF_SUBDIR);
     this.tableDirName = tableDir;
-    this.appName = appName;
     this.parent = parent;
-    this.startWatching();
 
+    this.startWatching();
     update();
   }
 
+  public void start() {
+
+    Log.i(t, "start() " + getFormsDirPath(tableDirName));
+
+    if ( formsWatch != null ) {
+      formsWatch.start();
+    }
+
+  }
+
   public String getFormsDirPath(String tableDirName) {
-    return ODKFileUtils.getFormsFolder(appName, tableDirName);
+    return parent.getTableDirPath(tableDirName) + File.separator + ODKFileUtils.FORMS_FOLDER_NAME;
   }
 
   private void update() {
+    if ( stopping ) return;
 
     File formsFolder = new File(getFormsDirPath(tableDirName));
 
@@ -66,7 +74,8 @@ class AppNameTablesTableDirObserver extends FileObserver {
   }
 
   public void stop() {
-    active = false;
+    stopping = true;
+
     this.stopWatching();
 
     // remove watches on the tables formDef files...
@@ -79,17 +88,13 @@ class AppNameTablesTableDirObserver extends FileObserver {
   }
 
   private void addFormsFolderWatch() {
-    if (!active)
-      return;
     if (formsWatch != null) {
       formsWatch.stop();
     }
-    formsWatch = new AppNameFormsFolderObserver(this, appName, tableDirName);
+    formsWatch = new AppNameFormsFolderObserver(this, tableDirName);
   }
 
   public void removeFormsFolderWatch() {
-    if (!active)
-      return;
     if (formsWatch != null) {
       formsWatch.stop();
       formsWatch = null;
@@ -100,8 +105,6 @@ class AppNameTablesTableDirObserver extends FileObserver {
   @Override
   public void onEvent(int event, String path) {
     Log.i(t, "onEvent: " + path + " event: " + ODKFolderObserver.eventMap(event));
-    if (!active)
-      return;
 
     if ((event & FileObserver.DELETE_SELF) != 0) {
       stop();

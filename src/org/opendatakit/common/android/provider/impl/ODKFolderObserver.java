@@ -55,7 +55,7 @@ class ODKFolderObserver extends FileObserver {
 
   private FormsProviderImpl self;
 
-  private boolean active = true;
+  private boolean stopping = false;
 
   // A map of appName => observer for /odk/appName changes
   private Map<String, AppNameFolderObserver> appNameFoldersWatch = new HashMap<String, AppNameFolderObserver>();
@@ -63,12 +63,22 @@ class ODKFolderObserver extends FileObserver {
   public ODKFolderObserver(FormsProviderImpl self) {
     super(ODKFileUtils.getOdkFolder(), LIKELY_CHANGE_OF_SUBDIR);
     this.self = self;
-    this.startWatching();
 
+    this.startWatching();
     update();
   }
 
+  public void start() {
+
+    Log.i(t, "start() " + ODKFileUtils.getOdkFolder());
+
+    for (AppNameFolderObserver fdo : appNameFoldersWatch.values()) {
+      fdo.start();
+    }
+  }
+
   private void update() {
+    if ( stopping ) return;
 
     File[] appFolders = ODKFileUtils.getAppFolders();
 
@@ -100,7 +110,8 @@ class ODKFolderObserver extends FileObserver {
   }
 
   public void stop() {
-    active = false;
+    stopping = true;
+
     this.stopWatching();
     // remove watches on the formDef files...
     for (AppNameFolderObserver fdo : appNameFoldersWatch.values()) {
@@ -111,8 +122,6 @@ class ODKFolderObserver extends FileObserver {
   }
 
   public void addAppNameWatch(String appNameFolder) {
-    if (!active)
-      return;
     AppNameFolderObserver v = appNameFoldersWatch.get(appNameFolder);
     if (v != null) {
       v.stop();
@@ -121,8 +130,6 @@ class ODKFolderObserver extends FileObserver {
   }
 
   public void removeAppNameWatch(String appNameFolder) {
-    if (!active)
-      return;
     AppNameFolderObserver v = appNameFoldersWatch.get(appNameFolder);
     if (v != null) {
       appNameFoldersWatch.remove(appNameFolder);
@@ -177,8 +184,6 @@ class ODKFolderObserver extends FileObserver {
   @Override
   public void onEvent(int event, String path) {
     Log.i(t, "onEvent: " + path + " event: " + eventMap(event));
-    if (!active)
-      return;
 
     if ((event & FileObserver.DELETE_SELF) != 0) {
       stop();

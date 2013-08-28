@@ -34,24 +34,34 @@ class AppNameFrameworkFolderObserver extends FileObserver {
   private static final String t = "AppNameFrameworkFolderObserver";
 
   private AppNameFolderObserver parent;
-  private String appName;
-  private boolean active = true;
   private AppNameFrameworkFormDefJsonObserver formDefJsonWatch = null;
+  private boolean stopping = false;
 
-  public AppNameFrameworkFolderObserver(AppNameFolderObserver parent, String appName) {
-    super(ODKFileUtils.getFrameworkFolder(appName), ODKFolderObserver.LIKELY_CHANGE_OF_SUBDIR);
+  public AppNameFrameworkFolderObserver(AppNameFolderObserver parent) {
+    super(parent.getFrameworkDirPath(), ODKFolderObserver.LIKELY_CHANGE_OF_SUBDIR);
     this.parent = parent;
-    this.appName = appName;
-    this.startWatching();
 
+    this.startWatching();
     update();
   }
 
   public String getFrameworkFormDefJsonFilePath() {
-    return ODKFileUtils.getFrameworkFolder(appName) + File.separator + ODKFileUtils.FORMDEF_JSON_FILENAME;
+    return parent.getFrameworkDirPath() + File.separator + ODKFileUtils.FORMDEF_JSON_FILENAME;
+  }
+
+  public void start() {
+
+    Log.i(t, "start() " + parent.getFrameworkDirPath());
+
+    if ( formDefJsonWatch != null ) {
+      formDefJsonWatch.start();
+    }
+
   }
 
   public void update() {
+    if ( stopping ) return;
+
     File formDefJson = new File(getFrameworkFormDefJsonFilePath());
 
     if (formDefJson.exists() && formDefJson.isFile()) {
@@ -64,19 +74,18 @@ class AppNameFrameworkFolderObserver extends FileObserver {
   }
 
   public void stop() {
-    active = false;
+    stopping = true;
+
     this.stopWatching();
     // remove watch on the formDef files...
     if (formDefJsonWatch != null) {
       formDefJsonWatch.stop();
     }
     formDefJsonWatch = null;
-    Log.i(t, "stop() " + ODKFileUtils.getFrameworkFolder(appName));
+    Log.i(t, "stop() " + parent.getFrameworkDirPath());
   }
 
   public void addFormDefJsonWatch() {
-    if (!active)
-      return;
     if (formDefJsonWatch != null) {
       formDefJsonWatch.stop();
     }
@@ -84,8 +93,6 @@ class AppNameFrameworkFolderObserver extends FileObserver {
   }
 
   public void removeFormDefJsonWatch() {
-    if (!active)
-      return;
     if (formDefJsonWatch != null) {
       formDefJsonWatch.stop();
       formDefJsonWatch = null;
@@ -98,8 +105,6 @@ class AppNameFrameworkFolderObserver extends FileObserver {
   @Override
   public void onEvent(int event, String path) {
     Log.i(t, "onEvent: " + path + " event: " + ODKFolderObserver.eventMap(event));
-    if (!active)
-      return;
 
     if ((event & FileObserver.DELETE_SELF) != 0) {
       stop();

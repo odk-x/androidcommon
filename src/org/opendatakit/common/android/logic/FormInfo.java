@@ -214,11 +214,14 @@ public final String formPath;
   /**
    *
    * @param context
+   * @param appName
    * @param formDefFile
    */
   @SuppressWarnings("unchecked")
-  public FormInfo(Context c, File formDefFile) {
+  public FormInfo(Context c, String appName, File formDefFile) {
 
+    // save the appName
+    this.appName = appName;
     // save the File of the formDef...
     this.formDefFile = formDefFile;
 
@@ -229,12 +232,6 @@ public final String formPath;
     File parentFile = formDefFile.getParentFile(); // child of forms
     formFilePath = parentFile.getAbsolutePath() + File.separator + parentFile.getName() + ".xml";
     formMediaPath = parentFile.getAbsolutePath();
-
-    File appRoot = parentFile.getParentFile() /* forms */
-        .getParentFile() /* table_id */
-        .getParentFile() /* tables */
-        .getParentFile() /* app */;
-    appName = appRoot.getName();
 
     // OK -- parse the formDef file.
     HashMap<String, Object> om = null;

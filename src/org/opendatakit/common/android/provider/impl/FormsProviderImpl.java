@@ -60,18 +60,19 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
    *
    * @param self
    */
-  private static synchronized void doInitialAppsScan(final FormsProviderImpl self) {
+  private static synchronized ODKFolderObserver doInitialAppsScan(final FormsProviderImpl self) {
     if (!bInitialScan) {
       // observer will start monitoring and trigger forms discovery
       try {
-        bInitialScan = true;
         observer = new ODKFolderObserver(self);
+        bInitialScan = true;
       } catch (Exception e) {
         Log.e(t, "Exception: " + e.toString());
         bInitialScan = false;
         stopScan();
       }
     }
+    return observer;
   }
 
   static synchronized void stopScan() {
@@ -86,7 +87,8 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     Thread r = new Thread() {
       @Override
       public void run() {
-        doInitialAppsScan(self);
+        ODKFolderObserver obs = doInitialAppsScan(self);
+        obs.start(); // triggers re-evaluation of everything
       }
     };
     r.start();
@@ -196,12 +198,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
           + " directory does not exist: " + mediaPath.getAbsolutePath());
     }
 
-    String mediaAppName = mediaPath.getParentFile()/* forms folder */
-        .getParentFile() /* table_id */
-        .getParentFile() /* tables */
-        .getParentFile() /* app */
-        .getName();
-    if (!appName.equals(mediaAppName)) {
+    if (!ODKFileUtils.isPathUnderAppName(appName, mediaPath)) {
       throw new IllegalArgumentException(
           "Form definition is not contained within the application: " + appName);
     }

@@ -31,25 +31,45 @@ class AppNameFolderObserver extends FileObserver {
   private static final String t = "AppNameFolderObserver";
 
   private ODKFolderObserver parent;
-  private boolean active = true;
   private String appName;
+  private boolean stopping = false;
 
   // the /odk/appName/tables observer...
   private AppNameTablesFolderObserver appNameTablesWatch = null;
   // the /odk/appName/framework observer...
-  private AppNameFrameworkFolderObserver appNameframeworkWatch = null;
+  private AppNameFrameworkFolderObserver appNameFrameworkWatch = null;
 
   public AppNameFolderObserver(ODKFolderObserver parent, String appName) {
     super(ODKFileUtils.getAppFolder(appName), ODKFolderObserver.LIKELY_CHANGE_OF_SUBDIR);
     this.appName = appName;
     this.parent = parent;
-    this.startWatching();
 
+    this.startWatching();
     update();
+  }
+  public String getTablesDirPath() {
+    return ODKFileUtils.getTablesFolder(appName);
+  }
+
+  public String getFrameworkDirPath() {
+    return ODKFileUtils.getFrameworkFolder(appName);
+  }
+
+  public void start() {
+
+    Log.i(t, "start() " + ODKFileUtils.getAppFolder(appName));
+
+    if ( appNameTablesWatch != null ) {
+      appNameTablesWatch.start();
+    }
+
+    if ( appNameFrameworkWatch != null ) {
+      appNameFrameworkWatch.start();
+    }
   }
 
   private void update() {
-
+    if ( stopping ) return;
     File tablesFolder = new File(ODKFileUtils.getTablesFolder(appName));
 
     if (tablesFolder.exists() && tablesFolder.isDirectory()) {
@@ -63,7 +83,7 @@ class AppNameFolderObserver extends FileObserver {
     File frameworkFolder = new File(ODKFileUtils.getFrameworkFolder(appName));
 
     if (frameworkFolder.exists() && frameworkFolder.isDirectory()) {
-      if (appNameframeworkWatch == null) {
+      if (appNameFrameworkWatch == null) {
         addFrameworkFolderWatch();
       }
     } else {
@@ -72,7 +92,7 @@ class AppNameFolderObserver extends FileObserver {
   }
 
   public void stop() {
-    active = false;
+    stopping = true;
     this.stopWatching();
 
     // remove watches on the tables formDef files...
@@ -82,26 +102,22 @@ class AppNameFolderObserver extends FileObserver {
     appNameTablesWatch = null;
 
     // remove watches on the framework formDef files...
-    if (appNameframeworkWatch != null) {
-      appNameframeworkWatch.stop();
+    if (appNameFrameworkWatch != null) {
+      appNameFrameworkWatch.stop();
     }
-    appNameframeworkWatch = null;
+    appNameFrameworkWatch = null;
 
     Log.i(t, "stop() " + ODKFileUtils.getAppFolder(appName));
   }
 
   private void addTablesFolderWatch() {
-    if (!active)
-      return;
     if (appNameTablesWatch != null) {
       appNameTablesWatch.stop();
     }
-    appNameTablesWatch = new AppNameTablesFolderObserver(this, appName);
+    appNameTablesWatch = new AppNameTablesFolderObserver(this);
   }
 
   public void removeTablesFolderWatch() {
-    if (!active)
-      return;
     if (appNameTablesWatch != null) {
       appNameTablesWatch.stop();
       appNameTablesWatch = null;
@@ -110,20 +126,16 @@ class AppNameFolderObserver extends FileObserver {
   }
 
   private void addFrameworkFolderWatch() {
-    if (!active)
-      return;
-    if (appNameframeworkWatch != null) {
-      appNameframeworkWatch.stop();
+    if (appNameFrameworkWatch != null) {
+      appNameFrameworkWatch.stop();
     }
-    appNameframeworkWatch = new AppNameFrameworkFolderObserver(this, appName);
+    appNameFrameworkWatch = new AppNameFrameworkFolderObserver(this);
   }
 
   public void removeFrameworkFolderWatch() {
-    if (!active)
-      return;
-    if (appNameframeworkWatch != null) {
-      appNameframeworkWatch.stop();
-      appNameframeworkWatch = null;
+    if (appNameFrameworkWatch != null) {
+      appNameFrameworkWatch.stop();
+      appNameFrameworkWatch = null;
       launchFrameworkDiscovery("monitoring removed: " + ODKFileUtils.getFrameworkFolder(appName));
     }
   }
@@ -131,8 +143,6 @@ class AppNameFolderObserver extends FileObserver {
   @Override
   public void onEvent(int event, String path) {
     Log.i(t, "onEvent: " + path + " event: " + ODKFolderObserver.eventMap(event));
-    if (!active)
-      return;
 
     if ((event & FileObserver.DELETE_SELF) != 0) {
       stop();
