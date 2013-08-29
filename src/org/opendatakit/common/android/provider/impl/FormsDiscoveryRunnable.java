@@ -15,7 +15,6 @@
 package org.opendatakit.common.android.provider.impl;
 
 import java.io.File;
-import java.io.FileFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,16 +42,32 @@ public final class FormsDiscoveryRunnable implements Runnable {
   private Context context;
   private Uri formsProviderContentUri;
   private String appName;
+  private boolean isFramework = false;
+  private String tableDirName;
+  private String formDirName;
 
   private static synchronized final int getNextCount() {
     int newCount = ++counter;
     return newCount;
   }
 
+  public FormsDiscoveryRunnable(FormsProviderImpl impl, String appName, String tableDirName, String formDirName) {
+    context = impl.getContext();
+    formsProviderContentUri = Uri.parse("content://" + impl.getFormsAuthority());
+    this.appName = appName;
+    this.tableDirName = tableDirName;
+    this.formDirName = formDirName;
+    this.isFramework = false;
+    this.instanceCounter = getNextCount();
+  }
+
   public FormsDiscoveryRunnable(FormsProviderImpl impl, String appName) {
     context = impl.getContext();
     formsProviderContentUri = Uri.parse("content://" + impl.getFormsAuthority());
     this.appName = appName;
+    this.tableDirName = null;
+    this.formDirName = null;
+    this.isFramework = true;
     this.instanceCounter = getNextCount();
   }
 
@@ -119,7 +134,7 @@ public final class FormsDiscoveryRunnable implements Runnable {
    */
   private final File moveToStaleDirectory(File mediaPath, String baseStaleMediaPath)
       throws IOException {
-    // we have a 'default' form in the forms directory.
+    // we have a 'framework' form in the forms directory.
     // Move it to the stale directory.
     // Delete all records referring to this directory.
     int i = 0;
@@ -135,8 +150,8 @@ public final class FormsDiscoveryRunnable implements Runnable {
 
   /**
    * Scan the given formDir and update the Forms database. If it is the
-   * formsFolder, then any 'default' forms should be forbidden. If it is not the
-   * formsFolder, only 'default' forms should be allowed
+   * formsFolder, then any 'framework' forms should be forbidden. If it is not the
+   * formsFolder, only 'framework' forms should be allowed
    *
    * @param mediaPath
    *          -- full formDir
@@ -173,7 +188,7 @@ public final class FormsDiscoveryRunnable implements Runnable {
         FileUtils.moveDirectory(tempMediaPath, formDir);
         // we don't know which of the above records was correct, so
         // reparse this to get ground truth...
-        fi = new FormInfo(context, formDef);
+        fi = new FormInfo(context, appName, formDef);
       } else if (c.getCount() == 1) {
         c.moveToFirst();
         String id = c.getString(c.getColumnIndex(FormsColumns.FORM_ID));
@@ -186,11 +201,11 @@ public final class FormsDiscoveryRunnable implements Runnable {
           fi = new FormInfo(c, false);
           needUpdate = false;
         } else {
-          fi = new FormInfo(context, formDef);
+          fi = new FormInfo(context, appName, formDef);
         }
       } else if (c.getCount() == 0) {
         // it should be new, try to parse it...
-        fi = new FormInfo(context, formDef);
+        fi = new FormInfo(context, appName, formDef);
       }
 
       // Enforce that a formId == FormsColumns.COMMON_BASE_FORM_ID can only be
@@ -201,7 +216,7 @@ public final class FormsDiscoveryRunnable implements Runnable {
 
       if (fi.formId.equals(FormsColumns.COMMON_BASE_FORM_ID)) {
         if (isFormsFolder) {
-          // we have a 'default' form in the forms directory.
+          // we have a 'framework' form in the forms directory.
           // Move it to the stale directory.
           // Delete all records referring to this directory.
           moveToStaleDirectory(formDir, baseStaleMediaPath);
@@ -211,7 +226,7 @@ public final class FormsDiscoveryRunnable implements Runnable {
         }
       } else {
         if (!isFormsFolder) {
-          // we have a non-'default' form in the framework directory.
+          // we have a non-'framework' form in the framework directory.
           // Move it to the stale directory.
           // Delete all records referring to this directory.
           moveToStaleDirectory(formDir, baseStaleMediaPath);
@@ -355,55 +370,25 @@ public final class FormsDiscoveryRunnable implements Runnable {
   }
 
   /**
-   * Scan for new directories in the given formsDir and add them to the
-   * database. If it is the formsFolder, then any 'default' forms should be
-   * forbidden. If it is not the formsFolder, only 'default' forms should be
-   * allowed
-   *
-   * @param formsDir
-   * @param isFormsFolder
-   * @param baseStaleMediaPath
-   */
-  private final void updateFormInfoCommon(File formsDir, boolean isFormsFolder,
-      String baseStaleMediaPath) {
-
-    File[] candidates = formsDir.listFiles(new FileFilter() {
-
-      @Override
-      public boolean accept(File pathname) {
-        if (!pathname.isDirectory())
-          return false;
-        File f = new File(pathname, ODKFileUtils.FORMDEF_JSON_FILENAME);
-        return (f.exists() && f.isFile());
-      }
-    });
-
-    ArrayList<File> formDirs = new ArrayList<File>();
-    if (candidates != null) {
-      for (File formDir : candidates) {
-        formDirs.add(formDir);
-      }
-    }
-
-    for (File formDir : formDirs) {
-      Log.i(t, "[" + instanceCounter + "] updateFormInfo: " + formDir.getAbsolutePath());
-      updateFormDir(formDir, isFormsFolder, baseStaleMediaPath);
-    }
-  }
-
-  /**
    * Scan for new forms directories in both the forms and framework areas and
    * add them to Forms database.
    */
   private final void updateFormInfo() {
     Log.i(t, "[" + instanceCounter + "] updateFormInfo: " + appName + " begin");
 
-    File formsDir = new File(ODKFileUtils.getFormsFolder(appName));
-    updateFormInfoCommon(formsDir, true, ODKFileUtils.getStaleFormsFolder(appName) + File.separator);
-
-    File frameworkDir = new File(ODKFileUtils.getFrameworkFolder(appName));
-    updateFormInfoCommon(frameworkDir, false, ODKFileUtils.getStaleFrameworkFolder(appName)
-        + File.separator);
+    if ( !isFramework ) {
+      if ( tableDirName != null && formDirName != null ) {
+        // specifically target this form...
+        File formDir = new File(ODKFileUtils.getFormFolder(appName, tableDirName, formDirName));
+        Log.i(t, "[" + instanceCounter + "] updateFormInfo: form: " + formDir.getAbsolutePath());
+        updateFormDir(formDir, true, ODKFileUtils.getStaleFormsFolder(appName) + File.separator);
+      }
+    } else {
+      File frameworkDir = new File(ODKFileUtils.getFrameworkFolder(appName));
+      Log.i(t, "[" + instanceCounter + "] updateFormInfo: framework: " + frameworkDir.getAbsolutePath());
+      updateFormDir(frameworkDir, false, ODKFileUtils.getStaleFrameworkFolder(appName)
+          + File.separator);
+    }
 
     Log.i(t, "[" + instanceCounter + "] updateFormInfo: " + appName + " end");
   }
@@ -419,19 +404,28 @@ public final class FormsDiscoveryRunnable implements Runnable {
         // this task was created after the start of the last task that searched
         // and updated the appName tree. So we should execute it.
         int startCounter = counter;
-        Log.i(t, "[" + instanceCounter + "] doInBackground begins! " + appName + " baseCounter: "
+        Log.i(t, "[" + instanceCounter + "] doInBackground removeStaleFormInfo() begins! " + appName + " baseCounter: "
             + ic + " startCounter: " + startCounter);
 
         try {
           removeStaleFormInfo();
-          updateFormInfo();
         } finally {
-          Log.i(t, "[" + instanceCounter + "] doInBackground ends! " + appName);
+          Log.i(t, "[" + instanceCounter + "] doInBackground removeStaleFormInfo() ends! " + appName);
           appInstanceCounterStart.put(appName, startCounter);
         }
       } else {
-        Log.i(t, "[" + instanceCounter + "] doInBackground skipped! " + appName + " baseCounter: "
+        Log.i(t, "[" + instanceCounter + "] doInBackground removeStaleFormInfo() skipped! " + appName + " baseCounter: "
             + ic);
+      }
+
+      Log.i(t, "[" + instanceCounter + "] doInBackground updateFormInfo() begins! " + appName + " baseCounter: "
+          + ic);
+
+      try {
+        updateFormInfo();
+      } finally {
+        Log.i(t, "[" + instanceCounter + "] doInBackground updateFormInfo() ends! " + appName + " baseCounter: "
+          + ic);
       }
     }
   }

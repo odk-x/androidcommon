@@ -31,30 +31,41 @@ import android.util.Log;
  *
  */
 class AppNameFormsFormDirObserver extends FileObserver {
-  private static final String t = "AppNameFormsObserver";
+  private static final String t = "AppNameFormsFormDirObserver";
 
   private AppNameFormsFolderObserver parent;
-  private boolean active = true;
   private String formDirName;
   private AppNameFormsFormDefJsonObserver formDefJsonWatch = null;
+  private boolean stopping = false;
 
-  public AppNameFormsFormDirObserver(AppNameFormsFolderObserver parent, String appName,
+  public AppNameFormsFormDirObserver(AppNameFormsFolderObserver parent,
       String formDir) {
     super(parent.getFormDirPath(formDir), ODKFolderObserver.LIKELY_CHANGE_OF_SUBDIR);
     this.formDirName = formDir;
     this.parent = parent;
-    this.startWatching();
 
+    this.startWatching();
     update();
   }
 
-  public String getFormDirPath() {
-    return parent.getFormDirPath(formDirName);
+  public void start() {
+
+    Log.i(t, "start() " + parent.getFormDirPath(formDirName));
+
+    if ( formDefJsonWatch != null ) {
+      formDefJsonWatch.start();
+    }
+
+  }
+
+  public String getFormDefJsonFilePath() {
+    return parent.getFormDirPath(formDirName) + File.separator + ODKFileUtils.FORMDEF_JSON_FILENAME;
   }
 
   public void update() {
-    File formDirFolder = new File(getFormDirPath());
-    File formDefJson = new File(formDirFolder, ODKFileUtils.FORMDEF_JSON_FILENAME);
+    if ( stopping ) return;
+
+    File formDefJson = new File(getFormDefJsonFilePath());
 
     if (formDefJson.exists() && formDefJson.isFile()) {
       if (formDefJsonWatch == null) {
@@ -66,19 +77,17 @@ class AppNameFormsFormDirObserver extends FileObserver {
   }
 
   public void stop() {
-    active = false;
+    stopping = true;
     this.stopWatching();
     // remove watch on the formDef files...
     if (formDefJsonWatch != null) {
       formDefJsonWatch.stop();
     }
     formDefJsonWatch = null;
-    Log.i(t, "stop() " + getFormDirPath());
+    Log.i(t, "stop() " + parent.getFormDirPath(formDirName));
   }
 
   public void addFormDefJsonWatch() {
-    if (!active)
-      return;
     if (formDefJsonWatch != null) {
       formDefJsonWatch.stop();
     }
@@ -86,14 +95,11 @@ class AppNameFormsFormDirObserver extends FileObserver {
   }
 
   public void removeFormDefJsonWatch() {
-    if (!active)
-      return;
     if (formDefJsonWatch != null) {
       formDefJsonWatch.stop();
       formDefJsonWatch = null;
 
-      File formDirFolder = new File(getFormDirPath());
-      File formDefJson = new File(formDirFolder, ODKFileUtils.FORMDEF_JSON_FILENAME);
+      File formDefJson = new File(getFormDefJsonFilePath());
       launchFormsDiscovery("monitoring removed: " + formDefJson.getAbsolutePath());
     }
   }
@@ -101,8 +107,6 @@ class AppNameFormsFormDirObserver extends FileObserver {
   @Override
   public void onEvent(int event, String path) {
     Log.i(t, "onEvent: " + path + " event: " + ODKFolderObserver.eventMap(event));
-    if (!active)
-      return;
 
     if ((event & FileObserver.DELETE_SELF) != 0) {
       stop();
@@ -120,6 +124,6 @@ class AppNameFormsFormDirObserver extends FileObserver {
   }
 
   public void launchFormsDiscovery(String reason) {
-    parent.launchFormsDiscovery(reason);
+    parent.launchFormsDiscovery(formDirName, reason);
   }
 }

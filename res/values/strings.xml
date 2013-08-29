@@ -162,4 +162,5 @@
 <string name="expansion_progress">%1$s\n\n(%2$s of %3$s).</string>
 <string name="expansion_failed">Unable to expand APK expansion files</string>
 <string name="loading_video">Loading video &#8230;</string>
+<string name="invalid_form_id">Invalid form_id: %1$s (form name: %2$s).</string>
 </resources>

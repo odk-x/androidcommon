@@ -45,7 +45,7 @@ public class FormInfo {
 private static final String FORMDEF_DISPLAY_ELEMENT = "display";
 private static final String FORMDEF_SURVEY_SETTINGS = "survey";
 private static final String FORMDEF_SETTINGS_SUBSECTION = "settings";
-private static final String FORMDEF_LOGIC_FLOW_SECTION = "logic_flow";
+private static final String FORMDEF_SPECIFICATION_SECTION = "specification";
 public final String formPath;
   public final String formFilePath;
   public final String formMediaPath;
@@ -214,11 +214,14 @@ public final String formPath;
   /**
    *
    * @param context
+   * @param appName
    * @param formDefFile
    */
   @SuppressWarnings("unchecked")
-  public FormInfo(Context c, File formDefFile) {
+  public FormInfo(Context c, String appName, File formDefFile) {
 
+    // save the appName
+    this.appName = appName;
     // save the File of the formDef...
     this.formDefFile = formDefFile;
 
@@ -229,9 +232,6 @@ public final String formPath;
     File parentFile = formDefFile.getParentFile(); // child of forms
     formFilePath = parentFile.getAbsolutePath() + File.separator + parentFile.getName() + ".xml";
     formMediaPath = parentFile.getAbsolutePath();
-
-    File appRoot = parentFile.getParentFile() /* forms */.getParentFile(); /* app */
-    appName = appRoot.getName();
 
     // OK -- parse the formDef file.
     HashMap<String, Object> om = null;
@@ -257,17 +257,17 @@ public final String formPath;
     // TODO: DEPENDENCY ALERT!!!
     // THIS ASSUMES A CERTAIN STRUCTURE FOR THE formDef.json
     // file...
-    Map<String, Object> logicFlow = (Map<String, Object>) formDef
-            .get(FORMDEF_LOGIC_FLOW_SECTION);
-    if (logicFlow == null) {
-        throw new IllegalArgumentException("File is not a formdef json file! No logic_flow element."
+    Map<String, Object> specification = (Map<String, Object>) formDef
+            .get(FORMDEF_SPECIFICATION_SECTION);
+    if (specification == null) {
+        throw new IllegalArgumentException("File is not a formdef json file! No specification element."
             + formDefFile.getAbsolutePath());
       }
 
-    Map<String, Object> settings = (Map<String, Object>) logicFlow
+    Map<String, Object> settings = (Map<String, Object>) specification
         .get(FORMDEF_SETTINGS_SUBSECTION);
     if (settings == null) {
-      throw new IllegalArgumentException("File is not a formdef json file! No settings section inside logic_flow element."
+      throw new IllegalArgumentException("File is not a formdef json file! No settings section inside specification element."
           + formDefFile.getAbsolutePath());
     }
     Map<String, Object> setting = null;

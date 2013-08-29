@@ -30,7 +30,7 @@ public final class FormsColumns implements BaseColumns {
   public static final String CONTENT_ITEM_TYPE = "vnd.android.cursor.item/vnd.opendatakit.form";
 
   /** The form_id that holds the common javascript files for Survey */
-  public static final String COMMON_BASE_FORM_ID = "default";
+  public static final String COMMON_BASE_FORM_ID = "framework";
 
   // These are the only things needed for an insert
   public static final String TABLE_ID = "tableId"; // for Tables linkage
@@ -84,7 +84,7 @@ public final class FormsColumns implements BaseColumns {
 	            + DISPLAY_NAME + " text not null, "
 	            + DISPLAY_SUBTEXT + " text not null, "
 	            + DESCRIPTION + " text, "
-	            + TABLE_ID + " text not null, "
+	            + TABLE_ID + " text null, " // null if framework
 	            + FORM_VERSION + " text, "
 	            + FORM_FILE_PATH + " text null, "
 	            + FORM_MEDIA_PATH + " text not null, "

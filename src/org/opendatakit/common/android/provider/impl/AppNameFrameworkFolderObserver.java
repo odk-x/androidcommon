@@ -15,11 +15,6 @@
 package org.opendatakit.common.android.provider.impl;
 
 import java.io.File;
-import java.io.FileFilter;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 
@@ -27,111 +22,89 @@ import android.os.FileObserver;
 import android.util.Log;
 
 /**
- * Monitor changes to the forms folder within an appName, i.e.,
- * /odk/appName/framework
+ * Monitor changes to the framework folder within an appName. Only pay
+ * attention to changes to the existence of the formDef.json file.
+ *
+ * i.e., /odk/appName/framework
  *
  * @author mitchellsundt@gmail.com
  *
  */
 class AppNameFrameworkFolderObserver extends FileObserver {
-  private static final String t = "AppNameFormsObserver";
+  private static final String t = "AppNameFrameworkFolderObserver";
 
   private AppNameFolderObserver parent;
-  private boolean active = true;
-  private String appName;
+  private AppNameFrameworkFormDefJsonObserver formDefJsonWatch = null;
+  private boolean stopping = false;
 
-  Map<String, AppNameFrameworkFormDirObserver> formDirsWatch = new HashMap<String, AppNameFrameworkFormDirObserver>();
-
-  public AppNameFrameworkFolderObserver(AppNameFolderObserver parent, String appName) {
-    super(ODKFileUtils.getFrameworkFolder(appName), ODKFolderObserver.LIKELY_CHANGE_OF_SUBDIR);
-    this.appName = appName;
+  public AppNameFrameworkFolderObserver(AppNameFolderObserver parent) {
+    super(parent.getFrameworkDirPath(), ODKFolderObserver.LIKELY_CHANGE_OF_SUBDIR);
     this.parent = parent;
-    this.startWatching();
 
+    this.startWatching();
     update();
   }
 
-  public String getFormDirPath(String formDirName) {
-    return ODKFileUtils.getFrameworkFolder(appName) + File.separator + formDirName;
+  public String getFrameworkFormDefJsonFilePath() {
+    return parent.getFrameworkDirPath() + File.separator + ODKFileUtils.FORMDEF_JSON_FILENAME;
   }
 
-  private void update() {
+  public void start() {
 
-    File formsFolder = new File(ODKFileUtils.getFrameworkFolder(appName));
+    Log.i(t, "start() " + parent.getFrameworkDirPath());
 
-    File[] formDirs = formsFolder.listFiles(new FileFilter() {
+    if ( formDefJsonWatch != null ) {
+      formDefJsonWatch.start();
+    }
 
-      @Override
-      public boolean accept(File pathname) {
-        return pathname.isDirectory();
-      }
-    });
+  }
 
-    // formDirs is the list of forms sub-directories. Monitor these for changes.
+  public void update() {
+    if ( stopping ) return;
 
-    if (formDirs != null) {
-      // add ones we don't know about
-      for (File f : formDirs) {
-        String formDirName = f.getName();
-        if (!formDirsWatch.containsKey(formDirName)) {
-          addFormDirWatch(formDirName);
-        }
+    File formDefJson = new File(getFrameworkFormDefJsonFilePath());
+
+    if (formDefJson.exists() && formDefJson.isFile()) {
+      if (formDefJsonWatch == null) {
+        addFormDefJsonWatch();
       }
-      // find ones to remove...
-      Set<String> toRetain = new HashSet<String>();
-      for (File f : formDirs) {
-        toRetain.add(f.getName());
-      }
-      Set<String> toRemove = new HashSet<String>();
-      for (String formDirName : formDirsWatch.keySet()) {
-        if (!toRetain.contains(formDirName)) {
-          toRemove.add(formDirName);
-        }
-      }
-      // remove the ones that are no longer present
-      for (String formDirName : toRemove) {
-        removeFormDirWatch(formDirName);
-      }
+    } else if (formDefJsonWatch != null) {
+      removeFormDefJsonWatch();
     }
   }
 
   public void stop() {
-    active = false;
+    stopping = true;
+
     this.stopWatching();
-    // remove watches on the formDef files...
-    for (AppNameFrameworkFormDirObserver fdo : formDirsWatch.values()) {
-      fdo.stop();
+    // remove watch on the formDef files...
+    if (formDefJsonWatch != null) {
+      formDefJsonWatch.stop();
     }
-    formDirsWatch.clear();
-    Log.i(t, "stop() " + ODKFileUtils.getFrameworkFolder(appName));
+    formDefJsonWatch = null;
+    Log.i(t, "stop() " + parent.getFrameworkDirPath());
   }
 
-  public void addFormDirWatch(String formDir) {
-    if (!active)
-      return;
-    AppNameFrameworkFormDirObserver v = formDirsWatch.get(formDir);
-    if (v != null) {
-      v.stop();
+  public void addFormDefJsonWatch() {
+    if (formDefJsonWatch != null) {
+      formDefJsonWatch.stop();
     }
-    formDirsWatch.put(formDir, new AppNameFrameworkFormDirObserver(this, appName, formDir));
+    formDefJsonWatch = new AppNameFrameworkFormDefJsonObserver(this);
   }
 
-  public void removeFormDirWatch(String formDir) {
-    if (!active)
-      return;
-    AppNameFrameworkFormDirObserver v = formDirsWatch.get(formDir);
-    if (v != null) {
-      formDirsWatch.remove(formDir);
-      v.stop();
-      launchFormsDiscovery("monitoring removed: " + getFormDirPath(formDir));
+  public void removeFormDefJsonWatch() {
+    if (formDefJsonWatch != null) {
+      formDefJsonWatch.stop();
+      formDefJsonWatch = null;
+
+      File formDefJson = new File(getFrameworkFormDefJsonFilePath());
+      launchFrameworkDiscovery("monitoring removed: " + formDefJson.getAbsolutePath());
     }
   }
 
   @Override
   public void onEvent(int event, String path) {
     Log.i(t, "onEvent: " + path + " event: " + ODKFolderObserver.eventMap(event));
-    if (!active)
-      return;
 
     if ((event & FileObserver.DELETE_SELF) != 0) {
       stop();
@@ -148,7 +121,7 @@ class AppNameFrameworkFolderObserver extends FileObserver {
     update();
   }
 
-  public void launchFormsDiscovery(String reason) {
-    parent.launchFormsDiscovery(reason);
+  public void launchFrameworkDiscovery(String reason) {
+    parent.launchFrameworkDiscovery(reason);
   }
 }
