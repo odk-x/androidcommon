@@ -137,8 +137,14 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     SQLiteDatabase db = getDbHelper(getContext(), appName).getReadableDatabase();
 
     // Get the database and run the query
-    Cursor c = db.query(DataModelDatabaseHelper.FORMS_TABLE_NAME, projection, whereId, whereIdArgs,
+    Cursor c = null;
+    try {
+      c = db.query(DataModelDatabaseHelper.FORMS_TABLE_NAME, projection, whereId, whereIdArgs,
         null, null, sortOrder);
+    } catch ( Exception e ) {
+      Log.w(t, "Database is not consistent with the current release of ODK Survey and is not upgradeable. AppName: " + appName);
+      return null;
+    }
 
     // Tell the cursor what uri to watch, so it knows when its source data
     // changes
@@ -295,6 +301,16 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
         throw new SQLException("FAILED Insert into " + uri
             + " -- row already exists for form directory: " + mediaPath.getAbsolutePath());
       }
+    } catch ( Exception e ) {
+      Log.w(t, "FAILED Insert into " + uri +
+            " -- query for existing row failed: " + e.toString());
+
+      if ( e instanceof SQLException ) {
+        throw (SQLException) e;
+      } else {
+        throw new SQLException("FAILED Insert into " + uri +
+            " -- query for existing row failed: " + e.toString());
+      }
     } finally {
       if (c != null) {
         c.close();
@@ -424,6 +440,16 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
         formIdValue = del.getString(del.getColumnIndex(FormsColumns.FORM_ID));
         File mediaDir = new File(del.getString(del.getColumnIndex(FormsColumns.FORM_MEDIA_PATH)));
         mediaDirs.put(mediaDir, (tableIdValue == null) ? DirType.FRAMEWORK : DirType.FORMS );
+      }
+    } catch ( Exception e ) {
+      Log.w(t, "FAILED Delete from " + uri +
+            " -- query for existing row failed: " + e.toString());
+
+      if ( e instanceof SQLException ) {
+        throw (SQLException) e;
+      } else {
+        throw new SQLException("FAILED Delete from " + uri +
+            " -- query for existing row failed: " + e.toString());
       }
     } finally {
       if (del != null) {
@@ -565,6 +591,16 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
             ref = cur;
           }
         }
+      }
+    } catch ( Exception e ) {
+      Log.w(t, "FAILED Update of " + uri +
+            " -- query for existing row failed: " + e.toString());
+
+      if ( e instanceof SQLException ) {
+        throw (SQLException) e;
+      } else {
+        throw new SQLException("FAILED Update of " + uri +
+            " -- query for existing row failed: " + e.toString());
       }
     } finally {
       if (c != null) {
