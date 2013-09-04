@@ -167,7 +167,7 @@ public final String formPath;
     formDefFile = new File(formMediaPath + File.separator + ODKFileUtils.FORMDEF_JSON_FILENAME);
 
     File formFolder = new File(formMediaPath);
-    appName = formFolder.getParentFile()/* forms */.getParentFile() /* app */.getName();
+    appName = ODKFileUtils.extractAppNameFromPath(formFolder);
     lastModificationDate = c.getLong(c.getColumnIndex(FormsColumns.DATE));
     formId = c.getString(c.getColumnIndex(FormsColumns.FORM_ID));
     formVersion = c.getString(c.getColumnIndex(FormsColumns.FORM_VERSION));

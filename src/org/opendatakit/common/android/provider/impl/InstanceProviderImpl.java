@@ -34,6 +34,7 @@ import org.opendatakit.common.android.utilities.ODKFileUtils;
 
 import android.content.ContentValues;
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 
@@ -44,7 +45,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
 
   // private static final String t = "InstancesProviderImpl";
 
-  private static final String DATA_TABLE_ID_COLUMN = InstanceColumns.DATA_TABLE_INSTANCE_ID;
+  private static final String DATA_TABLE_ID_COLUMN = DataTableColumns.ID;
   private static final String DATA_TABLE_TIMESTAMP_COLUMN = DataTableColumns.TIMESTAMP;
   private static final String DATA_TABLE_INSTANCE_NAME_COLUMN = DataTableColumns.INSTANCE_NAME;
   private static final String DATA_TABLE_SAVED_COLUMN = DataTableColumns.SAVED;
@@ -75,9 +76,19 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     // _ID in UPLOADS_TABLE_NAME
     String instanceId = (segments.size() == 3 ? segments.get(2) : null);
 
-    SQLiteDatabase db = getDbHelper(getContext(), appName).getReadableDatabase();
+    DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
+    if ( dbh == null ) {
+      return null;
+    }
 
-    IdStruct ids = DataModelDatabaseHelper.getIds(db, uriFormId);
+    SQLiteDatabase db = dbh.getReadableDatabase();
+
+    IdStruct ids;
+    try {
+      ids = DataModelDatabaseHelper.getIds(db, uriFormId);
+    } catch ( Exception e ) {
+      throw new SQLException("Unable to retrieve formId " + uri);
+    }
 
     if (ids == null) {
       throw new IllegalArgumentException("Unknown URI (no matching formId) " + uri);
@@ -250,9 +261,21 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     // _ID in UPLOADS_TABLE_NAME
     String instanceId = (segments.size() == 3 ? segments.get(2) : null);
 
-    SQLiteDatabase db = getDbHelper(getContext(), appName).getWritableDatabase();
+    DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
+    if ( dbh == null ) {
+      return 0;
+    }
 
-    String dbTableName = DataModelDatabaseHelper.getDbTableName(db, tableId);
+    SQLiteDatabase db = dbh.getWritableDatabase();
+
+    String dbTableName;
+    try {
+      dbTableName = DataModelDatabaseHelper.getDbTableName(db, tableId);
+    } catch ( Exception e ) {
+      e.printStackTrace();
+      return 0;
+    }
+
     if (dbTableName == null) {
       return 0; // not known...
     }
@@ -324,9 +347,21 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     String instanceId = segments.get(2);
     // TODO: should we do something to ensure instanceId is the one updated?
 
-    SQLiteDatabase db = getDbHelper(getContext(), appName).getWritableDatabase();
+    DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
+    if ( dbh == null ) {
+      return 0;
+    }
 
-    String dbTableName = DataModelDatabaseHelper.getDbTableName(db, tableId);
+    SQLiteDatabase db = dbh.getWritableDatabase();
+
+    String dbTableName;
+    try {
+      dbTableName = DataModelDatabaseHelper.getDbTableName(db, tableId);
+    } catch ( Exception e ) {
+      e.printStackTrace();
+      return 0;
+    }
+
     if (dbTableName == null) {
       throw new IllegalArgumentException("Unknown URI (no matching tableId) " + uri);
     }

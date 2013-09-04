@@ -39,6 +39,11 @@ public class WebSqlDatabaseHelper {
       db = mWebDb.getWritableDatabase();
       c = db.query(WebDbDatabaseHelper.WEBDB_DATABASES_TABLE, null, null, null, null, null, null);
 
+      if ( c == null ) {
+        Log.i(t, "Null cursor returned from  WebDbDatabaseHelper path: " + path);
+        return;
+      }
+
       if (c.moveToFirst()) {
         do {
           String shortName = c.getString(c.getColumnIndex(WebDbDatabaseHelper.DATABASES_NAME));
