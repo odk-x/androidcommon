@@ -48,6 +48,8 @@ public class WebLogger {
   private static final int SUCCESS = 7;
   private static final int TIP = 8;
 
+  private static final int LOG_INFO_LEVEL = 1;
+
   private static long lastStaleScan = 0L;
   private static Map<String, WebLogger> loggers = new HashMap<String, WebLogger>();
 
@@ -179,37 +181,40 @@ public class WebLogger {
 
   private void log(int severity, String t, String logMsg) {
     try {
+      // do logcat logging...
+      if ( severity == ERROR ) {
+        Log.e(t, logMsg);
+      } else if ( severity == WARN ) {
+        Log.w(t, logMsg);
+      } else if ( LOG_INFO_LEVEL >= severity ) {
+        Log.i(t, logMsg);
+      } else {
+        Log.d(t, logMsg);
+      }
+      // and compose the log to the file...
       switch (severity) {
       case ASSERT:
-        Log.d(t, logMsg);
         logMsg = "A/" + t + ": " + logMsg;
         break;
       case DEBUG:
-        Log.d(t, logMsg);
         logMsg = "D/" + t + ": " + logMsg;
         break;
       case ERROR:
-        Log.e(t, logMsg);
         logMsg = "E/" + t + ": " + logMsg;
         break;
       case INFO:
-        Log.i(t, logMsg);
         logMsg = "I/" + t + ": " + logMsg;
         break;
       case SUCCESS:
-        Log.d(t, logMsg);
         logMsg = "S/" + t + ": " + logMsg;
         break;
       case VERBOSE:
-        Log.d(t, logMsg);
         logMsg = "V/" + t + ": " + logMsg;
         break;
       case TIP:
-        Log.d(t, logMsg);
         logMsg = "T/" + t + ": " + logMsg;
         break;
       case WARN:
-        Log.w(t, logMsg);
         logMsg = "W/" + t + ": " + logMsg;
         break;
       default:

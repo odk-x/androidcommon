@@ -83,6 +83,11 @@ public final class FormsDiscoveryRunnable implements Runnable {
       c = context.getContentResolver().query(
           Uri.withAppendedPath(formsProviderContentUri, appName), null, null, null, null);
 
+      if ( c == null ) {
+        Log.w(t, "[" + instanceCounter + "] removeStaleFormInfo " + appName + " null cursor returned from query.");
+        return;
+      }
+
       if (c.moveToFirst()) {
         do {
           String id = c.getString(c.getColumnIndex(FormsColumns.FORM_ID));
@@ -162,7 +167,7 @@ public final class FormsDiscoveryRunnable implements Runnable {
   private final void updateFormDir(File formDir, boolean isFormsFolder, String baseStaleMediaPath) {
 
     String formDirectoryPath = formDir.getAbsolutePath();
-    Log.i(t, "[" + instanceCounter + "] updateFormInfo: " + formDirectoryPath);
+    Log.i(t, "[" + instanceCounter + "] updateFormDir: " + formDirectoryPath);
 
     boolean needUpdate = true;
     FormInfo fi = null;
@@ -176,6 +181,11 @@ public final class FormsDiscoveryRunnable implements Runnable {
       c = context.getContentResolver().query(
           Uri.withAppendedPath(formsProviderContentUri, appName), null, selection, selectionArgs,
           null);
+
+      if ( c == null ) {
+        Log.w(t, "[" + instanceCounter + "] updateFormDir: " + formDirectoryPath + " null cursor -- cannot update!");
+        return;
+      }
 
       if (c.getCount() > 1) {
         c.close();
@@ -307,9 +317,14 @@ public final class FormsDiscoveryRunnable implements Runnable {
     }
 
     try {
-      c = context.getContentResolver().query(
-          Uri.withAppendedPath(formsProviderContentUri, appName), null, selection, selectionArgs,
+      Uri uriApp = Uri.withAppendedPath(formsProviderContentUri, appName);
+      c = context.getContentResolver().query(uriApp, null, selection, selectionArgs,
           null);
+
+      if ( c == null ) {
+        Log.w(t, "[" + instanceCounter + "] updateFormDir: " + uriApp.toString() + " null cursor -- cannot update!");
+        return;
+      }
 
       if (c.moveToFirst()) {
         // the directory we are processing is stale -- move it to stale

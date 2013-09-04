@@ -380,6 +380,26 @@ public class ODKFileUtils {
     return (path != null);
   }
 
+  public static String extractAppNameFromPath(File path) {
+
+    if ( path == null ) {
+      return null;
+    }
+
+    File parent = path.getParentFile();
+    File odkDir = new File(getOdkFolder());
+    while (parent != null && !parent.equals(odkDir)) {
+      path = parent;
+      parent = path.getParentFile();
+    }
+
+    if ( parent == null ) {
+      return null;
+    } else {
+      return path.getName();
+    }
+  }
+
   public static String getRelativeFormPath(String appName, File formDefFile) {
 
     // compute FORM_PATH...
