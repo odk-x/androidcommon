@@ -79,6 +79,38 @@ public class ODKFileUtils {
     LEGACY_DIRECTORIES.add(METADATA_FOLDER_NAME);
     LEGACY_DIRECTORIES.add("config");
   }
+  
+  /**
+   * Get the name of the logging folder, without a path.
+   * @return
+   */
+  public static String getNameOfLoggingFolder() {
+    return LOGGING_FOLDER_NAME;
+  }
+  
+  /**
+   * Get the name of the metadata folder, without a path.
+   * @return
+   */
+  public static String getNameOfMetadataFolder() {
+    return METADATA_FOLDER_NAME;
+  }
+  
+  /**
+   * Get the name of the framework folder, without a path.
+   * @return
+   */
+  public static String getNameOfFrameworkFolder() {
+    return FRAMEWORK_FOLDER_NAME;
+  }
+  
+  /**
+   * Get the name of the instances folder, without a path.
+   * @return
+   */
+  public static String getNameOfInstancesFolder() {
+    return INSTANCES_FOLDER_NAME;
+  }
 
   public static final ObjectMapper mapper = new ObjectMapper();
 
