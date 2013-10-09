@@ -32,10 +32,6 @@ public class ColumnDefinitionsColumns implements BaseColumns {
   // is_persisted cannot be null
   // integer interpreted as a boolean value
   public static final String IS_PERSISTED = "_is_persisted";
-  // joins can be null
-  // json array of objects:
-  // [{table_id: tid, element_key: elem}, ...]
-  public static final String JOINS = "_joins";
 
   // This class cannot be instantiated
   private ColumnDefinitionsColumns() {
@@ -54,10 +50,7 @@ public class ColumnDefinitionsColumns implements BaseColumns {
 				+ ELEMENT_NAME + " TEXT NOT NULL, "
 				+ ELEMENT_TYPE + " TEXT NOT NULL, "
 				+ LIST_CHILD_ELEMENT_KEYS + " TEXT NULL, "
-				+ IS_PERSISTED	+ " INTEGER NOT NULL, "
-				+ JOINS + " TEXT NULL, " +
-				// ", " + DB_JOIN_TABLE_ID + " TEXT NULL" +
-				// ", " + DB_JOIN_ELEMENT_KEY + " TEXT NULL" +
+				+ IS_PERSISTED	+ " INTEGER NOT NULL, " +
 				"PRIMARY KEY ( " + TABLE_ID + ", " + ELEMENT_KEY + ") )";
 		//@formatter:on
   }
