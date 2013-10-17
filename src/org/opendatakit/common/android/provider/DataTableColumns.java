@@ -39,24 +39,24 @@ public class DataTableColumns implements BaseColumns {
   public static final String CONFLICT_TYPE = TableConstants.CONFLICT_TYPE;
 
   /**
-   * (timestamp, saved, form_id) are the tuple written and managed by ODK Survey
-   * when a record is updated. ODK Tables needs to update these appropriately
-   * when a cell is directly edited based upon whether or not the table is
-   * 'form-managed' or not.
+   * (_savepoint_timestamp, _savepoint_type, _form_id, _locale) are the tuple
+   * written and managed by ODK Survey when a record is updated. ODK Tables
+   * needs to update these appropriately when a cell is directly edited based
+   * upon whether or not the table is 'form-managed' or not.
    *
-   * timestamp and last_mod_time are the same field. last_mod_time is simply
-   * a well-formatted text representation of the timestamp value.
+   * _savepoint_timestamp, timestamp and last_mod_time are the same field.
+   * last_mod_time is simply a well-formatted text representation of the timestamp value.
    */
-  public static final String TIMESTAMP = TableConstants.TIMESTAMP;
-  public static final String SAVED = TableConstants.SAVED;
+  public static final String SAVEPOINT_TIMESTAMP = TableConstants.SAVEPOINT_TIMESTAMP;
+  public static final String SAVEPOINT_TYPE = TableConstants.SAVEPOINT_TYPE;
   public static final String FORM_ID = TableConstants.FORM_ID;
+  public static final String LOCALE = TableConstants.LOCALE;
   /*
    * For ODKTables generated rows (as opposed to ODK Collect), the thought is
    * that this instance name would just be the iso86 pretty print date of
    * creation.
    */
   public static final String INSTANCE_NAME = TableConstants.INSTANCE_NAME;
-  public static final String LOCALE = TableConstants.LOCALE;
 
   // These are the default values that will be set to the database in case
   // there is nothing included. This has been a problem when downloading a
