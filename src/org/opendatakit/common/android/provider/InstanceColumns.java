@@ -40,7 +40,7 @@ public final class InstanceColumns implements BaseColumns {
   // _ID is the index on the table maintained for ODK Survey purposes
   // DATA_TABLE_INSTANCE_ID ****MUST MATCH**** value used in javascript
   // joins on the data table...
-  public static final String DATA_TABLE_INSTANCE_ID = "id";
+  public static final String DATA_TABLE_INSTANCE_ID = "_id";
   public static final String DATA_TABLE_TABLE_ID = "tableId";
   public static final String XML_PUBLISH_FORM_ID = "xmlPublishFormId";
   public static final String XML_PUBLISH_TIMESTAMP = "xmlPublishTimestamp";

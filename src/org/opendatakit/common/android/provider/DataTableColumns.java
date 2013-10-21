@@ -32,7 +32,6 @@ public class DataTableColumns implements BaseColumns {
 
   // tablename is chosen by user...
   public static final String ID = TableConstants.ID;
-  public static final String ROW_ID = TableConstants.ID;
   public static final String URI_ACCESS_CONTROL = TableConstants.URI_ACCESS_CONTROL;
   public static final String SYNC_TAG = TableConstants.SYNC_TAG;
   public static final String SYNC_STATE = TableConstants.SYNC_STATE;
@@ -51,17 +50,10 @@ public class DataTableColumns implements BaseColumns {
   public static final String SAVEPOINT_TYPE = TableConstants.SAVEPOINT_TYPE;
   public static final String FORM_ID = TableConstants.FORM_ID;
   public static final String LOCALE = TableConstants.LOCALE;
-  /*
-   * For ODKTables generated rows (as opposed to ODK Collect), the thought is
-   * that this instance name would just be the iso86 pretty print date of
-   * creation.
-   */
-  public static final String INSTANCE_NAME = TableConstants.INSTANCE_NAME;
 
   // These are the default values that will be set to the database in case
   // there is nothing included. This has been a problem when downloading a
   // table from the server.
-  public static final String DEFAULT_INSTANCE_NAME = "";
   public static final String DEFAULT_LOCALE= "";
   public static final String DEFAULT_URI_USER = "";
   public static final String DEFAULT_SYNC_TAG = "";

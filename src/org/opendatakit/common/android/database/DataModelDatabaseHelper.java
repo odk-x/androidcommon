@@ -140,15 +140,17 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
     return null;
   }
 
-  public static final class IdStruct {
+  public static final class IdInstanceNameStruct {
     public final int _id;
     public final String formId;
     public final String tableId;
+    public final String instanceName;
 
-    public IdStruct(int _id, String formId, String tableId) {
+    public IdInstanceNameStruct(int _id, String formId, String tableId, String instanceName) {
       this._id = _id;
       this.formId = formId;
       this.tableId = tableId;
+      this.instanceName = instanceName;
     }
   }
 
@@ -160,21 +162,25 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
    *          -- either the integer _ID or the textual form_id
    * @return
    */
-  public static IdStruct getIds(SQLiteDatabase db, String formId) {
+  public static IdInstanceNameStruct getIds(SQLiteDatabase db, String formId) {
     boolean isNumericId = StringUtils.isNumeric(formId);
 
     Cursor c = null;
     try {
       c = db.query(FORMS_TABLE_NAME, new String[] { FormsColumns._ID, FormsColumns.FORM_ID,
-          FormsColumns.TABLE_ID }, (isNumericId ? FormsColumns._ID : FormsColumns.FORM_ID) + "=?",
+          FormsColumns.TABLE_ID, FormsColumns.INSTANCE_NAME },
+          (isNumericId ? FormsColumns._ID : FormsColumns.FORM_ID) + "=?",
           new String[] { formId }, null, null, null);
 
       if (c.moveToFirst()) {
         int idxId = c.getColumnIndex(FormsColumns._ID);
         int idxFormId = c.getColumnIndex(FormsColumns.FORM_ID);
         int idxTableId = c.getColumnIndex(FormsColumns.TABLE_ID);
+        int idxInstanceName = c.getColumnIndex(FormsColumns.INSTANCE_NAME);
 
-        return new IdStruct(c.getInt(idxId), c.getString(idxFormId), c.getString(idxTableId));
+        return new IdInstanceNameStruct(c.getInt(idxId), c.getString(idxFormId),
+                      c.getString(idxTableId),
+                      c.isNull(idxInstanceName) ? null : c.getString(idxInstanceName));
       }
     } finally {
       if (c != null && !c.isClosed()) {

@@ -27,7 +27,7 @@ import java.util.Locale;
 import org.apache.commons.io.FileUtils;
 import org.opendatakit.common.android.R;
 import org.opendatakit.common.android.database.DataModelDatabaseHelper;
-import org.opendatakit.common.android.database.DataModelDatabaseHelper.IdStruct;
+import org.opendatakit.common.android.database.DataModelDatabaseHelper.IdInstanceNameStruct;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.InstanceColumns;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
@@ -47,7 +47,6 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
 
   private static final String DATA_TABLE_ID_COLUMN = DataTableColumns.ID;
   private static final String DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN = DataTableColumns.SAVEPOINT_TIMESTAMP;
-  private static final String DATA_TABLE_INSTANCE_NAME_COLUMN = DataTableColumns.INSTANCE_NAME;
   private static final String DATA_TABLE_SAVEPOINT_TYPE_COLUMN = DataTableColumns.SAVEPOINT_TYPE;
   private static final String DATA_TABLE_FORM_ID_COLUMN = DataTableColumns.FORM_ID;
   private static final String DATA_TABLE_LOCALE_COLUMN = DataTableColumns.LOCALE;
@@ -87,7 +86,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
 
     SQLiteDatabase db = dbh.getReadableDatabase();
 
-    IdStruct ids;
+    IdInstanceNameStruct ids;
     try {
       ids = DataModelDatabaseHelper.getIds(db, uriFormId);
     } catch ( Exception e ) {
@@ -159,7 +158,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
         .append(" > ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" THEN null")
         .append(" ELSE ").append(InstanceColumns.DISPLAY_SUBTEXT).append(" END as ")
         .append(InstanceColumns.DISPLAY_SUBTEXT).append(",");
-    b.append(DATA_TABLE_INSTANCE_NAME_COLUMN).append(" as ").append(InstanceColumns.DISPLAY_NAME);
+    b.append(ids.instanceName).append(" as ").append(InstanceColumns.DISPLAY_NAME);
     b.append(" FROM ");
     b.append("( SELECT * FROM ").append(dbTableName).append(" GROUP BY ")
         .append(DATA_TABLE_ID_COLUMN).append(" HAVING ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
