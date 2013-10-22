@@ -38,9 +38,9 @@ public final class InstanceColumns implements BaseColumns {
 
   // These are the only things needed for an insert
   // _ID is the index on the table maintained for ODK Survey purposes
-  // DATA_TABLE_INSTANCE_ID ****MUST MATCH**** value used in javascript
-  // joins on the data table...
-  public static final String DATA_TABLE_INSTANCE_ID = "_id";
+  // DATA_INSTANCE_ID holds the _id value of the data record as used
+  // in the javascript and ODK Tables.
+  public static final String DATA_INSTANCE_ID = "insanceId";
   public static final String DATA_TABLE_TABLE_ID = "tableId";
   public static final String XML_PUBLISH_FORM_ID = "xmlPublishFormId";
   public static final String XML_PUBLISH_TIMESTAMP = "xmlPublishTimestamp";
@@ -57,7 +57,7 @@ public final class InstanceColumns implements BaseColumns {
     //@formatter:off
        return "CREATE TABLE IF NOT EXISTS " + tableName + " ("
            + _ID + " integer primary key, "
-           + DATA_TABLE_INSTANCE_ID + " text, "
+           + DATA_INSTANCE_ID + " text, "
            + DATA_TABLE_TABLE_ID + " text, "
            + XML_PUBLISH_FORM_ID + " text, "
            + XML_PUBLISH_TIMESTAMP + " integer, "

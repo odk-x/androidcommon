@@ -108,18 +108,18 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     StringBuilder b = new StringBuilder();
     //@formatter:off
     b.append("INSERT INTO ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append("(")
-        .append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(",")
+        .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
         .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
         .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(") ").append("SELECT ")
-        .append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(",")
+        .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
         .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
         .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(" FROM (")
           .append("SELECT DISTINCT ").append(DATA_TABLE_ID_COLUMN).append(" as ")
-          .append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(",").append("? as ")
+          .append(InstanceColumns.DATA_INSTANCE_ID).append(",").append("? as ")
           .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",").append("? as ")
           .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(" FROM ")
           .append(dbTableName).append(" EXCEPT SELECT DISTINCT ")
-          .append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(",")
+          .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
           .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
           .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(" FROM ")
           .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(")");
@@ -167,7 +167,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     b.append(" JOIN ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(" ON ")
         .append(dbTableName).append(".").append(DATA_TABLE_ID_COLUMN).append("=")
         .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
-        .append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(" AND ").append("? =")
+        .append(InstanceColumns.DATA_INSTANCE_ID).append(" AND ").append("? =")
         .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
         .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(" AND ").append("? =")
         .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
@@ -286,7 +286,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     dbTableName = "\"" + dbTableName + "\"";
 
     if (segments.size() == 2) {
-      where = "(" + where + ") AND (" + InstanceColumns.DATA_TABLE_INSTANCE_ID + "=? )";
+      where = "(" + where + ") AND (" + InstanceColumns.DATA_INSTANCE_ID + "=? )";
       if (whereArgs != null) {
         String[] args = new String[whereArgs.length + 1];
         for (int i = 0; i < whereArgs.length; ++i) {
@@ -305,7 +305,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
       del = this.query(uri, null, where, whereArgs, null);
       del.moveToPosition(-1);
       while (del.moveToNext()) {
-        String iId = del.getString(del.getColumnIndex(InstanceColumns.DATA_TABLE_INSTANCE_ID));
+        String iId = del.getString(del.getColumnIndex(InstanceColumns.DATA_INSTANCE_ID));
         ids.add(iId);
         String path = ODKFileUtils.getInstanceFolder(appName, tableId, iId);
         File f = new File(path);
@@ -328,7 +328,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     }
 
     for (String id : ids) {
-      db.delete(DataModelDatabaseHelper.UPLOADS_TABLE_NAME, InstanceColumns.DATA_TABLE_INSTANCE_ID
+      db.delete(DataModelDatabaseHelper.UPLOADS_TABLE_NAME, InstanceColumns.DATA_INSTANCE_ID
           + "=?", new String[] { id });
       db.delete(dbTableName, DATA_TABLE_ID_COLUMN + "=?", new String[] { id });
     }
@@ -380,7 +380,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
       ref = this.query(uri, null, where, whereArgs, null);
       ref.moveToPosition(-1);
       while (ref.moveToNext()) {
-        String iId = ref.getString(ref.getColumnIndex(InstanceColumns.DATA_TABLE_INSTANCE_ID));
+        String iId = ref.getString(ref.getColumnIndex(InstanceColumns.DATA_INSTANCE_ID));
         ids.add(iId);
       }
     } finally {
@@ -402,7 +402,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
 
     int count = 0;
     for (String id : ids) {
-      values.put(InstanceColumns.DATA_TABLE_INSTANCE_ID, id);
+      values.put(InstanceColumns.DATA_INSTANCE_ID, id);
       count += (db.replace(DataModelDatabaseHelper.UPLOADS_TABLE_NAME, null, values) != -1) ? 1 : 0;
     }
     getContext().getContentResolver().notifyChange(uri, null);
@@ -413,8 +413,8 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
 
     sInstancesProjectionMap = new HashMap<String, String>();
     sInstancesProjectionMap.put(InstanceColumns._ID, InstanceColumns._ID);
-    sInstancesProjectionMap.put(InstanceColumns.DATA_TABLE_INSTANCE_ID,
-        InstanceColumns.DATA_TABLE_INSTANCE_ID);
+    sInstancesProjectionMap.put(InstanceColumns.DATA_INSTANCE_ID,
+        InstanceColumns.DATA_INSTANCE_ID);
     sInstancesProjectionMap.put(InstanceColumns.XML_PUBLISH_TIMESTAMP,
         InstanceColumns.XML_PUBLISH_TIMESTAMP);
     sInstancesProjectionMap.put(InstanceColumns.XML_PUBLISH_STATUS,
