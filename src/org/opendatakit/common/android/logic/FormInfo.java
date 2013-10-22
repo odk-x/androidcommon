@@ -17,7 +17,6 @@ package org.opendatakit.common.android.logic;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -57,7 +56,8 @@ public final String formPath;
   public final String formTitle;
   public final String description;
   public final String displaySubtext;
-  public final String language;
+  public final String defaultLocale; // default locale
+  public final String instanceName;  // column containing instance name for display
   public final String xmlSubmissionUrl;
   public final String xmlBase64RsaPublicKey;
   public final String xmlDeviceIdPropertyName;
@@ -81,7 +81,9 @@ public final String formPath;
 
   static final String FORMDEF_XML_SUBMISSION_URL = "xml_submission_url";
 
-  static final String FORMDEF_DEFAULT_LOCALE = "default_locale";
+  static final String FORMDEF_DEFAULT_LOCALE = "_default_locale";
+
+  static final String FORMDEF_INSTANCE_NAME = "instance_name";
 
   static final String FORMDEF_FORM_TITLE = "form_title";
 
@@ -132,7 +134,9 @@ public final String formPath;
       } else if (FormsColumns.DATE.equals(s)) {
         ret[i] = Long.toString(lastModificationDate);
       } else if (FormsColumns.DEFAULT_FORM_LOCALE.equals(s)) {
-        ret[i] = language;
+        ret[i] = defaultLocale;
+      } else if (FormsColumns.INSTANCE_NAME.equals(s)) {
+        ret[i] = instanceName;
       } else if (FormsColumns.XML_SUBMISSION_URL.equals(s)) {
         ret[i] = xmlSubmissionUrl;
       } else if (FormsColumns.XML_BASE64_RSA_PUBLIC_KEY.equals(s)) {
@@ -175,7 +179,8 @@ public final String formPath;
     formTitle = c.getString(c.getColumnIndex(FormsColumns.DISPLAY_NAME));
     description = c.getString(c.getColumnIndex(FormsColumns.DESCRIPTION));
     displaySubtext = c.getString(c.getColumnIndex(FormsColumns.DISPLAY_SUBTEXT));
-    language = c.getString(c.getColumnIndex(FormsColumns.DEFAULT_FORM_LOCALE));
+    defaultLocale = c.getString(c.getColumnIndex(FormsColumns.DEFAULT_FORM_LOCALE));
+    instanceName = c.getString(c.getColumnIndex(FormsColumns.INSTANCE_NAME));
     xmlSubmissionUrl = c.getString(c.getColumnIndex(FormsColumns.XML_SUBMISSION_URL));
     xmlBase64RsaPublicKey = c.getString(c.getColumnIndex(FormsColumns.XML_BASE64_RSA_PUBLIC_KEY));
     xmlDeviceIdPropertyName = c.getString(c
@@ -286,21 +291,19 @@ public final String formPath;
           + formDefFile.getAbsolutePath());
     }
 
-    String fallbackLanguage = "default";
-    String defaultLanguage;
+    // formDef.json should always have a _default_locale entry.
     setting = (Map<String, Object>) settings.get(FORMDEF_DEFAULT_LOCALE);
     if (setting != null) {
       Object o = setting.get(FORMDEF_VALUE);
-      if (o == null) {
-        defaultLanguage = null;
-      } else if (o instanceof String) {
-        defaultLanguage = (String) o;
+      if (o instanceof String) {
+        defaultLocale = (String) o;
       } else {
-        throw new IllegalArgumentException("defaultLocale is invalid in the formdef json file! "
+        throw new IllegalArgumentException(FORMDEF_DEFAULT_LOCALE + " is invalid in the formdef json file! "
             + formDefFile.getAbsolutePath());
       }
     } else {
-      defaultLanguage = null;
+      throw new IllegalArgumentException(FORMDEF_DEFAULT_LOCALE + " is invalid in the formdef json file! "
+          + formDefFile.getAbsolutePath());
     }
 
     Map<String, Object> formDefStruct = null;
@@ -314,7 +317,6 @@ public final String formPath;
 	          + formDefFile.getAbsolutePath());
 	    }
 	    if (o instanceof String) {
-	      language = (defaultLanguage != null) ? defaultLanguage : fallbackLanguage;
 	      formTitle = (String) o;
 	    } else {
 	      try {
@@ -326,15 +328,8 @@ public final String formPath;
 	                  + formDefFile.getAbsolutePath());
 	        }
 
-	        if (defaultLanguage == null || !formDefStruct.containsKey(defaultLanguage)) {
-	          String[] values = formDefStruct.keySet().toArray(new String[formDefStruct.size()]);
-	          Arrays.sort(values, 0, values.length);
-	          defaultLanguage = values[0];
-	        }
-
-	        language = (defaultLanguage != null) ? defaultLanguage : fallbackLanguage;
 	        // just get the one title string from the file...
-	        formTitle = (String) formDefStruct.get(language);
+	        formTitle = (String) formDefStruct.get(defaultLocale);
 	      } catch (ClassCastException e) {
 	        e.printStackTrace();
 	        throw new IllegalArgumentException("formTitle is invalid in the formdef json file! "
@@ -349,6 +344,20 @@ public final String formPath;
 	    throw new IllegalArgumentException("survey entry is not specified in the settings of formdef json file! "
 	            + formDefFile.getAbsolutePath());
 	}
+
+    setting = (Map<String, Object>) settings.get(FORMDEF_INSTANCE_NAME);
+    if (setting != null) {
+      Object o = setting.get(FORMDEF_VALUE);
+      if (o == null) {
+        instanceName = null;
+      } else if (o instanceof String) {
+        instanceName = (String) o;
+      } else {
+        instanceName = o.toString();
+      }
+    } else {
+      instanceName = null;
+    }
 
     setting = (Map<String, Object>) settings.get(FORMDEF_FORM_VERSION);
     if (setting != null) {

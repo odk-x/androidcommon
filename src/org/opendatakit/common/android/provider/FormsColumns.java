@@ -48,6 +48,8 @@ public final class FormsColumns implements BaseColumns {
 
   /** locale that the form should start in */
   public static final String DEFAULT_FORM_LOCALE = "defaultFormLocale";
+  /** column name for the 'instance_name' (display name) of a submission */
+  public static final String INSTANCE_NAME = "instanceName";
   /** ODK1 support - can be null */
   public static final String XML_SUBMISSION_URL = "xmlSubmissionUrl";
   /** ODK1 support - can be null */
@@ -68,7 +70,7 @@ public final class FormsColumns implements BaseColumns {
   // NOTE: this omits _ID (the primary key)
   public static final String[] formsDataColumnNames = { DISPLAY_NAME, DISPLAY_SUBTEXT, DESCRIPTION,
       TABLE_ID, FORM_ID, FORM_VERSION, FORM_FILE_PATH, FORM_MEDIA_PATH, FORM_PATH, MD5_HASH, DATE,
-      DEFAULT_FORM_LOCALE, XML_SUBMISSION_URL, XML_BASE64_RSA_PUBLIC_KEY,
+      DEFAULT_FORM_LOCALE, INSTANCE_NAME, XML_SUBMISSION_URL, XML_BASE64_RSA_PUBLIC_KEY,
       XML_DEVICE_ID_PROPERTY_NAME, XML_USER_ID_PROPERTY_NAME, XML_ROOT_ELEMENT_NAME };
 
   /**
@@ -92,6 +94,7 @@ public final class FormsColumns implements BaseColumns {
 	            + MD5_HASH + " text not null, "
 	            + DATE + " integer not null, " // milliseconds
 	            + DEFAULT_FORM_LOCALE + " text, "
+	            + INSTANCE_NAME + " text, "
 	            + XML_SUBMISSION_URL + " text, "
 	            + XML_BASE64_RSA_PUBLIC_KEY + " text, "
 	            + XML_ROOT_ELEMENT_NAME + " text, "

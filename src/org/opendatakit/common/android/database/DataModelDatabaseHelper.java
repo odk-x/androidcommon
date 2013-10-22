@@ -140,15 +140,17 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
     return null;
   }
 
-  public static final class IdStruct {
+  public static final class IdInstanceNameStruct {
     public final int _id;
     public final String formId;
     public final String tableId;
+    public final String instanceName;
 
-    public IdStruct(int _id, String formId, String tableId) {
+    public IdInstanceNameStruct(int _id, String formId, String tableId, String instanceName) {
       this._id = _id;
       this.formId = formId;
       this.tableId = tableId;
+      this.instanceName = instanceName;
     }
   }
 
@@ -160,21 +162,25 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
    *          -- either the integer _ID or the textual form_id
    * @return
    */
-  public static IdStruct getIds(SQLiteDatabase db, String formId) {
+  public static IdInstanceNameStruct getIds(SQLiteDatabase db, String formId) {
     boolean isNumericId = StringUtils.isNumeric(formId);
 
     Cursor c = null;
     try {
       c = db.query(FORMS_TABLE_NAME, new String[] { FormsColumns._ID, FormsColumns.FORM_ID,
-          FormsColumns.TABLE_ID }, (isNumericId ? FormsColumns._ID : FormsColumns.FORM_ID) + "=?",
+          FormsColumns.TABLE_ID, FormsColumns.INSTANCE_NAME },
+          (isNumericId ? FormsColumns._ID : FormsColumns.FORM_ID) + "=?",
           new String[] { formId }, null, null, null);
 
       if (c.moveToFirst()) {
         int idxId = c.getColumnIndex(FormsColumns._ID);
         int idxFormId = c.getColumnIndex(FormsColumns.FORM_ID);
         int idxTableId = c.getColumnIndex(FormsColumns.TABLE_ID);
+        int idxInstanceName = c.getColumnIndex(FormsColumns.INSTANCE_NAME);
 
-        return new IdStruct(c.getInt(idxId), c.getString(idxFormId), c.getString(idxTableId));
+        return new IdInstanceNameStruct(c.getInt(idxId), c.getString(idxFormId),
+                      c.getString(idxTableId),
+                      c.isNull(idxInstanceName) ? null : c.getString(idxInstanceName));
       }
     } finally {
       if (c != null && !c.isClosed()) {
@@ -184,16 +190,6 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
     return null;
   }
 
-  public static class Join {
-    public final String tableId;
-    public final String elementKey;
-
-    Join(String tableId, String elementKey) {
-      this.tableId = tableId;
-      this.elementKey = elementKey;
-    }
-  };
-
   public static class ColumnDefinition {
     public final String elementKey;
     public final String elementName;
@@ -201,7 +197,6 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
     public final boolean isPersisted;
 
     public final ArrayList<ColumnDefinition> children = new ArrayList<ColumnDefinition>();
-    public final ArrayList<Join> joins = new ArrayList<Join>();
     public ColumnDefinition parent = null;
 
     ColumnDefinition(String elementKey, String elementName, String elementType, boolean isPersisted) {
@@ -213,10 +208,6 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
 
     private void setParent(ColumnDefinition parent) {
       this.parent = parent;
-    }
-
-    void addJoin(Join j) {
-      joins.add(j);
     }
 
     void addChild(ColumnDefinition child) {
@@ -322,7 +313,6 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
         int idxET = c.getColumnIndex(ColumnDefinitionsColumns.ELEMENT_TYPE);
         int idxIP = c.getColumnIndex(ColumnDefinitionsColumns.IS_PERSISTED);
         int idxLIST = c.getColumnIndex(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS);
-        int idxJOINS = c.getColumnIndex(ColumnDefinitionsColumns.JOINS);
         HashMap<String, ColumnContainer> ref = new HashMap<String, ColumnContainer>();
 
         do {
@@ -331,7 +321,6 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
           String elementType = c.getString(idxET);
           boolean isPersisted = (c.getInt(idxIP) != 0);
           String childrenString = c.isNull(idxLIST) ? null : c.getString(idxLIST);
-          String joinsString = c.isNull(idxJOINS) ? null : c.getString(idxJOINS);
           ColumnContainer ctn = new ColumnContainer();
           ctn.defn = new ColumnDefinition(elementKey, elementName, elementType, isPersisted);
 
@@ -339,20 +328,6 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
             @SuppressWarnings("unchecked")
             ArrayList<String> l = ODKFileUtils.mapper.readValue(childrenString, ArrayList.class);
             ctn.children = l;
-          }
-
-          if (joinsString != null) {
-            @SuppressWarnings("unchecked")
-            ArrayList<Object> joins = ODKFileUtils.mapper.readValue(joinsString, ArrayList.class);
-            for (Object o : joins) {
-              @SuppressWarnings("unchecked")
-              Map<String, Object> m = (Map<String, Object>) o;
-              String tId = (String) m.get("table_id");
-              String tEK = (String) m.get("element_key");
-
-              Join j = new Join(tId, tEK);
-              ctn.defn.addJoin(j);
-            }
           }
 
           ref.put(elementKey, ctn);

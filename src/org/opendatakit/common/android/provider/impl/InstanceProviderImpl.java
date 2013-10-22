@@ -27,7 +27,7 @@ import java.util.Locale;
 import org.apache.commons.io.FileUtils;
 import org.opendatakit.common.android.R;
 import org.opendatakit.common.android.database.DataModelDatabaseHelper;
-import org.opendatakit.common.android.database.DataModelDatabaseHelper.IdStruct;
+import org.opendatakit.common.android.database.DataModelDatabaseHelper.IdInstanceNameStruct;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.InstanceColumns;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
@@ -46,11 +46,14 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
   // private static final String t = "InstancesProviderImpl";
 
   private static final String DATA_TABLE_ID_COLUMN = DataTableColumns.ID;
-  private static final String DATA_TABLE_TIMESTAMP_COLUMN = DataTableColumns.TIMESTAMP;
-  private static final String DATA_TABLE_INSTANCE_NAME_COLUMN = DataTableColumns.INSTANCE_NAME;
-  private static final String DATA_TABLE_SAVED_COLUMN = DataTableColumns.SAVED;
+  private static final String DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN = DataTableColumns.SAVEPOINT_TIMESTAMP;
+  private static final String DATA_TABLE_SAVEPOINT_TYPE_COLUMN = DataTableColumns.SAVEPOINT_TYPE;
   private static final String DATA_TABLE_FORM_ID_COLUMN = DataTableColumns.FORM_ID;
-  private static final String SAVED_AS_COMPLETE = "COMPLETE";
+  private static final String DATA_TABLE_LOCALE_COLUMN = DataTableColumns.LOCALE;
+
+  private static final String SAVEPOINT_TYPE_COMPLETE = "COMPLETE";
+  private static final String SAVEPOINT_TYPE_INCOMPLETE = "INCOMPLETE";
+  private static final String SAVEPOINT_TYPE_CHECKPOINT = null;
 
   private static HashMap<String, String> sInstancesProjectionMap;
 
@@ -83,7 +86,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
 
     SQLiteDatabase db = dbh.getReadableDatabase();
 
-    IdStruct ids;
+    IdInstanceNameStruct ids;
     try {
       ids = DataModelDatabaseHelper.getIds(db, uriFormId);
     } catch ( Exception e ) {
@@ -137,29 +140,29 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
      .append(dbTableName).append(".")
         .append("*").append(",");
     // b.append(dbTableName).append(".").append(InstanceColumns._ID).append(",");
-    b.append("CASE WHEN ").append(DATA_TABLE_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
+    b.append("CASE WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
         .append(" WHEN ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP)
-        .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_TIMESTAMP_COLUMN)
+        .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
         .append(" > ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" THEN null")
         .append(" ELSE ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" END as ")
         .append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(",");
-    b.append("CASE WHEN ").append(DATA_TABLE_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
+    b.append("CASE WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
         .append(" WHEN ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP)
-        .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_TIMESTAMP_COLUMN)
+        .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
         .append(" > ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" THEN null")
         .append(" ELSE ").append(InstanceColumns.XML_PUBLISH_STATUS).append(" END as ")
         .append(InstanceColumns.XML_PUBLISH_STATUS).append(",");
-    b.append("CASE WHEN ").append(DATA_TABLE_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
+    b.append("CASE WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
         .append(" WHEN ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP)
-        .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_TIMESTAMP_COLUMN)
+        .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
         .append(" > ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" THEN null")
         .append(" ELSE ").append(InstanceColumns.DISPLAY_SUBTEXT).append(" END as ")
         .append(InstanceColumns.DISPLAY_SUBTEXT).append(",");
-    b.append(DATA_TABLE_INSTANCE_NAME_COLUMN).append(" as ").append(InstanceColumns.DISPLAY_NAME);
+    b.append(ids.instanceName).append(" as ").append(InstanceColumns.DISPLAY_NAME);
     b.append(" FROM ");
     b.append("( SELECT * FROM ").append(dbTableName).append(" GROUP BY ")
-        .append(DATA_TABLE_ID_COLUMN).append(" HAVING ").append(DATA_TABLE_TIMESTAMP_COLUMN)
-        .append(" = MAX(").append(DATA_TABLE_TIMESTAMP_COLUMN).append(")").append(") as ")
+        .append(DATA_TABLE_ID_COLUMN).append(" HAVING ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
+        .append(" = MAX(").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(")").append(") as ")
         .append(dbTableName);
     b.append(" JOIN ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(" ON ")
         .append(dbTableName).append(".").append(DATA_TABLE_ID_COLUMN).append("=")
@@ -169,7 +172,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
         .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(" AND ").append("? =")
         .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
         .append(InstanceColumns.XML_PUBLISH_FORM_ID);
-    b.append(" WHERE ").append(DATA_TABLE_SAVED_COLUMN).append("=?");
+    b.append(" WHERE ").append(DATA_TABLE_SAVEPOINT_TYPE_COLUMN).append("=?");
     // @formatter:on
 
     String filterArgs[];
