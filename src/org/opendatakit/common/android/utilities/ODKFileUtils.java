@@ -45,7 +45,7 @@ import android.util.Log;
  * @author Carl Hartung (carlhartung@gmail.com)
  */
 public class ODKFileUtils {
-  private static final String ODK_FOLDER_NAME = "odk";
+  private static final String ODK_FOLDER_NAME = "opendatakit";
 
   private static final String TABLES_FOLDER_NAME = "tables";
   public static final String FORMS_FOLDER_NAME = "forms";
@@ -73,13 +73,13 @@ public class ODKFileUtils {
   private static final List<String> LEGACY_DIRECTORIES;
   static {
     LEGACY_DIRECTORIES = new ArrayList<String>();
-    LEGACY_DIRECTORIES.add(FORMS_FOLDER_NAME);
-    LEGACY_DIRECTORIES.add(INSTANCES_FOLDER_NAME);
-    LEGACY_DIRECTORIES.add(".cache");
-    LEGACY_DIRECTORIES.add(METADATA_FOLDER_NAME);
-    LEGACY_DIRECTORIES.add("config");
+//    LEGACY_DIRECTORIES.add(FORMS_FOLDER_NAME);
+//    LEGACY_DIRECTORIES.add(INSTANCES_FOLDER_NAME);
+//    LEGACY_DIRECTORIES.add(".cache");
+//    LEGACY_DIRECTORIES.add(METADATA_FOLDER_NAME);
+//    LEGACY_DIRECTORIES.add("config");
   }
-  
+
   /**
    * Get the name of the logging folder, without a path.
    * @return
@@ -87,7 +87,7 @@ public class ODKFileUtils {
   public static String getNameOfLoggingFolder() {
     return LOGGING_FOLDER_NAME;
   }
-  
+
   /**
    * Get the name of the metadata folder, without a path.
    * @return
@@ -95,7 +95,7 @@ public class ODKFileUtils {
   public static String getNameOfMetadataFolder() {
     return METADATA_FOLDER_NAME;
   }
-  
+
   /**
    * Get the name of the framework folder, without a path.
    * @return
@@ -103,7 +103,7 @@ public class ODKFileUtils {
   public static String getNameOfFrameworkFolder() {
     return FRAMEWORK_FOLDER_NAME;
   }
-  
+
   /**
    * Get the name of the instances folder, without a path.
    * @return
