@@ -40,13 +40,13 @@ public final class InstanceColumns implements BaseColumns {
   // _ID is the index on the table maintained for ODK Survey purposes
   // DATA_INSTANCE_ID holds the _id value of the data record as used
   // in the javascript and ODK Tables.
-  public static final String DATA_INSTANCE_ID = "insanceId";
-  public static final String DATA_TABLE_TABLE_ID = "tableId";
-  public static final String XML_PUBLISH_FORM_ID = "xmlPublishFormId";
-  public static final String XML_PUBLISH_TIMESTAMP = "xmlPublishTimestamp";
-  public static final String XML_PUBLISH_STATUS = "xmlPublishStatus";
-  public static final String DISPLAY_NAME = "displayName";
-  public static final String DISPLAY_SUBTEXT = "displaySubtext";
+  public static final String DATA_INSTANCE_ID = "_instanceId";
+  public static final String DATA_TABLE_TABLE_ID = "_tableId";
+  public static final String XML_PUBLISH_FORM_ID = "_xmlPublishFormId";
+  public static final String XML_PUBLISH_TIMESTAMP = "_xmlPublishTimestamp";
+  public static final String XML_PUBLISH_STATUS = "_xmlPublishStatus";
+  public static final String DISPLAY_NAME = "_displayName";
+  public static final String DISPLAY_SUBTEXT = "_displaySubtext";
 
   /**
    * Get the create sql for the forms table (ODK Survey only).
