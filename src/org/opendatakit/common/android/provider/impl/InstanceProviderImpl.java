@@ -116,7 +116,8 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
         .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(" FROM (")
           .append("SELECT DISTINCT ").append(DATA_TABLE_ID_COLUMN).append(" as ")
           .append(InstanceColumns.DATA_INSTANCE_ID).append(",").append("? as ")
-          .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",").append("? as ")
+          .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
+          .append(DataTableColumns.FORM_ID).append(" as ")
           .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(" FROM ")
           .append(dbTableName).append(" EXCEPT SELECT DISTINCT ")
           .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
@@ -125,7 +126,8 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
           .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(")");
     //@formatter:on
 
-    String[] args = { ids.tableId, ids.formId };
+    // TODO: should we collapse across FORM_ID or leave it this way?
+    String[] args = { ids.tableId };
     db.execSQL(b.toString(), args);
 
     // We can now join through and access the data table rows
@@ -158,7 +160,12 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
         .append(" > ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" THEN null")
         .append(" ELSE ").append(InstanceColumns.DISPLAY_SUBTEXT).append(" END as ")
         .append(InstanceColumns.DISPLAY_SUBTEXT).append(",");
-    b.append(ids.instanceName).append(" as ").append(InstanceColumns.DISPLAY_NAME);
+    if ( ids.instanceName == null ) {
+      b.append( "datetime(").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append("/1000, 'unixepoch', 'localtime')");
+    } else {
+      b.append(ids.instanceName);
+    }
+    b.append(" as ").append(InstanceColumns.DISPLAY_NAME);
     b.append(" FROM ");
     b.append("( SELECT * FROM ").append(dbTableName).append(" GROUP BY ")
         .append(DATA_TABLE_ID_COLUMN).append(" HAVING ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
