@@ -189,6 +189,7 @@ public final class FormsDiscoveryRunnable implements Runnable {
 
       if (c.getCount() > 1) {
         c.close();
+        Log.w(t, "[" + instanceCounter + "] updateFormDir: " + formDirectoryPath + " multiple records from cursor -- delete all and restore!");
         // we have multiple records for this one directory.
         // Rename the directory. Delete the records, and move the
         // directory back.
@@ -211,7 +212,10 @@ public final class FormsDiscoveryRunnable implements Runnable {
           fi = new FormInfo(c, false);
           needUpdate = false;
         } else {
+          Log.i(t, "[" + instanceCounter + "] updateFormDir: " + formDirectoryPath
+              + " formDef revised");
           fi = new FormInfo(context, appName, formDef);
+          needUpdate = true;
         }
       } else if (c.getCount() == 0) {
         // it should be new, try to parse it...
