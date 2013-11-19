@@ -23,10 +23,14 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
+import org.codehaus.jackson.JsonParseException;
+import org.codehaus.jackson.map.JsonMappingException;
 import org.opendatakit.common.android.R;
 import org.opendatakit.common.android.database.DataModelDatabaseHelper;
+import org.opendatakit.common.android.database.DataModelDatabaseHelper.ColumnDefinition;
 import org.opendatakit.common.android.database.DataModelDatabaseHelper.IdInstanceNameStruct;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.InstanceColumns;
@@ -48,12 +52,6 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
   private static final String DATA_TABLE_ID_COLUMN = DataTableColumns.ID;
   private static final String DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN = DataTableColumns.SAVEPOINT_TIMESTAMP;
   private static final String DATA_TABLE_SAVEPOINT_TYPE_COLUMN = DataTableColumns.SAVEPOINT_TYPE;
-  private static final String DATA_TABLE_FORM_ID_COLUMN = DataTableColumns.FORM_ID;
-  private static final String DATA_TABLE_LOCALE_COLUMN = DataTableColumns.LOCALE;
-
-  private static final String SAVEPOINT_TYPE_COMPLETE = "COMPLETE";
-  private static final String SAVEPOINT_TYPE_INCOMPLETE = "INCOMPLETE";
-  private static final String SAVEPOINT_TYPE_CHECKPOINT = null;
 
   private static HashMap<String, String> sInstancesProjectionMap;
 
@@ -130,6 +128,22 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     String[] args = { ids.tableId };
     db.execSQL(b.toString(), args);
 
+    // Can't get away with dataTable.* because of collision with _ID column
+    // get map of (elementKey -> ColumnDefinition)
+    Map<String, ColumnDefinition> defns;
+    try {
+      defns = DataModelDatabaseHelper.getColumnDefinitions(db, ids.tableId);
+    } catch (JsonParseException e) {
+      e.printStackTrace();
+      throw new SQLException("Unable to retrieve column definitions for tableId " + ids.tableId);
+    } catch (JsonMappingException e) {
+      e.printStackTrace();
+      throw new SQLException("Unable to retrieve column definitions for tableId " + ids.tableId);
+    } catch (IOException e) {
+      e.printStackTrace();
+      throw new SQLException("Unable to retrieve column definitions for tableId " + ids.tableId);
+    }
+
     // We can now join through and access the data table rows
 
     b.setLength(0);
@@ -138,9 +152,25 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     b.append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
         .append(InstanceColumns._ID).append(",")
      .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
-        .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(",")
-     .append(dbTableName).append(".")
-        .append("*").append(",");
+        .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
+     .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+        .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(",");
+    // add the dataTable metadata except for _ID (which conflicts with InstanceColumns._ID)
+    b.append(dbTableName).append(".").append(DataTableColumns.URI_ACCESS_CONTROL).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SYNC_TAG).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SYNC_STATE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.CONFLICT_TYPE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_TIMESTAMP).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_TYPE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.FORM_ID).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.LOCALE).append(",");
+    // add the user-specified data fields in this dataTable
+    for ( ColumnDefinition cd : defns.values() ) {
+      if ( cd.isUnitOfRetention ) {
+        b.append(dbTableName).append(".")
+         .append(cd.elementKey).append(",");
+      }
+    }
     // b.append(dbTableName).append(".").append(InstanceColumns._ID).append(",");
     b.append("CASE WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
         .append(" WHEN ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP)
@@ -385,10 +415,12 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
       // use this provider's query interface to get the set of ids that
       // match (if any)
       ref = this.query(uri, null, where, whereArgs, null);
-      ref.moveToPosition(-1);
-      while (ref.moveToNext()) {
-        String iId = ref.getString(ref.getColumnIndex(InstanceColumns.DATA_INSTANCE_ID));
-        ids.add(iId);
+      if ( ref.getCount() != 0 ) {
+        ref.moveToFirst();
+        do {
+          String iId = ref.getString(ref.getColumnIndex(InstanceColumns._ID));
+          ids.add(iId);
+        } while (ref.moveToNext());
       }
     } finally {
       if (ref != null) {
@@ -407,10 +439,12 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
       }
     }
 
+    String[] args = new String[1];
     int count = 0;
     for (String id : ids) {
-      values.put(InstanceColumns.DATA_INSTANCE_ID, id);
-      count += (db.replace(DataModelDatabaseHelper.UPLOADS_TABLE_NAME, null, values) != -1) ? 1 : 0;
+      args[0] = id;
+      count += db.update(DataModelDatabaseHelper.UPLOADS_TABLE_NAME, values,
+                         InstanceColumns._ID + "=?", args);
     }
     getContext().getContentResolver().notifyChange(uri, null);
     return count;
