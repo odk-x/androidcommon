@@ -179,8 +179,8 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
 
   private void patchUpValues(String appName, ContentValues values) {
     // don't let users put in a manual FORM_FILE_PATH
-    if (values.containsKey(FormsColumns.FORM_FILE_PATH)) {
-      values.remove(FormsColumns.FORM_FILE_PATH);
+    if (values.containsKey(FormsColumns.APP_RELATIVE_FORM_FILE_PATH)) {
+      values.remove(FormsColumns.APP_RELATIVE_FORM_FILE_PATH);
     }
 
     // don't let users put in a manual FORM_PATH
@@ -200,16 +200,24 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
 
     // if we are not updating FORM_MEDIA_PATH, we don't need to recalc any
     // of the above
-    if (!values.containsKey(FormsColumns.FORM_MEDIA_PATH)) {
+    if (!values.containsKey(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH)) {
       return;
     }
 
     // Normalize path...
-    File mediaPath = new File(values.getAsString(FormsColumns.FORM_MEDIA_PATH));
+
+    // First, construct the full file path...
+    String path = values.getAsString(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH);
+    File mediaPath;
+    if ( path.startsWith(File.separator) ) {
+      mediaPath = new File(path);
+    } else {
+      mediaPath = ODKFileUtils.asAppFile(appName, path);
+    }
 
     // require that the form directory actually exists
     if (!mediaPath.exists()) {
-      throw new IllegalArgumentException(FormsColumns.FORM_MEDIA_PATH
+      throw new IllegalArgumentException(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH
           + " directory does not exist: " + mediaPath.getAbsolutePath());
     }
 
@@ -218,7 +226,8 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
           "Form definition is not contained within the application: " + appName);
     }
 
-    values.put(FormsColumns.FORM_MEDIA_PATH, mediaPath.getAbsolutePath());
+    values.put(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH,
+               ODKFileUtils.asRelativePath(appName, mediaPath));
 
     // require that it contain a formDef file
     File formDefFile = new File(mediaPath, ODKFileUtils.FORMDEF_JSON_FILENAME);
@@ -234,7 +243,8 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     // ODK2: FILENAME_XFORMS_XML may not exist if non-ODK1 fetch path...
     File xformsFile = new File(mediaPath, ODKFileUtils.FILENAME_XFORMS_XML);
     if (xformsFile.exists()) {
-      values.put(FormsColumns.FORM_FILE_PATH, xformsFile.getAbsolutePath());
+      values.put(FormsColumns.APP_RELATIVE_FORM_FILE_PATH,
+                 ODKFileUtils.asRelativePath(appName, xformsFile));
     }
 
     // compute FORM_PATH...
@@ -269,16 +279,16 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
 
     // ODK2: require FORM_MEDIA_PATH (different behavior -- ODK1 and
     // required FORM_FILE_PATH)
-    if (!values.containsKey(FormsColumns.FORM_MEDIA_PATH)) {
-      throw new IllegalArgumentException(FormsColumns.FORM_MEDIA_PATH + " must be specified.");
+    if (!values.containsKey(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH)) {
+      throw new IllegalArgumentException(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + " must be specified.");
     }
 
     // Normalize path...
-    File mediaPath = new File(values.getAsString(FormsColumns.FORM_MEDIA_PATH));
+    File mediaPath = ODKFileUtils.asAppFile(appName, values.getAsString(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH));
 
     // require that the form directory actually exists
     if (!mediaPath.exists()) {
-      throw new IllegalArgumentException(FormsColumns.FORM_MEDIA_PATH
+      throw new IllegalArgumentException(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH
           + " directory does not exist: " + mediaPath.getAbsolutePath());
     }
 
@@ -296,9 +306,9 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     }
 
     // first try to see if a record with this filename already exists...
-    String[] projection = { FormsColumns.FORM_ID, FormsColumns.FORM_MEDIA_PATH };
-    String[] selectionArgs = { mediaPath.getAbsolutePath() };
-    String selection = FormsColumns.FORM_MEDIA_PATH + "=?";
+    String[] projection = { FormsColumns.FORM_ID, FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH };
+    String[] selectionArgs = {  ODKFileUtils.asRelativePath(appName, mediaPath) };
+    String selection = FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + "=?";
     Cursor c = null;
 
     DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
@@ -474,7 +484,8 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
         idValue = del.getInt(del.getColumnIndex(FormsColumns._ID));
         tableIdValue = del.getString(del.getColumnIndex(FormsColumns.TABLE_ID));
         formIdValue = del.getString(del.getColumnIndex(FormsColumns.FORM_ID));
-        File mediaDir = new File(del.getString(del.getColumnIndex(FormsColumns.FORM_MEDIA_PATH)));
+        File mediaDir = ODKFileUtils.asAppFile(appName,
+            del.getString(del.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH)));
         mediaDirs.put(mediaDir, (tableIdValue == null) ? DirType.FRAMEWORK : DirType.FORMS );
       }
     } catch ( Exception e ) {
@@ -635,9 +646,10 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
           String formVersion = c.getString(c.getColumnIndex(FormsColumns.FORM_VERSION));
           FormIdVersion cur = new FormIdVersion(tableId, formId, formVersion);
 
-          String mediaPath = c.getString(c.getColumnIndex(FormsColumns.FORM_MEDIA_PATH));
+          int appRelativeMediaPathIdx = c.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH);
+          String mediaPath = c.getString(appRelativeMediaPathIdx);
           if (mediaPath != null) {
-            mediaDirs.put(new File(mediaPath), (tableIdValue == null) ? DirType.FRAMEWORK : DirType.FORMS);
+            mediaDirs.put(ODKFileUtils.asAppFile(appName,mediaPath), (tableIdValue == null) ? DirType.FRAMEWORK : DirType.FORMS);
           }
 
           if (ref != null && !ref.equals(cur)) {
@@ -667,14 +679,14 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     if (multiset) {
       // don't let users manually update media path
       // we are referring to two or more (formId,formVersion) tuples.
-      if (values.containsKey(FormsColumns.FORM_MEDIA_PATH)) {
-        values.remove(FormsColumns.FORM_MEDIA_PATH);
+      if (values.containsKey(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH)) {
+        values.remove(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH);
       }
-    } else if (values.containsKey(FormsColumns.FORM_MEDIA_PATH)) {
+    } else if (values.containsKey(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH)) {
       // we are not a multiset and we are setting the media path
       // try to move all the existing non-matching media paths to
       // somewhere else...
-      File mediaPath = new File(values.getAsString(FormsColumns.FORM_MEDIA_PATH));
+      File mediaPath = ODKFileUtils.asAppFile(appName,values.getAsString(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH));
       for (HashMap.Entry<File,DirType> entry : mediaDirs.entrySet()) {
         File altPath = entry.getKey();
         if (!altPath.equals(mediaPath)) {

@@ -14,6 +14,9 @@
 
 package org.opendatakit.common.android.provider;
 
+import java.util.List;
+
+import android.net.Uri;
 import android.provider.BaseColumns;
 
 /**
@@ -40,9 +43,9 @@ public final class FormsColumns implements BaseColumns {
   public static final String DESCRIPTION = "description"; // can be null
 
   /** ODK2: within the media directory */
-  public static final String FORM_FILE_PATH = "formFilePath";
+  public static final String APP_RELATIVE_FORM_FILE_PATH = "appRelativeFormFilePath";
   /** directory containing formDef.json */
-  public static final String FORM_MEDIA_PATH = "formMediaPath";
+  public static final String APP_RELATIVE_FORM_MEDIA_PATH = "appRelativeFormMediaPath";
   /** relative path for WebKit */
   public static final String FORM_PATH = "formPath";
 
@@ -69,7 +72,7 @@ public final class FormsColumns implements BaseColumns {
 
   // NOTE: this omits _ID (the primary key)
   public static final String[] formsDataColumnNames = { DISPLAY_NAME, DISPLAY_SUBTEXT, DESCRIPTION,
-      TABLE_ID, FORM_ID, FORM_VERSION, FORM_FILE_PATH, FORM_MEDIA_PATH, FORM_PATH, MD5_HASH, DATE,
+      TABLE_ID, FORM_ID, FORM_VERSION, APP_RELATIVE_FORM_FILE_PATH, APP_RELATIVE_FORM_MEDIA_PATH, FORM_PATH, MD5_HASH, DATE,
       DEFAULT_FORM_LOCALE, INSTANCE_NAME, XML_SUBMISSION_URL, XML_BASE64_RSA_PUBLIC_KEY,
       XML_DEVICE_ID_PROPERTY_NAME, XML_USER_ID_PROPERTY_NAME, XML_ROOT_ELEMENT_NAME };
 
@@ -88,8 +91,8 @@ public final class FormsColumns implements BaseColumns {
 	            + DESCRIPTION + " text, "
 	            + TABLE_ID + " text null, " // null if framework
 	            + FORM_VERSION + " text, "
-	            + FORM_FILE_PATH + " text null, "
-	            + FORM_MEDIA_PATH + " text not null, "
+	            + APP_RELATIVE_FORM_FILE_PATH + " text null, "
+	            + APP_RELATIVE_FORM_MEDIA_PATH + " text not null, "
 	            + FORM_PATH + " text not null, "
 	            + MD5_HASH + " text not null, "
 	            + DATE + " integer not null, " // milliseconds
@@ -103,4 +106,14 @@ public final class FormsColumns implements BaseColumns {
        //@formatter:on
   }
 
+  public static String extractAppNameFromFormsUri(Uri uri) {
+    List<String> segments = uri.getPathSegments();
+
+    if (segments.size() < 1) {
+      throw new IllegalArgumentException("Unknown URI (incorrect number of segments!) " + uri);
+    }
+
+    String appName = segments.get(0);
+    return appName;
+  }
 }

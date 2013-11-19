@@ -432,50 +432,73 @@ public class ODKFileUtils {
     }
   }
 
+  /**
+   * Returns the relative path beginning after the getAppFolder(appName) directory.
+   * The relative path does not start or end with a '/'
+   *
+   * @param appName
+   * @param fileUnderAppName
+   * @return
+   */
+  public static String asRelativePath(String appName, File fileUnderAppName) {
+    // convert fileUnderAppName to a relative path such that if
+    // we just append it to the AppFolder, we have a full path.
+    File parentDir = new File(ODKFileUtils.getAppFolder(appName));
+
+    ArrayList<String> pathElements = new ArrayList<String>();
+
+    File f = fileUnderAppName;
+    while (f != null && !f.equals(parentDir)) {
+      pathElements.add(f.getName());
+      f = f.getParentFile();
+    }
+
+    if (f == null) {
+      throw new IllegalArgumentException("file is not located under this appName (" + appName + ")!");
+    }
+
+    StringBuilder b = new StringBuilder();
+    for (int i = pathElements.size() - 1; i >= 0; --i) {
+      String element = pathElements.get(i);
+      b.append(element);
+      if ( i != 0 ) {
+        b.append(File.separator);
+      }
+    }
+    return b.toString();
+
+  }
+
+  /**
+   * Convert a relative path into an application filename
+   *
+   * @param appName
+   * @param relativePath
+   * @return
+   */
+  public static File asAppFile(String appName, String relativePath) {
+    return new File(ODKFileUtils.getAppFolder(appName) + File.separator + relativePath);
+  }
+
+  /**
+   * The formPath is relative to the framework directory and is passed into
+   * the WebKit to specify the form to display.
+   *
+   * @param appName
+   * @param formDefFile
+   * @return
+   */
   public static String getRelativeFormPath(String appName, File formDefFile) {
 
     // compute FORM_PATH...
     // we need to do this relative to the AppFolder, as the
     // common javascript framework (default form) is no longer
     // in the forms directory, but in the Framework folder.
-    File parentDir = new File(ODKFileUtils.getAppFolder(appName));
 
-    ArrayList<String> pathElements = new ArrayList<String>();
-
-    File f = formDefFile.getParentFile();
-
-    while (f != null && !f.equals(parentDir)) {
-      pathElements.add(f.getName());
-      f = f.getParentFile();
-    }
-
-    StringBuilder b = new StringBuilder();
-    if (f == null) {
-      // OK we have had to go all the way up to /
-
-      // to get from ./framework to appName
-      b.append("..");
-      b.append(File.separator);
-
-      // and then go all the way up to / from our appName
-      while (parentDir != null) {
-        b.append("..");
-        b.append(File.separator);
-        parentDir = parentDir.getParentFile();
-      }
-
-    } else {
-      // to get from ./framework to appName
-      b.append("..");
-      b.append(File.separator);
-    }
-
-    for (int i = pathElements.size() - 1; i >= 0; --i) {
-      String element = pathElements.get(i);
-      b.append(element);
-      b.append(File.separator);
-    }
-    return b.toString();
+    String relativePath = asRelativePath(appName, formDefFile.getParentFile());
+    // adjust for relative path from ./framework...
+    relativePath = ".." + File.separator + relativePath + File.separator;
+    return relativePath;
   }
 
   public static byte[] getFileAsBytes(File file) {

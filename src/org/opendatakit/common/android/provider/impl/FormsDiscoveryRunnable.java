@@ -94,8 +94,13 @@ public final class FormsDiscoveryRunnable implements Runnable {
           Uri otherUri = Uri.withAppendedPath(
               Uri.withAppendedPath(formsProviderContentUri, appName), id);
 
-          String formMediaPath = c.getString(c.getColumnIndex(FormsColumns.FORM_MEDIA_PATH));
-          File f = new File(formMediaPath);
+          int appRelativeFormMediaPathIdx = c.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH);
+          if ( appRelativeFormMediaPathIdx == -1) {
+            throw new IllegalStateException("Column " +
+                FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + " missing from database table. Incompatible versions?");
+          }
+          String appRelativeFormMediaPath = c.getString(appRelativeFormMediaPathIdx);
+          File f = ODKFileUtils.asAppFile(appName, appRelativeFormMediaPath);
           if (!f.exists() || !f.isDirectory()) {
             // the form definition does not exist
             badEntries.add(otherUri);
@@ -176,8 +181,8 @@ public final class FormsDiscoveryRunnable implements Runnable {
     try {
       File formDef = new File(formDir, ODKFileUtils.FORMDEF_JSON_FILENAME);
 
-      String selection = FormsColumns.FORM_MEDIA_PATH + "=?";
-      String[] selectionArgs = { formDirectoryPath };
+      String selection = FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + "=?";
+      String[] selectionArgs = { ODKFileUtils.asRelativePath(appName, formDir) };
       c = context.getContentResolver().query(
           Uri.withAppendedPath(formsProviderContentUri, appName), null, selection, selectionArgs,
           null);
@@ -209,7 +214,7 @@ public final class FormsDiscoveryRunnable implements Runnable {
         if (lastModificationDate.compareTo(formDefModified) == 0) {
           Log.i(t, "[" + instanceCounter + "] updateFormDir: " + formDirectoryPath
               + " formDef unchanged");
-          fi = new FormInfo(c, false);
+          fi = new FormInfo(appName, c, false);
           needUpdate = false;
         } else {
           Log.i(t, "[" + instanceCounter + "] updateFormDir: " + formDirectoryPath
@@ -292,15 +297,15 @@ public final class FormsDiscoveryRunnable implements Runnable {
     String selection;
     String[] selectionArgs;
     if (fi.formVersion == null) {
-      selection = FormsColumns.FORM_MEDIA_PATH + "!=? AND " + FormsColumns.FORM_ID + "=? AND "
+      selection = FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + "!=? AND " + FormsColumns.FORM_ID + "=? AND "
           + FormsColumns.FORM_VERSION + " IS NULL";
-      String[] temp = { formDirectoryPath, fi.formId };
+      String[] temp = { ODKFileUtils.asRelativePath(appName, formDir), fi.formId };
       selectionArgs = temp;
     } else {
-      selection = FormsColumns.FORM_MEDIA_PATH + "!=? AND " + FormsColumns.FORM_ID + "=? AND "
+      selection = FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + "!=? AND " + FormsColumns.FORM_ID + "=? AND "
           + "( " + FormsColumns.FORM_VERSION + " IS NULL" + " OR " + FormsColumns.FORM_VERSION
           + " <=?" + " )";
-      String[] temp = { formDirectoryPath, fi.formId, fi.formVersion };
+      String[] temp = { ODKFileUtils.asRelativePath(appName, formDir), fi.formId, fi.formVersion };
       selectionArgs = temp;
     }
 
@@ -309,14 +314,14 @@ public final class FormsDiscoveryRunnable implements Runnable {
 
     // See if we have any newer versions already present...
     if (fi.formVersion == null) {
-      selection = FormsColumns.FORM_MEDIA_PATH + "!=? AND " + FormsColumns.FORM_ID + "=? AND "
+      selection = FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + "!=? AND " + FormsColumns.FORM_ID + "=? AND "
           + FormsColumns.FORM_VERSION + " IS NOT NULL";
-      String[] temp = { formDirectoryPath, fi.formId };
+      String[] temp = { ODKFileUtils.asRelativePath(appName, formDir), fi.formId };
       selectionArgs = temp;
     } else {
-      selection = FormsColumns.FORM_MEDIA_PATH + "!=? AND " + FormsColumns.FORM_ID + "=? AND "
+      selection = FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + "!=? AND " + FormsColumns.FORM_ID + "=? AND "
           + FormsColumns.FORM_VERSION + " >?";
-      String[] temp = { formDirectoryPath, fi.formId, fi.formVersion };
+      String[] temp = { ODKFileUtils.asRelativePath(appName, formDir), fi.formId, fi.formVersion };
       selectionArgs = temp;
     }
 

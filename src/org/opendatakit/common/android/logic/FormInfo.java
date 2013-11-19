@@ -41,13 +41,17 @@ import android.database.Cursor;
 public class FormInfo {
 
   private static final String FORMDEF_TITLE_ELEMENT = "title";
-private static final String FORMDEF_DISPLAY_ELEMENT = "display";
-private static final String FORMDEF_SURVEY_SETTINGS = "survey";
-private static final String FORMDEF_SETTINGS_SUBSECTION = "settings";
-private static final String FORMDEF_SPECIFICATION_SECTION = "specification";
-public final String formPath;
-  public final String formFilePath;
-  public final String formMediaPath;
+  private static final String FORMDEF_DISPLAY_ELEMENT = "display";
+  private static final String FORMDEF_SURVEY_SETTINGS = "survey";
+  private static final String FORMDEF_SETTINGS_SUBSECTION = "settings";
+  private static final String FORMDEF_SPECIFICATION_SECTION = "specification";
+
+  /* relative path from framework directory to the directory containing the formDef.json */
+  public final String formPath;
+  /* use ODKFileUtils.asFile(appName,appRelativeFormFilePath) to construct a path to the XML file */
+  public final String appRelativeFormFilePath;
+  /* use ODKFileUtils.asFile(appName,appRelativeFormMediaPath) to construct a path to the form directory */
+  public final String appRelativeFormMediaPath;
   public final long lastModificationDate;
   public final String formId;
   public final String formVersion;
@@ -123,10 +127,10 @@ public final String formPath;
         ret[i] = formId;
       } else if (FormsColumns.FORM_VERSION.equals(s)) {
         ret[i] = formVersion;
-      } else if (FormsColumns.FORM_FILE_PATH.equals(s)) {
-        ret[i] = formFilePath;
-      } else if (FormsColumns.FORM_MEDIA_PATH.equals(s)) {
-        ret[i] = formMediaPath;
+      } else if (FormsColumns.APP_RELATIVE_FORM_FILE_PATH.equals(s)) {
+        ret[i] = appRelativeFormFilePath;
+      } else if (FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH.equals(s)) {
+        ret[i] = appRelativeFormMediaPath;
       } else if (FormsColumns.FORM_PATH.equals(s)) {
         ret[i] = formPath;
       } else if (FormsColumns.MD5_HASH.equals(s)) {
@@ -163,15 +167,16 @@ public final String formPath;
    *          -- true if the formDef.json file should be opened.
    */
   @SuppressWarnings("unchecked")
-  public FormInfo(Cursor c, boolean parseFormDef) {
+  public FormInfo(String appName, Cursor c, boolean parseFormDef) {
+    this.appName = appName;
+
     formPath = c.getString(c.getColumnIndex(FormsColumns.FORM_PATH));
-    formMediaPath = c.getString(c.getColumnIndex(FormsColumns.FORM_MEDIA_PATH));
-    formFilePath = c.getString(c.getColumnIndex(FormsColumns.FORM_FILE_PATH));
+    appRelativeFormMediaPath = c.getString(c.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH));
+    appRelativeFormFilePath = c.getString(c.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_FILE_PATH));
 
-    formDefFile = new File(formMediaPath + File.separator + ODKFileUtils.FORMDEF_JSON_FILENAME);
+    File formFolder = ODKFileUtils.asAppFile(appName, appRelativeFormMediaPath);
+    formDefFile = new File( formFolder, ODKFileUtils.FORMDEF_JSON_FILENAME);
 
-    File formFolder = new File(formMediaPath);
-    appName = ODKFileUtils.extractAppNameFromPath(formFolder);
     lastModificationDate = c.getLong(c.getColumnIndex(FormsColumns.DATE));
     formId = c.getString(c.getColumnIndex(FormsColumns.FORM_ID));
     formVersion = c.getString(c.getColumnIndex(FormsColumns.FORM_VERSION));
@@ -235,8 +240,8 @@ public final String formPath;
 
     // LEGACY
     File parentFile = formDefFile.getParentFile(); // child of forms
-    formFilePath = parentFile.getAbsolutePath() + File.separator + parentFile.getName() + ".xml";
-    formMediaPath = parentFile.getAbsolutePath();
+    appRelativeFormFilePath = ODKFileUtils.asRelativePath(appName, new File(parentFile, parentFile.getName() + ".xml"));
+    appRelativeFormMediaPath = ODKFileUtils.asRelativePath(appName, parentFile);
 
     // OK -- parse the formDef file.
     HashMap<String, Object> om = null;
