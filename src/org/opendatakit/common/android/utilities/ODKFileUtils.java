@@ -469,6 +469,21 @@ public class ODKFileUtils {
 
   }
 
+  public static String asUriFragment(String appName, File fileUnderAppName) {
+    String relativePath = asRelativePath( appName, fileUnderAppName);
+    String[] segments = relativePath.split(File.separator);
+    StringBuilder b = new StringBuilder();
+    boolean first = true;
+    for ( String s : segments ) {
+      if ( !first ) {
+        b.append("/"); // uris have forward slashes
+      }
+      first = false;
+      b.append(s);
+    }
+    return b.toString();
+  }
+
   /**
    * Convert a relative path into an application filename
    *
