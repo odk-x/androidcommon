@@ -119,12 +119,14 @@ class AppNameFormsFolderObserver extends FileObserver {
     if (v != null) {
       v.stop();
     }
+    Log.i(t, "addFormDirWatch() " + getFormDirPath(formDir));
     formDirsWatch.put(formDir, new AppNameFormsFormDirObserver(this, formDir));
   }
 
   public void removeFormDirWatch(String formDir) {
     AppNameFormsFormDirObserver v = formDirsWatch.get(formDir);
     if (v != null) {
+      Log.i(t, "removeFormDirWatch() " + getFormDirPath(formDir));
       formDirsWatch.remove(formDir);
       v.stop();
       launchFormsDiscovery(formDir, "monitoring removed: " + getFormDirPath(formDir));
@@ -142,9 +144,21 @@ class AppNameFormsFolderObserver extends FileObserver {
     }
 
     if ((event & FileObserver.MOVE_SELF) != 0) {
-      stop();
-      parent.removeFormsFolderWatch();
+      // find out whether we are still where we think we are -- if not, remove ourselves.
+      File f = new File(parent.getFormsDirPath(tableDirName));
+      if ( !f.exists() ) {
+        stop();
+        parent.removeFormsFolderWatch();
+      }
       return;
+    }
+
+    if ((event & FileObserver.MOVED_TO) != 0) {
+      // The folder won't be in the folders list yet... return so we don't do a no-op
+      if (path != null && !formDirsWatch.containsKey(path)) {
+        addFormDirWatch(path);
+        return;
+      }
     }
 
     update();

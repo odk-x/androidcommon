@@ -89,13 +89,16 @@ class AppNameFrameworkFolderObserver extends FileObserver {
     if (formDefJsonWatch != null) {
       formDefJsonWatch.stop();
     }
+    Log.i(t, "addFormDefJsonWatch() " + getFrameworkFormDefJsonFilePath());
     formDefJsonWatch = new AppNameFrameworkFormDefJsonObserver(this);
   }
 
   public void removeFormDefJsonWatch() {
     if (formDefJsonWatch != null) {
-      formDefJsonWatch.stop();
+      Log.i(t, "removeFormDefJsonWatch() " + getFrameworkFormDefJsonFilePath());
+      AppNameFrameworkFormDefJsonObserver fo = formDefJsonWatch;
       formDefJsonWatch = null;
+      fo.stop();
 
       File formDefJson = new File(getFrameworkFormDefJsonFilePath());
       launchFrameworkDiscovery("monitoring removed: " + formDefJson.getAbsolutePath());
@@ -113,9 +116,21 @@ class AppNameFrameworkFolderObserver extends FileObserver {
     }
 
     if ((event & FileObserver.MOVE_SELF) != 0) {
-      stop();
-      parent.removeFrameworkFolderWatch();
+      // find out whether we are still where we think we are -- if not, remove ourselves.
+      File f = new File(parent.getFrameworkDirPath());
+      if ( !f.exists() ) {
+        stop();
+        parent.removeFrameworkFolderWatch();
+      }
       return;
+    }
+
+    if ((event & FileObserver.MOVED_TO) != 0) {
+      // The folder won't be in the folders list yet... return so we don't do a no-op
+      if (formDefJsonWatch == null) {
+        addFormDefJsonWatch();
+        return;
+      }
     }
 
     update();

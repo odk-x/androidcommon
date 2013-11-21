@@ -192,8 +192,12 @@ class ODKFolderObserver extends FileObserver {
     }
 
     if ((event & FileObserver.MOVE_SELF) != 0) {
-      stop();
-      FormsProviderImpl.stopScan();
+      // find out whether we are still where we think we are -- if not, remove ourselves.
+      File f = new File(ODKFileUtils.getOdkFolder());
+      if ( !f.exists() ) {
+        stop();
+        FormsProviderImpl.stopScan();
+      }
       return;
     }
 

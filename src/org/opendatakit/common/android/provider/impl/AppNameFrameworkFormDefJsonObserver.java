@@ -57,13 +57,10 @@ class AppNameFrameworkFormDefJsonObserver extends FileObserver {
     File formDefJson = new File(parent.getFrameworkFormDefJsonFilePath());
 
     if (formDefJson.exists() && formDefJson.isFile()) {
-      boolean first = (lastModificationTime == -1L);
       long modTime = formDefJson.lastModified();
       if (modTime != lastModificationTime) {
         lastModificationTime = modTime;
-        if ( !first ) {
-          parent.launchFrameworkDiscovery("changed: " + formDefJson.getAbsolutePath());
-        }
+        parent.launchFrameworkDiscovery("changed: " + formDefJson.getAbsolutePath());
       }
     } else {
       parent.removeFormDefJsonWatch();
@@ -90,8 +87,12 @@ class AppNameFrameworkFormDefJsonObserver extends FileObserver {
     }
 
     if ((event & FileObserver.MOVE_SELF) != 0) {
-      stop();
-      parent.removeFormDefJsonWatch();
+      // find out whether we are still where we think we are -- if not, remove ourselves.
+      File f = new File(parent.getFrameworkFormDefJsonFilePath());
+      if ( !f.exists() ) {
+        stop();
+        parent.removeFormDefJsonWatch();
+      }
       return;
     }
 

@@ -91,13 +91,16 @@ class AppNameFormsFormDirObserver extends FileObserver {
     if (formDefJsonWatch != null) {
       formDefJsonWatch.stop();
     }
+    Log.i(t, "addFormDefJsonWatch() " + getFormDefJsonFilePath());
     formDefJsonWatch = new AppNameFormsFormDefJsonObserver(this);
   }
 
   public void removeFormDefJsonWatch() {
     if (formDefJsonWatch != null) {
-      formDefJsonWatch.stop();
+      Log.i(t, "removeFormDefJsonWatch() " + getFormDefJsonFilePath());
+      AppNameFormsFormDefJsonObserver fo = formDefJsonWatch;
       formDefJsonWatch = null;
+      fo.stop();
 
       File formDefJson = new File(getFormDefJsonFilePath());
       launchFormsDiscovery("monitoring removed: " + formDefJson.getAbsolutePath());
@@ -115,9 +118,21 @@ class AppNameFormsFormDirObserver extends FileObserver {
     }
 
     if ((event & FileObserver.MOVE_SELF) != 0) {
-      stop();
-      parent.removeFormDirWatch(formDirName);
+      // find out whether we are still where we think we are -- if not, remove ourselves.
+      File f = new File(parent.getFormDirPath(formDirName));
+      if ( !f.exists() ) {
+        stop();
+        parent.removeFormDirWatch(formDirName);
+      }
       return;
+    }
+
+    if ((event & FileObserver.MOVED_TO) != 0) {
+      // The folder won't be in the folders list yet... return so we don't do a no-op
+      if (formDefJsonWatch == null) {
+        addFormDefJsonWatch();
+        return;
+      }
     }
 
     update();

@@ -114,13 +114,16 @@ class AppNameFolderObserver extends FileObserver {
     if (appNameTablesWatch != null) {
       appNameTablesWatch.stop();
     }
+    Log.i(t, "addTablesFolderWatch() " + ODKFileUtils.getTablesFolder(appName));
     appNameTablesWatch = new AppNameTablesFolderObserver(this);
   }
 
   public void removeTablesFolderWatch() {
     if (appNameTablesWatch != null) {
-      appNameTablesWatch.stop();
+      Log.i(t, "removeTablesFolderWatch() " + ODKFileUtils.getTablesFolder(appName));
+      AppNameTablesFolderObserver fo = appNameTablesWatch;
       appNameTablesWatch = null;
+      fo.stop();
       launchFormsDiscovery(null, null, "monitoring removed: " + ODKFileUtils.getTablesFolder(appName));
     }
   }
@@ -129,13 +132,16 @@ class AppNameFolderObserver extends FileObserver {
     if (appNameFrameworkWatch != null) {
       appNameFrameworkWatch.stop();
     }
+    Log.i(t, "addFrameworkFolderWatch() " + ODKFileUtils.getFrameworkFolder(appName));
     appNameFrameworkWatch = new AppNameFrameworkFolderObserver(this);
   }
 
   public void removeFrameworkFolderWatch() {
     if (appNameFrameworkWatch != null) {
-      appNameFrameworkWatch.stop();
+      Log.i(t, "removeFrameworkFolderWatch() " + ODKFileUtils.getFrameworkFolder(appName));
+      AppNameFrameworkFolderObserver fo = appNameFrameworkWatch;
       appNameFrameworkWatch = null;
+      fo.stop();
       launchFrameworkDiscovery("monitoring removed: " + ODKFileUtils.getFrameworkFolder(appName));
     }
   }
@@ -151,8 +157,12 @@ class AppNameFolderObserver extends FileObserver {
     }
 
     if ((event & FileObserver.MOVE_SELF) != 0) {
-      stop();
-      parent.removeAppNameWatch(appName);
+      // find out whether we are still where we think we are -- if not, remove ourselves.
+      File f = new File(ODKFileUtils.getAppFolder(appName));
+      if ( !f.exists() ) {
+        stop();
+        parent.removeAppNameWatch(appName);
+      }
       return;
     }
 
