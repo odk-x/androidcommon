@@ -19,7 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
@@ -60,18 +60,19 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
    *
    * @param self
    */
-  private static synchronized void doInitialAppsScan(final FormsProviderImpl self) {
+  private static synchronized ODKFolderObserver doInitialAppsScan(final FormsProviderImpl self) {
     if (!bInitialScan) {
       // observer will start monitoring and trigger forms discovery
       try {
-        bInitialScan = true;
         observer = new ODKFolderObserver(self);
+        bInitialScan = true;
       } catch (Exception e) {
         Log.e(t, "Exception: " + e.toString());
         bInitialScan = false;
         stopScan();
       }
     }
+    return observer;
   }
 
   static synchronized void stopScan() {
@@ -86,7 +87,8 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     Thread r = new Thread() {
       @Override
       public void run() {
-        doInitialAppsScan(self);
+        ODKFolderObserver obs = doInitialAppsScan(self);
+        obs.start(); // triggers re-evaluation of everything
       }
     };
     r.start();
@@ -132,12 +134,27 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       }
     }
 
-    SQLiteDatabase db = getDbHelper(getContext(), appName).getReadableDatabase();
-
     // Get the database and run the query
-    Cursor c = db.query(DataModelDatabaseHelper.FORMS_TABLE_NAME, projection, whereId, whereIdArgs,
-        null, null, sortOrder);
+    Cursor c = null;
+    try {
+      DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
+      if ( dbh == null ) {
+        Log.w(t, "Unable to access database for appName " + appName);
+        return null;
+      }
 
+      SQLiteDatabase db = dbh.getReadableDatabase();
+      c = db.query(DataModelDatabaseHelper.FORMS_TABLE_NAME, projection, whereId, whereIdArgs,
+        null, null, sortOrder);
+    } catch ( Exception e ) {
+      Log.w(t, "Unable to query database for appName: " + appName);
+      return null;
+    }
+
+    if ( c == null ) {
+      Log.w(t, "Unable to query database for appName: " + appName);
+      return null;
+    }
     // Tell the cursor what uri to watch, so it knows when its source data
     // changes
     c.setNotificationUri(getContext().getContentResolver(), uri);
@@ -162,8 +179,8 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
 
   private void patchUpValues(String appName, ContentValues values) {
     // don't let users put in a manual FORM_FILE_PATH
-    if (values.containsKey(FormsColumns.FORM_FILE_PATH)) {
-      values.remove(FormsColumns.FORM_FILE_PATH);
+    if (values.containsKey(FormsColumns.APP_RELATIVE_FORM_FILE_PATH)) {
+      values.remove(FormsColumns.APP_RELATIVE_FORM_FILE_PATH);
     }
 
     // don't let users put in a manual FORM_PATH
@@ -183,27 +200,34 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
 
     // if we are not updating FORM_MEDIA_PATH, we don't need to recalc any
     // of the above
-    if (!values.containsKey(FormsColumns.FORM_MEDIA_PATH)) {
+    if (!values.containsKey(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH)) {
       return;
     }
 
     // Normalize path...
-    File mediaPath = new File(values.getAsString(FormsColumns.FORM_MEDIA_PATH));
+
+    // First, construct the full file path...
+    String path = values.getAsString(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH);
+    File mediaPath;
+    if ( path.startsWith(File.separator) ) {
+      mediaPath = new File(path);
+    } else {
+      mediaPath = ODKFileUtils.asAppFile(appName, path);
+    }
 
     // require that the form directory actually exists
     if (!mediaPath.exists()) {
-      throw new IllegalArgumentException(FormsColumns.FORM_MEDIA_PATH
+      throw new IllegalArgumentException(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH
           + " directory does not exist: " + mediaPath.getAbsolutePath());
     }
 
-    String mediaAppName = mediaPath.getParentFile()/* forms folder */.getParentFile()
-    /* app */.getName();
-    if (!appName.equals(mediaAppName)) {
+    if (!ODKFileUtils.isPathUnderAppName(appName, mediaPath)) {
       throw new IllegalArgumentException(
           "Form definition is not contained within the application: " + appName);
     }
 
-    values.put(FormsColumns.FORM_MEDIA_PATH, mediaPath.getAbsolutePath());
+    values.put(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH,
+               ODKFileUtils.asRelativePath(appName, mediaPath));
 
     // require that it contain a formDef file
     File formDefFile = new File(mediaPath, ODKFileUtils.FORMDEF_JSON_FILENAME);
@@ -219,7 +243,8 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     // ODK2: FILENAME_XFORMS_XML may not exist if non-ODK1 fetch path...
     File xformsFile = new File(mediaPath, ODKFileUtils.FILENAME_XFORMS_XML);
     if (xformsFile.exists()) {
-      values.put(FormsColumns.FORM_FILE_PATH, xformsFile.getAbsolutePath());
+      values.put(FormsColumns.APP_RELATIVE_FORM_FILE_PATH,
+                 ODKFileUtils.asRelativePath(appName, xformsFile));
     }
 
     // compute FORM_PATH...
@@ -245,8 +270,6 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
 
     String appName = segments.get(0);
 
-    SQLiteDatabase db = getDbHelper(getContext(), appName).getWritableDatabase();
-
     ContentValues values;
     if (initialValues != null) {
       values = new ContentValues(initialValues);
@@ -256,16 +279,16 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
 
     // ODK2: require FORM_MEDIA_PATH (different behavior -- ODK1 and
     // required FORM_FILE_PATH)
-    if (!values.containsKey(FormsColumns.FORM_MEDIA_PATH)) {
-      throw new IllegalArgumentException(FormsColumns.FORM_MEDIA_PATH + " must be specified.");
+    if (!values.containsKey(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH)) {
+      throw new IllegalArgumentException(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + " must be specified.");
     }
 
     // Normalize path...
-    File mediaPath = new File(values.getAsString(FormsColumns.FORM_MEDIA_PATH));
+    File mediaPath = ODKFileUtils.asAppFile(appName, values.getAsString(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH));
 
     // require that the form directory actually exists
     if (!mediaPath.exists()) {
-      throw new IllegalArgumentException(FormsColumns.FORM_MEDIA_PATH
+      throw new IllegalArgumentException(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH
           + " directory does not exist: " + mediaPath.getAbsolutePath());
     }
 
@@ -283,17 +306,40 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     }
 
     // first try to see if a record with this filename already exists...
-    String[] projection = { FormsColumns.FORM_ID, FormsColumns.FORM_MEDIA_PATH };
-    String[] selectionArgs = { mediaPath.getAbsolutePath() };
-    String selection = FormsColumns.FORM_MEDIA_PATH + "=?";
+    String[] projection = { FormsColumns.FORM_ID, FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH };
+    String[] selectionArgs = {  ODKFileUtils.asRelativePath(appName, mediaPath) };
+    String selection = FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + "=?";
     Cursor c = null;
+
+    DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
+    if ( dbh == null ) {
+      Log.w(t, "Unable to access database for appName " + appName);
+      throw new SQLException("FAILED Insert into " + uri
+          + " -- unable to access metadata directory for appName: " + appName);
+    }
+
     try {
+      SQLiteDatabase db = dbh.getWritableDatabase();
       c = db.query(DataModelDatabaseHelper.FORMS_TABLE_NAME, projection, selection, selectionArgs,
           null, null, null);
+      if (c == null) {
+        throw new SQLException("FAILED Insert into " + uri
+            + " -- unable to query for existing records: " + mediaPath.getAbsolutePath());
+      }
       if (c.getCount() > 0) {
         // already exists
         throw new SQLException("FAILED Insert into " + uri
             + " -- row already exists for form directory: " + mediaPath.getAbsolutePath());
+      }
+    } catch ( Exception e ) {
+      Log.w(t, "FAILED Insert into " + uri +
+            " -- query for existing row failed: " + e.toString());
+
+      if ( e instanceof SQLException ) {
+        throw (SQLException) e;
+      } else {
+        throw new SQLException("FAILED Insert into " + uri +
+            " -- query for existing row failed: " + e.toString());
       }
     } finally {
       if (c != null) {
@@ -301,18 +347,31 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       }
     }
 
-    long rowId = db.insert(DataModelDatabaseHelper.FORMS_TABLE_NAME, null, values);
-    if (rowId > 0) {
-      Uri formUri = Uri.withAppendedPath(
-          Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()), appName),
-          values.getAsString(FormsColumns.FORM_ID));
-      getContext().getContentResolver().notifyChange(formUri, null);
-      Uri idUri = Uri.withAppendedPath(
-          Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()), appName),
-          Long.toString(rowId));
-      getContext().getContentResolver().notifyChange(idUri, null);
+    try {
+      SQLiteDatabase db = dbh.getWritableDatabase();
+      long rowId = db.insert(DataModelDatabaseHelper.FORMS_TABLE_NAME, null, values);
+      if (rowId > 0) {
+        Uri formUri = Uri.withAppendedPath(
+            Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()), appName),
+            values.getAsString(FormsColumns.FORM_ID));
+        getContext().getContentResolver().notifyChange(formUri, null);
+        Uri idUri = Uri.withAppendedPath(
+            Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()), appName),
+            Long.toString(rowId));
+        getContext().getContentResolver().notifyChange(idUri, null);
 
-      return formUri;
+        return formUri;
+      }
+    } catch ( Exception e ) {
+      Log.w(t, "FAILED Insert into " + uri +
+            " -- insert of row failed: " + e.toString());
+
+      if ( e instanceof SQLException ) {
+        throw (SQLException) e;
+      } else {
+        throw new SQLException("FAILED Insert into " + uri +
+            " -- insert of row failed: " + e.toString());
+      }
     }
 
     throw new SQLException("Failed to insert row into " + uri);
@@ -323,14 +382,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     FORMS, FRAMEWORK, OTHER
   };
 
-  private void moveDirectory(String appName, File mediaDirectory) throws IOException {
-    String formsOrFrameworkDirectory = mediaDirectory.getParentFile().getAbsolutePath();
-    DirType mediaType = DirType.OTHER;
-    if (formsOrFrameworkDirectory.equals(ODKFileUtils.getFormsFolder(appName))) {
-      mediaType = DirType.FORMS;
-    } else if (formsOrFrameworkDirectory.equals(ODKFileUtils.getFrameworkFolder(appName))) {
-      mediaType = DirType.FRAMEWORK;
-    }
+  private void moveDirectory(String appName, DirType mediaType, File mediaDirectory) throws IOException {
 
     if (mediaDirectory.exists() && mediaType != DirType.OTHER) {
       // it is a directory under our control
@@ -416,33 +468,68 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       }
     }
 
-    SQLiteDatabase db = getDbHelper(getContext(), appName).getWritableDatabase();
     Cursor del = null;
     Integer idValue = null;
+    String tableIdValue = null;
     String formIdValue = null;
-    HashSet<File> mediaDirs = new HashSet<File>();
+    HashMap<File,DirType> mediaDirs = new HashMap<File,DirType>();
     try {
       del = this.query(uri, null, whereId, whereIdArgs, null);
+      if ( del == null ) {
+        throw new SQLException("FAILED Delete into " + uri
+            + " -- unable to query for existing records");
+      }
       del.moveToPosition(-1);
       while (del.moveToNext()) {
         idValue = del.getInt(del.getColumnIndex(FormsColumns._ID));
+        tableIdValue = del.getString(del.getColumnIndex(FormsColumns.TABLE_ID));
         formIdValue = del.getString(del.getColumnIndex(FormsColumns.FORM_ID));
-        File mediaDir = new File(del.getString(del.getColumnIndex(FormsColumns.FORM_MEDIA_PATH)));
-        mediaDirs.add(mediaDir);
+        File mediaDir = ODKFileUtils.asAppFile(appName,
+            del.getString(del.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH)));
+        mediaDirs.put(mediaDir, (tableIdValue == null) ? DirType.FRAMEWORK : DirType.FORMS );
+      }
+    } catch ( Exception e ) {
+      Log.w(t, "FAILED Delete from " + uri +
+            " -- query for existing row failed: " + e.toString());
+
+      if ( e instanceof SQLException ) {
+        throw (SQLException) e;
+      } else {
+        throw new SQLException("FAILED Delete from " + uri +
+            " -- query for existing row failed: " + e.toString());
       }
     } finally {
       if (del != null) {
         del.close();
       }
     }
-    int count = db.delete(DataModelDatabaseHelper.FORMS_TABLE_NAME, whereId, whereIdArgs);
+
+    int count;
+    try {
+      DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
+      if ( dbh == null ) {
+        Log.w(t, "Unable to access database for appName " + appName);
+        return 0;
+      }
+
+      SQLiteDatabase db = dbh.getWritableDatabase();
+      if ( db == null ) {
+        Log.w(t, "Unable to access database for appName " + appName);
+        return 0;
+      }
+      count = db.delete(DataModelDatabaseHelper.FORMS_TABLE_NAME, whereId, whereIdArgs);
+    } catch ( Exception e ) {
+      e.printStackTrace();
+      Log.w(t, "Unable to perform deletion " + e.toString());
+      return 0;
+    }
 
     // and attempt to move these directories to the stale forms location
     // so that they do not immediately get rescanned...
 
-    for (File mediaDir : mediaDirs) {
+    for (HashMap.Entry<File,DirType> entry : mediaDirs.entrySet() ) {
       try {
-        moveDirectory(appName, mediaDir);
+        moveDirectory(appName, entry.getValue(), entry.getKey());
       } catch (IOException e) {
         e.printStackTrace();
         Log.e(t, "Unable to move directory " + e.toString());
@@ -466,10 +553,12 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
   }
 
   static class FormIdVersion {
+    final String tableId;
     final String formId;
     final String formVersion;
 
-    FormIdVersion(String formId, String formVersion) {
+    FormIdVersion(String tableId, String formId, String formVersion) {
+      this.tableId = tableId;
       this.formId = formId;
       this.formVersion = formVersion;
     }
@@ -481,8 +570,9 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       FormIdVersion that = (FormIdVersion) o;
 
       // identical if id and version matches...
-      return formId.equals(that.formId)
-          && ((formVersion == null) ? (that.formVersion == null)
+      return tableId.equals(that.tableId) &&
+          formId.equals(that.formId) &&
+          ((formVersion == null) ? (that.formVersion == null)
               : (that.formVersion != null && formVersion.equals(that.formVersion)));
     }
   }
@@ -525,8 +615,6 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       }
     }
 
-    SQLiteDatabase db = getDbHelper(getContext(), appName).getWritableDatabase();
-
     /*
      * First, find out what records match this query, and if they refer to two
      * or more (formId,formVersion) tuples, then be sure to remove all
@@ -535,26 +623,33 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
      * non-matching directories elsewhere.
      */
     Integer idValue = null;
+    String tableIdValue = null;
     String formIdValue = null;
-    HashSet<File> mediaDirs = new HashSet<File>();
+    HashMap<File, DirType> mediaDirs = new HashMap<File, DirType>();
     boolean multiset = false;
     Cursor c = null;
     try {
       c = this.query(uri, null, whereId, whereIdArgs, null);
-
+      if ( c == null ) {
+        throw new SQLException("FAILED Update of " + uri +
+            " -- query for existing row did not return a cursor");
+      }
       if (c.getCount() >= 1) {
         FormIdVersion ref = null;
         c.moveToPosition(-1);
         while (c.moveToNext()) {
           idValue = c.getInt(c.getColumnIndex(FormsColumns._ID));
+          tableIdValue = c.getString(c.getColumnIndex(FormsColumns.TABLE_ID));
           formIdValue = c.getString(c.getColumnIndex(FormsColumns.FORM_ID));
+          String tableId = c.getString(c.getColumnIndex(FormsColumns.TABLE_ID));
           String formId = c.getString(c.getColumnIndex(FormsColumns.FORM_ID));
           String formVersion = c.getString(c.getColumnIndex(FormsColumns.FORM_VERSION));
-          FormIdVersion cur = new FormIdVersion(formId, formVersion);
+          FormIdVersion cur = new FormIdVersion(tableId, formId, formVersion);
 
-          String mediaPath = c.getString(c.getColumnIndex(FormsColumns.FORM_MEDIA_PATH));
+          int appRelativeMediaPathIdx = c.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH);
+          String mediaPath = c.getString(appRelativeMediaPathIdx);
           if (mediaPath != null) {
-            mediaDirs.add(new File(mediaPath));
+            mediaDirs.put(ODKFileUtils.asAppFile(appName,mediaPath), (tableIdValue == null) ? DirType.FRAMEWORK : DirType.FORMS);
           }
 
           if (ref != null && !ref.equals(cur)) {
@@ -565,6 +660,16 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
           }
         }
       }
+    } catch ( Exception e ) {
+      Log.w(t, "FAILED Update of " + uri +
+            " -- query for existing row failed: " + e.toString());
+
+      if ( e instanceof SQLException ) {
+        throw (SQLException) e;
+      } else {
+        throw new SQLException("FAILED Update of " + uri +
+            " -- query for existing row failed: " + e.toString());
+      }
     } finally {
       if (c != null) {
         c.close();
@@ -574,18 +679,19 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     if (multiset) {
       // don't let users manually update media path
       // we are referring to two or more (formId,formVersion) tuples.
-      if (values.containsKey(FormsColumns.FORM_MEDIA_PATH)) {
-        values.remove(FormsColumns.FORM_MEDIA_PATH);
+      if (values.containsKey(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH)) {
+        values.remove(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH);
       }
-    } else if (values.containsKey(FormsColumns.FORM_MEDIA_PATH)) {
+    } else if (values.containsKey(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH)) {
       // we are not a multiset and we are setting the media path
       // try to move all the existing non-matching media paths to
       // somewhere else...
-      File mediaPath = new File(values.getAsString(FormsColumns.FORM_MEDIA_PATH));
-      for (File altPath : mediaDirs) {
+      File mediaPath = ODKFileUtils.asAppFile(appName,values.getAsString(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH));
+      for (HashMap.Entry<File,DirType> entry : mediaDirs.entrySet()) {
+        File altPath = entry.getKey();
         if (!altPath.equals(mediaPath)) {
           try {
-            moveDirectory(appName, altPath);
+            moveDirectory(appName, entry.getValue(), altPath);
           } catch (IOException e) {
             e.printStackTrace();
             Log.e(t, "Attempt to move " + altPath.getAbsolutePath() + " failed: " + e.toString());
@@ -608,9 +714,27 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       values.put(FormsColumns.DISPLAY_SUBTEXT, ts);
     }
 
-    // OK Finally, now do the update...
+    int count;
+    try {
+      // OK Finally, now do the update...
+      DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
+      if ( dbh == null ) {
+        Log.w(t, "Unable to access database for appName " + appName);
+        return 0;
+      }
 
-    int count = db.update(DataModelDatabaseHelper.FORMS_TABLE_NAME, values, whereId, whereIdArgs);
+      SQLiteDatabase db = dbh.getWritableDatabase();
+      if ( db == null ) {
+        Log.w(t, "Unable to access metadata directory for appName " + appName);
+        return 0;
+      }
+
+      count = db.update(DataModelDatabaseHelper.FORMS_TABLE_NAME, values, whereId, whereIdArgs);
+    } catch ( Exception e ) {
+      e.printStackTrace();
+      Log.w(t, "Unable to perform update " + uri);
+      return 0;
+    }
 
     if (count == 1) {
       Uri formUri = Uri

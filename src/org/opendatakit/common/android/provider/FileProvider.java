@@ -123,31 +123,28 @@ public abstract class FileProvider extends ContentProvider {
 
   public static File getAsFile(Context context, String uriString) {
     File f = getAsFileObject(context, uriString);
-    if (!f.exists() || !f.isFile()) {
-      throw new IllegalArgumentException("Not a valid uri: " + uriString
-          + " file does not exist or is not a valid file.");
-    }
     return f;
   }
-
   /**
-   * The constructed URL may be invalid if it references a file that is in a
+   * The constructed URI may be invalid if it references a file that is in a
    * legacy directory or an inaccessible directory.
    *
-   * @param filePath
-   * @return Url that this content provider can process to return the file.
+   * Typical usage:
+   *
+   * File file;
+   *
+   * FileProvider.getAsUri(this, appName, ODKFileUtils.asUriFragment(appName, file));
+   *
+   * @param context
+   * @param appName
+   * @param uriFragment
+   * @return
    */
-  public static String getAsUrl(Context context, File filePath) {
-
-    String fullPath = filePath.getAbsolutePath();
-    String relativePath = ODKFileUtils.toAppPath(fullPath);
-    if (relativePath == null) {
-      throw new IllegalArgumentException("Invalid file access: " + fullPath);
-    }
-
-    // we need to escape the segments.
-    String[] segments = relativePath.split(File.separator);
+  public static String getAsUri(Context context, String appName, String uriFragment) {
     Uri u = FileProvider.getContentUri(context);
+    // we need to escape the segments.
+    u = Uri.withAppendedPath(u, Uri.encode(appName));
+    String[] segments = uriFragment.split("/");
     for (String s : segments) {
       u = Uri.withAppendedPath(u, Uri.encode(s));
     }

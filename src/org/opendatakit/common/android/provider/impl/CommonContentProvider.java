@@ -14,6 +14,7 @@
 
 package org.opendatakit.common.android.provider.impl;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,6 +25,7 @@ import org.opendatakit.common.android.utilities.ODKFileUtils;
 
 import android.content.ContentProvider;
 import android.content.Context;
+import android.util.Log;
 
 /**
  * Common base class for content providers. This holds the access logic to the
@@ -33,7 +35,6 @@ import android.content.Context;
  *
  */
 public abstract class CommonContentProvider extends ContentProvider {
-
   // array of the underlying database handles used by all the content provider
   // instances
   private static final Map<String, DataModelDatabaseHelper> dbHelpers = new HashMap<String, DataModelDatabaseHelper>();
@@ -46,9 +47,29 @@ public abstract class CommonContentProvider extends ContentProvider {
    */
   public synchronized static DataModelDatabaseHelper getDbHelper(Context context, String appName) {
 
+    try {
+      ODKFileUtils.verifyExternalStorageAvailability();
+    } catch ( Exception e ) {
+      Log.e("CommonContentProvider", "External storage not available -- purging dbHelpers");
+      dbHelpers.clear();
+      return null;
+    }
+
+    String path = ODKFileUtils.getWebDbFolder(appName);
+    File webDb = new File(path);
+    if ( !webDb.exists() || !webDb.isDirectory()) {
+      ODKFileUtils.assertDirectoryStructure(appName);
+    }
+
+    // the assert above should have created it...
+    if ( !webDb.exists() || !webDb.isDirectory()) {
+      Log.e("CommonContentProvider", "webDb directory not available -- purging dbHelpers");
+      dbHelpers.clear();
+      return null;
+    }
+
     DataModelDatabaseHelper dbHelper = dbHelpers.get(appName);
     if (dbHelper == null) {
-      String path = ODKFileUtils.getWebDbFolder(appName);
       WebSqlDatabaseHelper h;
       h = new WebSqlDatabaseHelper(context, path);
       WebDbDefinition defn = h.getWebKitDatabaseInfoHelper();

@@ -14,6 +14,9 @@
 
 package org.opendatakit.common.android.provider;
 
+import java.util.List;
+
+import android.net.Uri;
 import android.provider.BaseColumns;
 
 /**
@@ -30,7 +33,7 @@ public final class FormsColumns implements BaseColumns {
   public static final String CONTENT_ITEM_TYPE = "vnd.android.cursor.item/vnd.opendatakit.form";
 
   /** The form_id that holds the common javascript files for Survey */
-  public static final String COMMON_BASE_FORM_ID = "default";
+  public static final String COMMON_BASE_FORM_ID = "framework";
 
   // These are the only things needed for an insert
   public static final String TABLE_ID = "tableId"; // for Tables linkage
@@ -40,14 +43,16 @@ public final class FormsColumns implements BaseColumns {
   public static final String DESCRIPTION = "description"; // can be null
 
   /** ODK2: within the media directory */
-  public static final String FORM_FILE_PATH = "formFilePath";
+  public static final String APP_RELATIVE_FORM_FILE_PATH = "appRelativeFormFilePath";
   /** directory containing formDef.json */
-  public static final String FORM_MEDIA_PATH = "formMediaPath";
+  public static final String APP_RELATIVE_FORM_MEDIA_PATH = "appRelativeFormMediaPath";
   /** relative path for WebKit */
   public static final String FORM_PATH = "formPath";
 
   /** locale that the form should start in */
   public static final String DEFAULT_FORM_LOCALE = "defaultFormLocale";
+  /** column name for the 'instance_name' (display name) of a submission */
+  public static final String INSTANCE_NAME = "instanceName";
   /** ODK1 support - can be null */
   public static final String XML_SUBMISSION_URL = "xmlSubmissionUrl";
   /** ODK1 support - can be null */
@@ -67,8 +72,8 @@ public final class FormsColumns implements BaseColumns {
 
   // NOTE: this omits _ID (the primary key)
   public static final String[] formsDataColumnNames = { DISPLAY_NAME, DISPLAY_SUBTEXT, DESCRIPTION,
-      TABLE_ID, FORM_ID, FORM_VERSION, FORM_FILE_PATH, FORM_MEDIA_PATH, FORM_PATH, MD5_HASH, DATE,
-      DEFAULT_FORM_LOCALE, XML_SUBMISSION_URL, XML_BASE64_RSA_PUBLIC_KEY,
+      TABLE_ID, FORM_ID, FORM_VERSION, APP_RELATIVE_FORM_FILE_PATH, APP_RELATIVE_FORM_MEDIA_PATH, FORM_PATH, MD5_HASH, DATE,
+      DEFAULT_FORM_LOCALE, INSTANCE_NAME, XML_SUBMISSION_URL, XML_BASE64_RSA_PUBLIC_KEY,
       XML_DEVICE_ID_PROPERTY_NAME, XML_USER_ID_PROPERTY_NAME, XML_ROOT_ELEMENT_NAME };
 
   /**
@@ -84,14 +89,15 @@ public final class FormsColumns implements BaseColumns {
 	            + DISPLAY_NAME + " text not null, "
 	            + DISPLAY_SUBTEXT + " text not null, "
 	            + DESCRIPTION + " text, "
-	            + TABLE_ID + " text not null, "
+	            + TABLE_ID + " text null, " // null if framework
 	            + FORM_VERSION + " text, "
-	            + FORM_FILE_PATH + " text null, "
-	            + FORM_MEDIA_PATH + " text not null, "
+	            + APP_RELATIVE_FORM_FILE_PATH + " text null, "
+	            + APP_RELATIVE_FORM_MEDIA_PATH + " text not null, "
 	            + FORM_PATH + " text not null, "
 	            + MD5_HASH + " text not null, "
 	            + DATE + " integer not null, " // milliseconds
 	            + DEFAULT_FORM_LOCALE + " text, "
+	            + INSTANCE_NAME + " text, "
 	            + XML_SUBMISSION_URL + " text, "
 	            + XML_BASE64_RSA_PUBLIC_KEY + " text, "
 	            + XML_ROOT_ELEMENT_NAME + " text, "
@@ -100,4 +106,14 @@ public final class FormsColumns implements BaseColumns {
        //@formatter:on
   }
 
+  public static String extractAppNameFromFormsUri(Uri uri) {
+    List<String> segments = uri.getPathSegments();
+
+    if (segments.size() < 1) {
+      throw new IllegalArgumentException("Unknown URI (incorrect number of segments!) " + uri);
+    }
+
+    String appName = segments.get(0);
+    return appName;
+  }
 }

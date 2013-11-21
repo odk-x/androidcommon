@@ -46,30 +46,30 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
    */
 
   // tablenames for the various key value stores
-  public static final String KEY_VALUE_STORE_DEFAULT_TABLE_NAME = "key_value_store_default";
-  public static final String KEY_VALUE_STORE_ACTIVE_TABLE_NAME = "key_value_store_active";
-  public static final String KEY_VALUE_STORE_SERVER_TABLE_NAME = "key_value_store_server";
-  public static final String KEY_VALULE_STORE_SYNC_TABLE_NAME = "key_value_store_sync";
+  public static final String KEY_VALUE_STORE_DEFAULT_TABLE_NAME = "_key_value_store_default";
+  public static final String KEY_VALUE_STORE_ACTIVE_TABLE_NAME = "_key_value_store_active";
+  public static final String KEY_VALUE_STORE_SERVER_TABLE_NAME = "_key_value_store_server";
+  public static final String KEY_VALULE_STORE_SYNC_TABLE_NAME = "_key_value_store_sync";
 
   /**
    * table definitions table
    */
 
   // only one of these...
-  private static final String TABLE_DEFS_TABLE_NAME = "table_definitions";
+  public static final String TABLE_DEFS_TABLE_NAME = "_table_definitions";
   /**
    * column definitions table
    */
 
   // only one of these...
-  private static final String COLUMN_DEFINITIONS_TABLE_NAME = "column_definitions";
+  public static final String COLUMN_DEFINITIONS_TABLE_NAME = "_column_definitions";
 
   /**
    * For ODK Survey (only)
    *
    * Tracks all the forms present in the forms directory.
    */
-  public static final String SURVEY_CONFIGURATION_TABLE_NAME = "survey_configuration";
+  public static final String SURVEY_CONFIGURATION_TABLE_NAME = "_survey_configuration";
 
   /**
    * For ODK Survey (only)
@@ -78,7 +78,7 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
    * publishing to multiple formids for a given table row
    */
 
-  public static final String UPLOADS_TABLE_NAME = "uploads";
+  public static final String UPLOADS_TABLE_NAME = "_uploads";
 
   /**
    * For ODK Survey (only)
@@ -86,7 +86,7 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
    * Tracks all the forms present in the forms directory.
    */
 
-  public static final String FORMS_TABLE_NAME = "formDefs";
+  public static final String FORMS_TABLE_NAME = "_formDefs";
 
   public DataModelDatabaseHelper(String dbPath, String databaseName) {
     super(dbPath, databaseName, null, APP_KEY, APP_VERSION);
@@ -140,15 +140,17 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
     return null;
   }
 
-  public static final class IdStruct {
+  public static final class IdInstanceNameStruct {
     public final int _id;
     public final String formId;
     public final String tableId;
+    public final String instanceName;
 
-    public IdStruct(int _id, String formId, String tableId) {
+    public IdInstanceNameStruct(int _id, String formId, String tableId, String instanceName) {
       this._id = _id;
       this.formId = formId;
       this.tableId = tableId;
+      this.instanceName = instanceName;
     }
   }
 
@@ -160,21 +162,25 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
    *          -- either the integer _ID or the textual form_id
    * @return
    */
-  public static IdStruct getIds(SQLiteDatabase db, String formId) {
+  public static IdInstanceNameStruct getIds(SQLiteDatabase db, String formId) {
     boolean isNumericId = StringUtils.isNumeric(formId);
 
     Cursor c = null;
     try {
       c = db.query(FORMS_TABLE_NAME, new String[] { FormsColumns._ID, FormsColumns.FORM_ID,
-          FormsColumns.TABLE_ID }, (isNumericId ? FormsColumns._ID : FormsColumns.FORM_ID) + "=?",
+          FormsColumns.TABLE_ID, FormsColumns.INSTANCE_NAME },
+          (isNumericId ? FormsColumns._ID : FormsColumns.FORM_ID) + "=?",
           new String[] { formId }, null, null, null);
 
       if (c.moveToFirst()) {
         int idxId = c.getColumnIndex(FormsColumns._ID);
         int idxFormId = c.getColumnIndex(FormsColumns.FORM_ID);
         int idxTableId = c.getColumnIndex(FormsColumns.TABLE_ID);
+        int idxInstanceName = c.getColumnIndex(FormsColumns.INSTANCE_NAME);
 
-        return new IdStruct(c.getInt(idxId), c.getString(idxFormId), c.getString(idxTableId));
+        return new IdInstanceNameStruct(c.getInt(idxId), c.getString(idxFormId),
+                      c.getString(idxTableId),
+                      c.isNull(idxInstanceName) ? null : c.getString(idxInstanceName));
       }
     } finally {
       if (c != null && !c.isClosed()) {
@@ -184,39 +190,24 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
     return null;
   }
 
-  public static class Join {
-    public final String tableId;
-    public final String elementKey;
-
-    Join(String tableId, String elementKey) {
-      this.tableId = tableId;
-      this.elementKey = elementKey;
-    }
-  };
-
   public static class ColumnDefinition {
     public final String elementKey;
     public final String elementName;
     public final String elementType;
-    public final boolean isPersisted;
+    public final boolean isUnitOfRetention;
 
     public final ArrayList<ColumnDefinition> children = new ArrayList<ColumnDefinition>();
-    public final ArrayList<Join> joins = new ArrayList<Join>();
     public ColumnDefinition parent = null;
 
-    ColumnDefinition(String elementKey, String elementName, String elementType, boolean isPersisted) {
+    ColumnDefinition(String elementKey, String elementName, String elementType, boolean isUnitOfRetention) {
       this.elementKey = elementKey;
       this.elementName = elementName;
       this.elementType = elementType;
-      this.isPersisted = isPersisted;
+      this.isUnitOfRetention = isUnitOfRetention;
     }
 
     private void setParent(ColumnDefinition parent) {
       this.parent = parent;
-    }
-
-    void addJoin(Join j) {
-      joins.add(j);
     }
 
     void addChild(ColumnDefinition child) {
@@ -254,23 +245,23 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
     if (c.elementType.equals("string")) {
       jsonSchema.put("type", "string");
       jsonSchema.put("elementKey", c.elementKey);
-      jsonSchema.put("isPersisted", c.isPersisted);
+      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention);
     } else if (c.elementType.equals("number")) {
       jsonSchema.put("type", "number");
       jsonSchema.put("elementKey", c.elementKey);
-      jsonSchema.put("isPersisted", c.isPersisted);
+      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention);
     } else if (c.elementType.equals("integer")) {
       jsonSchema.put("type", "integer");
       jsonSchema.put("elementKey", c.elementKey);
-      jsonSchema.put("isPersisted", c.isPersisted);
+      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention);
     } else if (c.elementType.equals("boolean")) {
       jsonSchema.put("type", "boolean");
       jsonSchema.put("elementKey", c.elementKey);
-      jsonSchema.put("isPersisted", c.isPersisted);
+      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention);
     } else if (c.elementType.equals("array")) {
       jsonSchema.put("type", "array");
       jsonSchema.put("elementKey", c.elementKey);
-      jsonSchema.put("isPersisted", c.isPersisted);
+      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention);
       ColumnDefinition ch = c.children.get(0);
       jsonSchema.put("items", new TreeMap<String, Object>());
       @SuppressWarnings("unchecked")
@@ -282,7 +273,7 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
         jsonSchema.put("elementType", c.elementType);
       }
       jsonSchema.put("elementKey", c.elementKey);
-      jsonSchema.put("isPersisted", c.isPersisted);
+      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention);
       jsonSchema.put("properties", new TreeMap<String, Object>());
       @SuppressWarnings("unchecked")
       TreeMap<String, Object> propertiesSchema = (TreeMap<String, Object>) jsonSchema
@@ -320,39 +311,23 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
         int idxEK = c.getColumnIndex(ColumnDefinitionsColumns.ELEMENT_KEY);
         int idxEN = c.getColumnIndex(ColumnDefinitionsColumns.ELEMENT_NAME);
         int idxET = c.getColumnIndex(ColumnDefinitionsColumns.ELEMENT_TYPE);
-        int idxIP = c.getColumnIndex(ColumnDefinitionsColumns.IS_PERSISTED);
+        int idxIP = c.getColumnIndex(ColumnDefinitionsColumns.IS_UNIT_OF_RETENTION);
         int idxLIST = c.getColumnIndex(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS);
-        int idxJOINS = c.getColumnIndex(ColumnDefinitionsColumns.JOINS);
         HashMap<String, ColumnContainer> ref = new HashMap<String, ColumnContainer>();
 
         do {
           String elementKey = c.getString(idxEK);
           String elementName = c.getString(idxEN);
           String elementType = c.getString(idxET);
-          boolean isPersisted = (c.getInt(idxIP) != 0);
+          boolean isUnitOfRetention = (c.getInt(idxIP) != 0);
           String childrenString = c.isNull(idxLIST) ? null : c.getString(idxLIST);
-          String joinsString = c.isNull(idxJOINS) ? null : c.getString(idxJOINS);
           ColumnContainer ctn = new ColumnContainer();
-          ctn.defn = new ColumnDefinition(elementKey, elementName, elementType, isPersisted);
+          ctn.defn = new ColumnDefinition(elementKey, elementName, elementType, isUnitOfRetention);
 
           if (childrenString != null) {
             @SuppressWarnings("unchecked")
             ArrayList<String> l = ODKFileUtils.mapper.readValue(childrenString, ArrayList.class);
             ctn.children = l;
-          }
-
-          if (joinsString != null) {
-            @SuppressWarnings("unchecked")
-            ArrayList<Object> joins = ODKFileUtils.mapper.readValue(joinsString, ArrayList.class);
-            for (Object o : joins) {
-              @SuppressWarnings("unchecked")
-              Map<String, Object> m = (Map<String, Object>) o;
-              String tId = (String) m.get("table_id");
-              String tEK = (String) m.get("element_key");
-
-              Join j = new Join(tId, tEK);
-              ctn.defn.addJoin(j);
-            }
           }
 
           ref.put(elementKey, ctn);

@@ -23,17 +23,22 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
+import org.codehaus.jackson.JsonParseException;
+import org.codehaus.jackson.map.JsonMappingException;
 import org.opendatakit.common.android.R;
 import org.opendatakit.common.android.database.DataModelDatabaseHelper;
-import org.opendatakit.common.android.database.DataModelDatabaseHelper.IdStruct;
+import org.opendatakit.common.android.database.DataModelDatabaseHelper.ColumnDefinition;
+import org.opendatakit.common.android.database.DataModelDatabaseHelper.IdInstanceNameStruct;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.InstanceColumns;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 
 import android.content.ContentValues;
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 
@@ -44,12 +49,9 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
 
   // private static final String t = "InstancesProviderImpl";
 
-  private static final String DATA_TABLE_ID_COLUMN = InstanceColumns.DATA_TABLE_INSTANCE_ID;
-  private static final String DATA_TABLE_TIMESTAMP_COLUMN = DataTableColumns.TIMESTAMP;
-  private static final String DATA_TABLE_INSTANCE_NAME_COLUMN = DataTableColumns.INSTANCE_NAME;
-  private static final String DATA_TABLE_SAVED_COLUMN = DataTableColumns.SAVED;
-  private static final String DATA_TABLE_FORM_ID_COLUMN = DataTableColumns.FORM_ID;
-  private static final String SAVED_AS_COMPLETE = "COMPLETE";
+  private static final String DATA_TABLE_ID_COLUMN = DataTableColumns.ID;
+  private static final String DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN = DataTableColumns.SAVEPOINT_TIMESTAMP;
+  private static final String DATA_TABLE_SAVEPOINT_TYPE_COLUMN = DataTableColumns.SAVEPOINT_TYPE;
 
   private static HashMap<String, String> sInstancesProjectionMap;
 
@@ -75,9 +77,19 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     // _ID in UPLOADS_TABLE_NAME
     String instanceId = (segments.size() == 3 ? segments.get(2) : null);
 
-    SQLiteDatabase db = getDbHelper(getContext(), appName).getReadableDatabase();
+    DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
+    if ( dbh == null ) {
+      return null;
+    }
 
-    IdStruct ids = DataModelDatabaseHelper.getIds(db, uriFormId);
+    SQLiteDatabase db = dbh.getReadableDatabase();
+
+    IdInstanceNameStruct ids;
+    try {
+      ids = DataModelDatabaseHelper.getIds(db, uriFormId);
+    } catch ( Exception e ) {
+      throw new SQLException("Unable to retrieve formId " + uri);
+    }
 
     if (ids == null) {
       throw new IllegalArgumentException("Unknown URI (no matching formId) " + uri);
@@ -92,68 +104,113 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     // ARGH! we must ensure that we have records in our UPLOADS_TABLE_NAME
     // for every distinct instance in the data table.
     StringBuilder b = new StringBuilder();
+    //@formatter:off
     b.append("INSERT INTO ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append("(")
-        .append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(",")
+        .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
         .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
         .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(") ").append("SELECT ")
-        .append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(",")
+        .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
         .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
-        .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(",").append(" FROM (")
-        .append("SELECT DISTINCT ").append(DATA_TABLE_ID_COLUMN).append(" as ")
-        .append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(",").append("? as ")
-        .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",").append("? as ")
-        .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(",").append(" FROM ")
-        .append(dbTableName).append(" EXCEPT SELECT DISTINCT ")
-        .append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(",")
-        .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
-        .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(" FROM ")
-        .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(")");
+        .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(" FROM (")
+          .append("SELECT DISTINCT ").append(DATA_TABLE_ID_COLUMN).append(" as ")
+          .append(InstanceColumns.DATA_INSTANCE_ID).append(",").append("? as ")
+          .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
+          .append(DataTableColumns.FORM_ID).append(" as ")
+          .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(" FROM ")
+          .append(dbTableName).append(" EXCEPT SELECT DISTINCT ")
+          .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
+          .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
+          .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(" FROM ")
+          .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(")");
+    //@formatter:on
 
-    String[] args = { ids.tableId, ids.formId };
+    // TODO: should we collapse across FORM_ID or leave it this way?
+    String[] args = { ids.tableId };
     db.execSQL(b.toString(), args);
+
+    // Can't get away with dataTable.* because of collision with _ID column
+    // get map of (elementKey -> ColumnDefinition)
+    Map<String, ColumnDefinition> defns;
+    try {
+      defns = DataModelDatabaseHelper.getColumnDefinitions(db, ids.tableId);
+    } catch (JsonParseException e) {
+      e.printStackTrace();
+      throw new SQLException("Unable to retrieve column definitions for tableId " + ids.tableId);
+    } catch (JsonMappingException e) {
+      e.printStackTrace();
+      throw new SQLException("Unable to retrieve column definitions for tableId " + ids.tableId);
+    } catch (IOException e) {
+      e.printStackTrace();
+      throw new SQLException("Unable to retrieve column definitions for tableId " + ids.tableId);
+    }
 
     // We can now join through and access the data table rows
 
     b.setLength(0);
+    // @formatter:off
     b.append("SELECT ");
-    b.append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".").append(InstanceColumns._ID)
-        .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
-        .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(",").append(dbTableName).append(".")
-        .append("*").append(",");
+    b.append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+        .append(InstanceColumns._ID).append(",")
+     .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+        .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
+     .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+        .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(",");
+    // add the dataTable metadata except for _ID (which conflicts with InstanceColumns._ID)
+    b.append(dbTableName).append(".").append(DataTableColumns.URI_ACCESS_CONTROL).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SYNC_TAG).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SYNC_STATE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.CONFLICT_TYPE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_TIMESTAMP).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_TYPE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.FORM_ID).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.LOCALE).append(",");
+    // add the user-specified data fields in this dataTable
+    for ( ColumnDefinition cd : defns.values() ) {
+      if ( cd.isUnitOfRetention ) {
+        b.append(dbTableName).append(".")
+         .append(cd.elementKey).append(",");
+      }
+    }
     // b.append(dbTableName).append(".").append(InstanceColumns._ID).append(",");
-    b.append("CASE WHEN ").append(DATA_TABLE_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
+    b.append("CASE WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
         .append(" WHEN ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP)
-        .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_TIMESTAMP_COLUMN)
+        .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
         .append(" > ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" THEN null")
         .append(" ELSE ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" END as ")
         .append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(",");
-    b.append("CASE WHEN ").append(DATA_TABLE_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
+    b.append("CASE WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
         .append(" WHEN ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP)
-        .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_TIMESTAMP_COLUMN)
+        .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
         .append(" > ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" THEN null")
         .append(" ELSE ").append(InstanceColumns.XML_PUBLISH_STATUS).append(" END as ")
         .append(InstanceColumns.XML_PUBLISH_STATUS).append(",");
-    b.append("CASE WHEN ").append(DATA_TABLE_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
+    b.append("CASE WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
         .append(" WHEN ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP)
-        .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_TIMESTAMP_COLUMN)
+        .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
         .append(" > ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" THEN null")
         .append(" ELSE ").append(InstanceColumns.DISPLAY_SUBTEXT).append(" END as ")
         .append(InstanceColumns.DISPLAY_SUBTEXT).append(",");
-    b.append(DATA_TABLE_INSTANCE_NAME_COLUMN).append(" as ").append(InstanceColumns.DISPLAY_NAME);
+    if ( ids.instanceName == null ) {
+      b.append( "datetime(").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append("/1000, 'unixepoch', 'localtime')");
+    } else {
+      b.append(ids.instanceName);
+    }
+    b.append(" as ").append(InstanceColumns.DISPLAY_NAME);
     b.append(" FROM ");
     b.append("( SELECT * FROM ").append(dbTableName).append(" GROUP BY ")
-        .append(DATA_TABLE_ID_COLUMN).append(" HAVING ").append(DATA_TABLE_TIMESTAMP_COLUMN)
-        .append(" = MAX(").append(DATA_TABLE_TIMESTAMP_COLUMN).append(")").append(") as ")
+        .append(DATA_TABLE_ID_COLUMN).append(" HAVING ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
+        .append(" = MAX(").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(")").append(") as ")
         .append(dbTableName);
     b.append(" JOIN ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(" ON ")
         .append(dbTableName).append(".").append(DATA_TABLE_ID_COLUMN).append("=")
         .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
-        .append(InstanceColumns.DATA_TABLE_INSTANCE_ID).append(" AND ").append("? =")
+        .append(InstanceColumns.DATA_INSTANCE_ID).append(" AND ").append("? =")
         .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
         .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(" AND ").append("? =")
         .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
         .append(InstanceColumns.XML_PUBLISH_FORM_ID);
-    b.append(" WHERE ").append(DATA_TABLE_SAVED_COLUMN).append("=?");
+    b.append(" WHERE ").append(DATA_TABLE_SAVEPOINT_TYPE_COLUMN).append("=?");
+    // @formatter:on
 
     String filterArgs[];
     if (instanceId != null) {
@@ -244,9 +301,21 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     // _ID in UPLOADS_TABLE_NAME
     String instanceId = (segments.size() == 3 ? segments.get(2) : null);
 
-    SQLiteDatabase db = getDbHelper(getContext(), appName).getWritableDatabase();
+    DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
+    if ( dbh == null ) {
+      return 0;
+    }
 
-    String dbTableName = DataModelDatabaseHelper.getDbTableName(db, tableId);
+    SQLiteDatabase db = dbh.getWritableDatabase();
+
+    String dbTableName;
+    try {
+      dbTableName = DataModelDatabaseHelper.getDbTableName(db, tableId);
+    } catch ( Exception e ) {
+      e.printStackTrace();
+      return 0;
+    }
+
     if (dbTableName == null) {
       return 0; // not known...
     }
@@ -254,7 +323,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     dbTableName = "\"" + dbTableName + "\"";
 
     if (segments.size() == 2) {
-      where = "(" + where + ") AND (" + InstanceColumns.DATA_TABLE_INSTANCE_ID + "=? )";
+      where = "(" + where + ") AND (" + InstanceColumns.DATA_INSTANCE_ID + "=? )";
       if (whereArgs != null) {
         String[] args = new String[whereArgs.length + 1];
         for (int i = 0; i < whereArgs.length; ++i) {
@@ -273,7 +342,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
       del = this.query(uri, null, where, whereArgs, null);
       del.moveToPosition(-1);
       while (del.moveToNext()) {
-        String iId = del.getString(del.getColumnIndex(InstanceColumns.DATA_TABLE_INSTANCE_ID));
+        String iId = del.getString(del.getColumnIndex(InstanceColumns.DATA_INSTANCE_ID));
         ids.add(iId);
         String path = ODKFileUtils.getInstanceFolder(appName, tableId, iId);
         File f = new File(path);
@@ -296,7 +365,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     }
 
     for (String id : ids) {
-      db.delete(DataModelDatabaseHelper.UPLOADS_TABLE_NAME, InstanceColumns.DATA_TABLE_INSTANCE_ID
+      db.delete(DataModelDatabaseHelper.UPLOADS_TABLE_NAME, InstanceColumns.DATA_INSTANCE_ID
           + "=?", new String[] { id });
       db.delete(dbTableName, DATA_TABLE_ID_COLUMN + "=?", new String[] { id });
     }
@@ -318,9 +387,21 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     String instanceId = segments.get(2);
     // TODO: should we do something to ensure instanceId is the one updated?
 
-    SQLiteDatabase db = getDbHelper(getContext(), appName).getWritableDatabase();
+    DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
+    if ( dbh == null ) {
+      return 0;
+    }
 
-    String dbTableName = DataModelDatabaseHelper.getDbTableName(db, tableId);
+    SQLiteDatabase db = dbh.getWritableDatabase();
+
+    String dbTableName;
+    try {
+      dbTableName = DataModelDatabaseHelper.getDbTableName(db, tableId);
+    } catch ( Exception e ) {
+      e.printStackTrace();
+      return 0;
+    }
+
     if (dbTableName == null) {
       throw new IllegalArgumentException("Unknown URI (no matching tableId) " + uri);
     }
@@ -334,10 +415,12 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
       // use this provider's query interface to get the set of ids that
       // match (if any)
       ref = this.query(uri, null, where, whereArgs, null);
-      ref.moveToPosition(-1);
-      while (ref.moveToNext()) {
-        String iId = ref.getString(ref.getColumnIndex(InstanceColumns.DATA_TABLE_INSTANCE_ID));
-        ids.add(iId);
+      if ( ref.getCount() != 0 ) {
+        ref.moveToFirst();
+        do {
+          String iId = ref.getString(ref.getColumnIndex(InstanceColumns._ID));
+          ids.add(iId);
+        } while (ref.moveToNext());
       }
     } finally {
       if (ref != null) {
@@ -356,10 +439,12 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
       }
     }
 
+    String[] args = new String[1];
     int count = 0;
     for (String id : ids) {
-      values.put(InstanceColumns.DATA_TABLE_INSTANCE_ID, id);
-      count += (db.replace(DataModelDatabaseHelper.UPLOADS_TABLE_NAME, null, values) != -1) ? 1 : 0;
+      args[0] = id;
+      count += db.update(DataModelDatabaseHelper.UPLOADS_TABLE_NAME, values,
+                         InstanceColumns._ID + "=?", args);
     }
     getContext().getContentResolver().notifyChange(uri, null);
     return count;
@@ -369,8 +454,8 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
 
     sInstancesProjectionMap = new HashMap<String, String>();
     sInstancesProjectionMap.put(InstanceColumns._ID, InstanceColumns._ID);
-    sInstancesProjectionMap.put(InstanceColumns.DATA_TABLE_INSTANCE_ID,
-        InstanceColumns.DATA_TABLE_INSTANCE_ID);
+    sInstancesProjectionMap.put(InstanceColumns.DATA_INSTANCE_ID,
+        InstanceColumns.DATA_INSTANCE_ID);
     sInstancesProjectionMap.put(InstanceColumns.XML_PUBLISH_TIMESTAMP,
         InstanceColumns.XML_PUBLISH_TIMESTAMP);
     sInstancesProjectionMap.put(InstanceColumns.XML_PUBLISH_STATUS,

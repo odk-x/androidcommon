@@ -42,7 +42,7 @@ public class PropertyManager {
 
     String getInstanceDirectory();
 
-    String getNewInstanceFile(String extension);
+    String getUriFragmentNewInstanceFile(String uriDeviceId, String extension);
   };
 
   private String t = "PropertyManager";
@@ -74,9 +74,9 @@ public class PropertyManager {
   public final static String APP_NAME = "appName";
   // instanceDirectory -- directory containing media files for current instance
   public final static String INSTANCE_DIRECTORY = "instancedirectory";
-  // newfile -- the full path to a non-existent file with the given extension
-  public final static String NEW_FILE_WITHOUT_COLON = "newfile";
-  public final static String NEW_FILE = NEW_FILE_WITHOUT_COLON + ":";
+  // uriFragmentNewFile -- the appName-relative uri for a non-existent file with the given extension
+  public final static String URI_FRAGMENT_NEW_INSTANCE_FILE_WITHOUT_COLON = "urifragmentnewinstancefile";
+  public final static String URI_FRAGMENT_NEW_INSTANCE_FILE = URI_FRAGMENT_NEW_INSTANCE_FILE_WITHOUT_COLON + ":";
 
   /**
    * Constructor used within the Application object to create a singleton of the
@@ -175,15 +175,15 @@ public class PropertyManager {
       if (value == null)
         return null;
       return value;
-    } else if (propertyName.startsWith(NEW_FILE_WITHOUT_COLON)) {
+    } else if (propertyName.startsWith(URI_FRAGMENT_NEW_INSTANCE_FILE_WITHOUT_COLON)) {
       // grab the requested extension, if any...
       String ext;
-      if (propertyName.startsWith(NEW_FILE)) {
-        ext = rawPropertyName.substring(NEW_FILE.length());
+      if (propertyName.startsWith(URI_FRAGMENT_NEW_INSTANCE_FILE)) {
+        ext = rawPropertyName.substring(URI_FRAGMENT_NEW_INSTANCE_FILE.length());
       } else {
         ext = "";
       }
-      String value = callback.getNewInstanceFile(ext);
+      String value = callback.getUriFragmentNewInstanceFile(mProperties.get(OR_DEVICE_ID_PROPERTY),ext);
       return value;
     } else {
       return mProperties.get(propertyName);
