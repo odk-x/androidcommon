@@ -15,6 +15,7 @@
 package org.opendatakit.common.android.provider;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +28,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
@@ -60,11 +62,19 @@ public abstract class FileProvider extends ContentProvider {
   }
 
   public static Uri getContentUri(Context c) {
-	  return Uri.parse("content://" + getFileAuthority(c) + "/");
+    if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN ) {
+	   return Uri.parse("content://" + getFileAuthority(c) + "/");
+    } else {
+      return Uri.parse("file://" + ODKFileUtils.getOdkFolder() + "/");
+    }
   }
 
   public static String getFileOriginString(Context c) {
-    return ContentResolver.SCHEME_CONTENT + "_" + getFileAuthority(c) + "_0";
+    if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN ) {
+      return ContentResolver.SCHEME_CONTENT + "_" + getFileAuthority(c) + "_0";
+    } else {
+      return "file__0";
+    }
   }
 
   /**
@@ -167,7 +177,7 @@ public abstract class FileProvider extends ContentProvider {
     if (!realFile.isFile()) {
       throw new FileNotFoundException("Not a valid uri: " + uri + " is not a file.");
     }
-    return ParcelFileDescriptor.open(realFile, ParcelFileDescriptor.MODE_READ_ONLY);
+    return ParcelFileDescriptor.open(realFile, ParcelFileDescriptor.MODE_READ_ONLY | ParcelFileDescriptor.MODE_WORLD_READABLE);
   }
 
   @Override
