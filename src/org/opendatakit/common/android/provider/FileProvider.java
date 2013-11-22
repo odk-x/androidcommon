@@ -28,6 +28,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
+import android.util.Log;
 
 /**
  * The WebKit does better if there is a content provider vending files to it.
@@ -160,6 +161,8 @@ public abstract class FileProvider extends ContentProvider {
     }
 
     File realFile = ODKFileUtils.fromAppPath(path);
+
+    Log.i(this.getClass().getSimpleName(), "openFile: " + realFile.getAbsolutePath());
 
     if (!realFile.isFile()) {
       throw new FileNotFoundException("Not a valid uri: " + uri + " is not a file.");
