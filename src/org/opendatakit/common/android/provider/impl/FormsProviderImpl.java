@@ -82,6 +82,21 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
 
   @Override
   public boolean onCreate() {
+
+    try {
+      ODKFileUtils.verifyExternalStorageAvailability();
+      File f = new File(ODKFileUtils.getOdkFolder());
+      if ( !f.exists() ) {
+        f.mkdir();
+      } else if ( !f.isDirectory() ) {
+        Log.e(t, f.getAbsolutePath() + " is not a directory!");
+        return false;
+      }
+    } catch ( Exception e ) {
+      Log.e(t, "External storage not available -- purging dbHelpers");
+      return false;
+    }
+
     // fire off background thread to scan directories...
     final FormsProviderImpl self = this;
     Thread r = new Thread() {
