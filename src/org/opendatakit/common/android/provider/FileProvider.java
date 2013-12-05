@@ -15,7 +15,6 @@
 package org.opendatakit.common.android.provider;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +46,7 @@ import android.util.Log;
 public abstract class FileProvider extends ContentProvider {
   public static final String CONTENT_ITEM_TYPE = "vnd.android.cursor.item/vnd.opendatakit.file";
 
-  public static String getApkPart(Context c) {
+  private static String getApkPart(Context c) {
 	    String pkgName = c.getApplicationInfo().packageName;
 	    String trailing = pkgName.substring(pkgName.lastIndexOf('.')+1);
 	    if ( trailing.equals("android") ) {
@@ -58,7 +57,7 @@ public abstract class FileProvider extends ContentProvider {
   }
 
   public static String getFileAuthority(Context c) {
-	  return "org.opendatakit." + getApkPart(c) + ".android.provider.file";
+	  return "org.opendatakit.common.android.provider.files";
   }
 
   public static Uri getContentUri(Context c) {
@@ -174,10 +173,20 @@ public abstract class FileProvider extends ContentProvider {
 
     Log.i(this.getClass().getSimpleName(), "openFile: " + realFile.getAbsolutePath());
 
-    if (!realFile.isFile()) {
+    if ( mode.equals("rwt") || mode.equals("rw") ) {
+      if ( !realFile.getParentFile().exists() ) {
+        realFile.getParentFile().mkdirs();
+      }
+      if ( mode.equals("rwt") ) {
+        return ParcelFileDescriptor.open(realFile, ParcelFileDescriptor.MODE_READ_WRITE | ParcelFileDescriptor.MODE_TRUNCATE | ParcelFileDescriptor.MODE_WORLD_READABLE);
+      } else {
+        return ParcelFileDescriptor.open(realFile, ParcelFileDescriptor.MODE_READ_WRITE | ParcelFileDescriptor.MODE_WORLD_READABLE);
+      }
+    } else if (!realFile.isFile()) {
       throw new FileNotFoundException("Not a valid uri: " + uri + " is not a file.");
+    } else {
+      return ParcelFileDescriptor.open(realFile, ParcelFileDescriptor.MODE_READ_ONLY | ParcelFileDescriptor.MODE_WORLD_READABLE);
     }
-    return ParcelFileDescriptor.open(realFile, ParcelFileDescriptor.MODE_READ_ONLY | ParcelFileDescriptor.MODE_WORLD_READABLE);
   }
 
   @Override
