@@ -333,6 +333,15 @@ public class ODKFileUtils {
     }
   }
 
+  public static String getInstancesFolder(String appName, String tableId) {
+    String path;
+    path = getTablesFolder(appName, tableId) + File.separator + INSTANCES_FOLDER_NAME;
+
+    File f = new File(path);
+    f.mkdirs();
+    return f.getAbsolutePath();
+  }
+
   public static String getInstanceFolder(String appName, String tableId, String instanceId) {
     String path;
     if (instanceId == null || instanceId.length() == 0) {
