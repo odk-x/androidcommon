@@ -43,8 +43,8 @@ public class DataTableColumns implements BaseColumns {
    * needs to update these appropriately when a cell is directly edited based
    * upon whether or not the table is 'form-managed' or not.
    *
-   * _savepoint_timestamp, timestamp and last_mod_time are the same field.
-   * last_mod_time is simply a well-formatted text representation of the timestamp value.
+   * _savepoint_timestamp is the currentTimeMillis.
+   * It is stored as an Integer on the client, and as a string on the server.
    */
   public static final String SAVEPOINT_TIMESTAMP = TableConstants.SAVEPOINT_TIMESTAMP;
   public static final String SAVEPOINT_TYPE = TableConstants.SAVEPOINT_TYPE;
