@@ -63,27 +63,26 @@ public abstract class FileProvider extends ContentProvider {
   }
 
   public static Uri getContentUri(Context c) {
-    return Uri.parse("http://" + SimpleWebServer.HOSTNAME +
-        ":" + Integer.toString(SimpleWebServer.PORT) + "/");
+    //return Uri.parse("http://" + SimpleWebServer.HOSTNAME +
+    //    ":" + Integer.toString(SimpleWebServer.PORT) + "/");
 
-    /*
+
     if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN ) {
 	   return Uri.parse("content://" + getFileAuthority(c) + "/");
     } else {
       return Uri.parse("file://" + ODKFileUtils.getOdkFolder() + "/");
-    }*/
+    }
   }
 
   public static String getFileOriginString(Context c) {
-    return "http_" + SimpleWebServer.HOSTNAME +
-        "_" + Integer.toString(SimpleWebServer.PORT);
-    /*
+    //return "http_" + SimpleWebServer.HOSTNAME +
+    //    "_" + Integer.toString(SimpleWebServer.PORT);
+
     if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN ) {
       return ContentResolver.SCHEME_CONTENT + "_" + getFileAuthority(c) + "_0";
     } else {
       return "file__0";
     }
-    */
   }
 
   /**

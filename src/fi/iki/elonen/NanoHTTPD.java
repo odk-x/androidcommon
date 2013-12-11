@@ -13,6 +13,7 @@
  */
 package fi.iki.elonen;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
@@ -23,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.io.SequenceInputStream;
@@ -100,7 +102,7 @@ public abstract class NanoHTTPD {
      * This is required as the Keep-Alive HTTP connections would otherwise
      * block the socket reading thread forever (or as long the browser is open).
      */
-    public static final int SOCKET_READ_TIMEOUT = 5000;
+    public static final int SOCKET_READ_TIMEOUT = 15000;
     /**
      * Common mime type for dynamic content: plain text
      */
@@ -196,11 +198,13 @@ public abstract class NanoHTTPD {
                             asyncRunner.exec(new Runnable() {
                                 @Override
                                 public void run() {
+                                    BufferedInputStream bufferedInputStream = null;
                                     OutputStream outputStream = null;
                                     try {
                                         outputStream = finalAccept.getOutputStream();
                                         TempFileManager tempFileManager = tempFileManagerFactory.create();
-                                        HTTPSession session = new HTTPSession(tempFileManager, inputStream, outputStream, finalAccept.getInetAddress());
+                                        bufferedInputStream = new BufferedInputStream(inputStream);
+                                        HTTPSession session = new HTTPSession(tempFileManager, bufferedInputStream, outputStream, finalAccept.getInetAddress());
                                         while (!finalAccept.isClosed()) {
                                             session.execute();
                                         }
@@ -212,6 +216,7 @@ public abstract class NanoHTTPD {
                                         }
                                     } finally {
                                         safeClose(outputStream);
+                                        safeClose(bufferedInputStream);
                                         safeClose(inputStream);
                                         safeClose(finalAccept);
                                         unRegisterConnection(finalAccept);
@@ -635,11 +640,16 @@ public abstract class NanoHTTPD {
                 if (status == null) {
                     throw new Error("sendResponse(): Status can't be null.");
                 }
-                PrintWriter pw = new PrintWriter(outputStream);
+                OutputStreamWriter writer = new OutputStreamWriter(outputStream, "UTF-8");
+                PrintWriter pw = new PrintWriter(writer);
                 pw.print("HTTP/1.1 " + status.getDescription() + " \r\n");
 
                 if (mime != null) {
+                  if ( mime.contains("charset=utf-8") ) {
                     pw.print("Content-Type: " + mime + "\r\n");
+                  } else {
+                    pw.print("Content-Type: " + mime + "; charset=utf-8\r\n");
+                  }
                 }
 
                 if (header == null || header.get("Date") == null) {
@@ -862,32 +872,26 @@ public abstract class NanoHTTPD {
                 // Apache's default header limit is 8KB.
                 // Do NOT assume that a single read will get the entire header at once!
                 byte[] buf = new byte[BUFSIZE];
-                splitbyte = 0;
                 rlen = 0;
-                {
-                    int read = -1;
-                    try {
-                        read = inputStream.read(buf, 0, BUFSIZE);
-                    } catch (SocketException e) {
-                        throw new SocketException("NanoHttpd Shutdown");
-                    }
-                    if (read == -1) {
-                        // socket was been closed
-                        throw new SocketException("NanoHttpd Shutdown");
-                    }
-                    while (read > 0) {
-                        rlen += read;
-                        splitbyte = findHeaderEnd(buf, rlen);
-                        if (splitbyte > 0)
-                            break;
-                        read = inputStream.read(buf, rlen, BUFSIZE - rlen);
-                    }
+                splitbyte = 0;
+
+                try {
+                  int byteValue;
+                  while (splitbyte == 0 && (byteValue = inputStream.read()) != -1) {
+                    buf[rlen++] = (byte) byteValue;
+                    splitbyte = isHeaderEnd(buf, rlen);
+                  }
+                  if ( splitbyte == 0 ) {
+                    // this may be an HTTP/1.0 no-headers request
+                    splitbyte = rlen;
+                  }
+                } catch (SocketException e) {
+                    throw new SocketException("NanoHttpd Shutdown");
                 }
 
-                if (splitbyte < rlen) {
-                    ByteArrayInputStream splitInputStream = new ByteArrayInputStream(buf, splitbyte, rlen - splitbyte);
-                    SequenceInputStream sequenceInputStream = new SequenceInputStream(splitInputStream, inputStream);
-                    inputStream = sequenceInputStream;
+                if (splitbyte == 0) {
+                    // no header -- we should just terminate
+                    throw new SocketException("NanoHttpd Shutdown");
                 }
 
                 parms = new HashMap<String, String>();
@@ -896,7 +900,7 @@ public abstract class NanoHTTPD {
                 }
 
                 // Create a BufferedReader for parsing the header.
-                BufferedReader hin = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(buf, 0, rlen)));
+                BufferedReader hin = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(buf, 0, rlen), "UTF-8"));
 
                 // Decode the header into parms and header java properties
                 Map<String, String> pre = new HashMap<String, String>();
@@ -959,9 +963,9 @@ public abstract class NanoHTTPD {
                 byte[] buf = new byte[512];
                 while (rlen >= 0 && size > 0) {
                     rlen = inputStream.read(buf, 0, 512);
-                    size -= rlen;
                     if (rlen > 0) {
                         randomAccessFile.write(buf, 0, rlen);
+                        size -= rlen;
                     }
                 }
 
@@ -971,7 +975,7 @@ public abstract class NanoHTTPD {
 
                 // Create a BufferedReader for easily reading it as string.
                 InputStream bin = new FileInputStream(randomAccessFile.getFD());
-                in = new BufferedReader(new InputStreamReader(bin));
+                in = new BufferedReader(new InputStreamReader(bin,"UTF-8"));
 
                 // If the method is POST, there may be parameters
                 // in data section, too, read it:
@@ -1151,17 +1155,14 @@ public abstract class NanoHTTPD {
         }
 
         /**
-         * Find byte index separating header from body. It must be the last byte of the first two sequential new lines.
+         * Tests the rlen-4,rlen-3,rlen-2,rlen-1 bytes for the two consecutive line breaks.
          */
-        private int findHeaderEnd(final byte[] buf, int rlen) {
-            int splitbyte = 0;
-            while (splitbyte + 3 < rlen) {
-                if (buf[splitbyte] == '\r' && buf[splitbyte + 1] == '\n' && buf[splitbyte + 2] == '\r' && buf[splitbyte + 3] == '\n') {
-                    return splitbyte + 4;
-                }
-                splitbyte++;
-            }
-            return 0;
+        private int isHeaderEnd(final byte[] buf, int rlen) {
+          if ( rlen < 4 ) return 0;
+          if ( buf[rlen-4] == '\r' && buf[rlen-3] == '\n' && buf[rlen-2] == '\r' && buf[rlen-1] == '\n') {
+            return rlen;
+          }
+          return 0;
         }
 
         /**
