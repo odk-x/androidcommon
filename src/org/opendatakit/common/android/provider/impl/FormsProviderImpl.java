@@ -32,6 +32,8 @@ import org.opendatakit.common.android.database.DataModelDatabaseHelper;
 import org.opendatakit.common.android.provider.FormsColumns;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 
+import fi.iki.elonen.SimpleWebServer;
+
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.SQLException;
@@ -52,6 +54,8 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
   static ExecutorService executor = Executors.newFixedThreadPool(1);
   private static boolean bInitialScan = false; // set to true during first scan
 
+  private static SimpleWebServer server = null;
+
   /**
    * During initialization, a pool of content providers are created. We only
    * need to fire off one initial app scan. Use this synchronized method to do
@@ -66,6 +70,10 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       try {
         observer = new ODKFolderObserver(self);
         bInitialScan = true;
+        if ( server == null ) {
+          server = new SimpleWebServer();
+          server.start();
+        }
       } catch (Exception e) {
         Log.e(t, "Exception: " + e.toString());
         bInitialScan = false;
@@ -78,6 +86,14 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
   static synchronized void stopScan() {
     observer.stopWatching();
     bInitialScan = false;
+    if ( server != null ) {
+      try {
+        server.stop();
+      } catch ( Exception e ) {
+        // ignore...
+      }
+      server = null;
+    }
   }
 
   @Override

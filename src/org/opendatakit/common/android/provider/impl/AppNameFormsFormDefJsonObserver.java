@@ -43,11 +43,9 @@ class AppNameFormsFormDefJsonObserver extends FileObserver {
   }
 
   public void start() {
-    // notify parent we are beginning monitoring...
     File formDefJson = new File(parent.getFormDefJsonFilePath());
 
     Log.i(t, "start() " + formDefJson.getAbsolutePath());
-    parent.launchFormsDiscovery("monitoring added: " + formDefJson.getAbsolutePath());
   }
 
   private void update() {

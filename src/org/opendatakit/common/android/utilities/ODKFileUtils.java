@@ -51,7 +51,7 @@ public class ODKFileUtils {
   public static final String FORMS_FOLDER_NAME = "forms";
   private static final String INSTANCES_FOLDER_NAME = "instances";
 
-  private static final String METADATA_FOLDER_NAME = "metadata";
+  public static final String METADATA_FOLDER_NAME = "metadata";
   private static final String WEB_DB_FOLDER_NAME = "webDb";
   private static final String GEO_CACHE_FOLDER_NAME = "geoCache";
   private static final String APP_CACHE_FOLDER_NAME = "appCache";
