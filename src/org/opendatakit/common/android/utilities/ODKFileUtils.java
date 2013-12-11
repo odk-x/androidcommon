@@ -67,20 +67,6 @@ public class ODKFileUtils {
   private final static String t = "FileUtils";
 
   /**
-   * Directories at the application name level that are inaccessible. e.g.,
-   * legacy ODK Collect directories.
-   */
-  private static final List<String> LEGACY_DIRECTORIES;
-  static {
-    LEGACY_DIRECTORIES = new ArrayList<String>();
-//    LEGACY_DIRECTORIES.add(FORMS_FOLDER_NAME);
-//    LEGACY_DIRECTORIES.add(INSTANCES_FOLDER_NAME);
-//    LEGACY_DIRECTORIES.add(".cache");
-//    LEGACY_DIRECTORIES.add(METADATA_FOLDER_NAME);
-//    LEGACY_DIRECTORIES.add("config");
-  }
-
-  /**
    * Get the name of the logging folder, without a path.
    * @return
    */
@@ -154,10 +140,6 @@ public class ODKFileUtils {
     return path;
   }
 
-  public static boolean isValidAppName(String name) {
-    return !LEGACY_DIRECTORIES.contains(name);
-  }
-
   public static File[] getAppFolders() {
     File odk = new File(getOdkFolder());
 
@@ -167,7 +149,7 @@ public class ODKFileUtils {
       public boolean accept(File pathname) {
         if (!pathname.isDirectory())
           return false;
-        return !LEGACY_DIRECTORIES.contains(pathname.getName());
+        return true;
       }
     });
 
@@ -229,10 +211,6 @@ public class ODKFileUtils {
     if (terms == null || terms.length < 1) {
       return null;
     }
-    // exclude LEGACY_DIRECTORIES...
-    if (LEGACY_DIRECTORIES.contains(terms[0])) {
-      return null;
-    }
     File f = new File(new File(getOdkFolder()), appPath);
     return f;
   }
@@ -244,10 +222,6 @@ public class ODKFileUtils {
       String[] app = partialPath.split(File.separator);
       if (app == null || app.length < 1) {
         Log.w(t, "Missing file path (nothing under '" + ODK_FOLDER_NAME + "'): " + fullpath);
-        return null;
-      }
-      if (LEGACY_DIRECTORIES.contains(app[0])) {
-        Log.w(t, "File path detected as legacy directory: " + fullpath);
         return null;
       }
       return partialPath;
@@ -275,11 +249,6 @@ public class ODKFileUtils {
         Log.w(t, "File path is not under expected '" + ODK_FOLDER_NAME +
             "' Folder (" + path + ") missing file path (nothing under '" +
             ODK_FOLDER_NAME + "'): " + fullpath);
-        return null;
-      }
-      if (LEGACY_DIRECTORIES.contains(app[0])) {
-        Log.w(t, "File path is not under expected '" + ODK_FOLDER_NAME +
-            "' Folder (" + path + ") detected as legacy directory: " + fullpath);
         return null;
       }
 
