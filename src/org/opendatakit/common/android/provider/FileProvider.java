@@ -47,6 +47,7 @@ import android.util.Log;
  */
 public abstract class FileProvider extends ContentProvider {
   public static final String CONTENT_ITEM_TYPE = "vnd.android.cursor.item/vnd.opendatakit.file";
+  private static String SCHEME_HTTP = "http";
 
   private static String getApkPart(Context c) {
 	    String pkgName = c.getApplicationInfo().packageName;
@@ -58,20 +59,17 @@ public abstract class FileProvider extends ContentProvider {
 	    return trailing;
   }
 
-  public static String getFileAuthority(Context c) {
+  public static String getFileProviderAuthority(Context c) {
 	  return "org.opendatakit.common.android.provider.files";
   }
 
-  public static Uri getContentUri(Context c) {
-    //return Uri.parse("http://" + SimpleWebServer.HOSTNAME +
-    //    ":" + Integer.toString(SimpleWebServer.PORT) + "/");
+  public static Uri getWebViewContentUri(Context c) {
+    return Uri.parse(SCHEME_HTTP + "://" + SimpleWebServer.HOSTNAME +
+        ":" + Integer.toString(SimpleWebServer.PORT) + "/");
+  }
 
-
-    if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN ) {
-	   return Uri.parse("content://" + getFileAuthority(c) + "/");
-    } else {
-      return Uri.parse("file://" + ODKFileUtils.getOdkFolder() + "/");
-    }
+  public static Uri getFileProviderContentUri(Context c) {
+    return Uri.parse(ContentResolver.SCHEME_CONTENT + "://" + getFileProviderAuthority(c) + "/");
   }
 
   public static String getFileOriginString(Context c) {
@@ -79,7 +77,7 @@ public abstract class FileProvider extends ContentProvider {
     //    "_" + Integer.toString(SimpleWebServer.PORT);
 
     if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN ) {
-      return ContentResolver.SCHEME_CONTENT + "_" + getFileAuthority(c) + "_0";
+      return ContentResolver.SCHEME_CONTENT + "_" + getFileProviderAuthority(c) + "_0";
     } else {
       return "file__0";
     }
@@ -105,7 +103,7 @@ public abstract class FileProvider extends ContentProvider {
    */
   private static File getAsFileObject(Context context, String uriString) {
     Uri uri = Uri.parse(uriString);
-    if (!uri.getAuthority().equals(getFileAuthority(context))) {
+    if (!uri.getAuthority().equals(getFileProviderAuthority(context))) {
       throw new IllegalArgumentException("Not a valid uri: " + uriString);
     }
     List<String> segments = uri.getPathSegments();
@@ -140,8 +138,8 @@ public abstract class FileProvider extends ContentProvider {
     return f;
   }
 
-  public static File getAsFile(Context context, String uriString) {
-    File f = getAsFileObject(context, uriString);
+  public static File getAsFile(Context context, String appName, String uriFragment) {
+    File f = getAsFileObject(context, getAsFileProviderUri(context, appName, uriFragment));
     return f;
   }
   /**
@@ -152,15 +150,41 @@ public abstract class FileProvider extends ContentProvider {
    *
    * File file;
    *
-   * FileProvider.getAsUri(this, appName, ODKFileUtils.asUriFragment(appName, file));
+   * FileProvider.getAsFileProviderUri(this, appName, ODKFileUtils.asUriFragment(appName, file));
    *
    * @param context
    * @param appName
    * @param uriFragment
    * @return
    */
-  public static String getAsUri(Context context, String appName, String uriFragment) {
-    Uri u = FileProvider.getContentUri(context);
+  public static String getAsFileProviderUri(Context context, String appName, String uriFragment) {
+    Uri u = FileProvider.getFileProviderContentUri(context);
+    // we need to escape the segments.
+    u = Uri.withAppendedPath(u, Uri.encode(appName));
+    String[] segments = uriFragment.split("/");
+    for (String s : segments) {
+      u = Uri.withAppendedPath(u, Uri.encode(s));
+    }
+    return u.toString();
+  }
+
+  /**
+   * The constructed URI may be invalid if it references a file that is in a
+   * legacy directory or an inaccessible directory.
+   *
+   * Typical usage:
+   *
+   * File file;
+   *
+   * FileProvider.getAsWebViewUri(this, appName, ODKFileUtils.asUriFragment(appName, file));
+   *
+   * @param context
+   * @param appName
+   * @param uriFragment
+   * @return
+   */
+  public static String getAsWebViewUri(Context context, String appName, String uriFragment) {
+    Uri u = FileProvider.getWebViewContentUri(context);
     // we need to escape the segments.
     u = Uri.withAppendedPath(u, Uri.encode(appName));
     String[] segments = uriFragment.split("/");
@@ -173,7 +197,7 @@ public abstract class FileProvider extends ContentProvider {
   @Override
   public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
     String path = uri.getPath();
-    if (!uri.getAuthority().equalsIgnoreCase(getFileAuthority(getContext()))) {
+    if (!uri.getAuthority().equalsIgnoreCase(getFileProviderAuthority(getContext()))) {
       throw new FileNotFoundException("Not a valid uri: " + uri
           + " file does not exists or is not a file.");
     }
