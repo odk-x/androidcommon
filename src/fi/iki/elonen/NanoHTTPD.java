@@ -885,13 +885,31 @@ public abstract class NanoHTTPD {
                     // this may be an HTTP/1.0 no-headers request
                     splitbyte = rlen;
                   }
-                } catch (SocketException e) {
+                } catch (SocketTimeoutException e) {
+                  if ( rlen == 0 ) {
+                    // clean
                     throw new SocketException("NanoHttpd Shutdown");
+                  } else {
+                    // dirty
+                    throw new SocketException("NanoHttpd Shutdown -- partial read of header (bytes): " + rlen);
+                  }
+                } catch (SocketException e) {
+                  if ( rlen == 0 ) {
+                    // clean
+                    throw new SocketException("NanoHttpd Shutdown");
+                  } else {
+                    // dirty
+                    throw new SocketException("NanoHttpd Shutdown -- partial read of header (bytes): " + rlen);
+                  }
                 }
 
-                if (splitbyte == 0) {
-                    // no header -- we should just terminate
-                    throw new SocketException("NanoHttpd Shutdown");
+                // if there is no header -- we should just terminate
+                if ( rlen == 0 ) {
+                  // clean
+                  throw new SocketException("NanoHttpd Shutdown");
+                } else if (splitbyte == 0) {
+                  // dirty
+                  throw new SocketException("NanoHttpd Shutdown -- partial read of header (bytes): " + rlen);
                 }
 
                 parms = new HashMap<String, String>();

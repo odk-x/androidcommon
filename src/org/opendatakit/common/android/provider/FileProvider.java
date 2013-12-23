@@ -73,14 +73,8 @@ public abstract class FileProvider extends ContentProvider {
   }
 
   public static String getFileOriginString(Context c) {
-    //return "http_" + SimpleWebServer.HOSTNAME +
-    //    "_" + Integer.toString(SimpleWebServer.PORT);
-
-    if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN ) {
-      return ContentResolver.SCHEME_CONTENT + "_" + getFileProviderAuthority(c) + "_0";
-    } else {
-      return "file__0";
-    }
+    return "http_" + SimpleWebServer.HOSTNAME +
+        "_" + Integer.toString(SimpleWebServer.PORT);
   }
 
   /**
