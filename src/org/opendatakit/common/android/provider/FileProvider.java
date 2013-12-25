@@ -21,17 +21,15 @@ import java.util.List;
 
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 
-import fi.iki.elonen.SimpleWebServer;
-
 import android.content.ContentProvider;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
+import fi.iki.elonen.SimpleWebServer;
 
 /**
  * The WebKit does better if there is a content provider vending files to it.

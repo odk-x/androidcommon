@@ -117,5 +117,10 @@ public class WebDbDatabaseHelper extends ODKSQLiteOpenHelper {
    */
   @Override
   public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+    db.execSQL("DROP TABLE IF EXISTS " + WEBDB_ORIGINS_TABLE + ";");
+
+    db.execSQL("DROP TABLE IF EXISTS " + WEBDB_DATABASES_TABLE + ";");
+
+    onCreate(db);
   }
 }
