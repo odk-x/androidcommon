@@ -42,6 +42,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.StringTokenizer;
 
 import org.opendatakit.common.android.utilities.ODKFileUtils;
@@ -251,10 +252,12 @@ public class SimpleWebServer extends NanoHTTPD {
         boolean canServeUri;
         File f = new File(homeDir, uri);
         canServeUri = f.exists();
-        if ( canServeUri ) {
-          // further restrict uri to have an appName and to not access metadata directory
+        if ( canServeUri && !uri.contains("..")) {
+          Set<String> exclusions = ODKFileUtils.getDirectoriesToExcludeFromSync(false);
+          // further restrict uri to have an appName and to not reference one of the private directories
           String[] parts = uri.split("/");
-          canServeUri = parts.length > 1 && !parts[1].equals(ODKFileUtils.METADATA_FOLDER_NAME);
+          // TODO: ensure there are no ./ or ../ path elements
+          canServeUri = parts.length > 1 && !exclusions.contains(parts[1]);
         }
         return canServeUri;
     }

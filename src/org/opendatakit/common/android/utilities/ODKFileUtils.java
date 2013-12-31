@@ -26,7 +26,10 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.commons.io.FileUtils;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -44,16 +47,17 @@ import android.util.Log;
  * @author Carl Hartung (carlhartung@gmail.com)
  */
 public class ODKFileUtils {
+  private final static String t = "FileUtils";
+
+  // base path
   private static final String ODK_FOLDER_NAME = "opendatakit";
 
-  private static final String TABLES_FOLDER_NAME = "tables";
-  public static final String FORMS_FOLDER_NAME = "forms";
-  private static final String INSTANCES_FOLDER_NAME = "instances";
+  // 1st level -- appId
 
-  public static final String METADATA_FOLDER_NAME = "metadata";
-  private static final String WEB_DB_FOLDER_NAME = "webDb";
-  private static final String GEO_CACHE_FOLDER_NAME = "geoCache";
-  private static final String APP_CACHE_FOLDER_NAME = "appCache";
+  // 2nd level -- directories
+  private static final String METADATA_FOLDER_NAME = "metadata";
+
+  public static final String TABLES_FOLDER_NAME = "tables";
 
   private static final String LOGGING_FOLDER_NAME = "logging";
 
@@ -63,7 +67,45 @@ public class ODKFileUtils {
 
   private static final String STALE_FORMS_FOLDER_NAME = "forms.old";
 
-  private final static String t = "FileUtils";
+  // under the tables directory...
+  public static final String FORMS_FOLDER_NAME = "forms";
+  public static final String INSTANCES_FOLDER_NAME = "instances";
+
+  // under the metadata directory...
+  private static final String WEB_DB_FOLDER_NAME = "webDb";
+  private static final String GEO_CACHE_FOLDER_NAME = "geoCache";
+  private static final String APP_CACHE_FOLDER_NAME = "appCache";
+
+  private static final Set<String> topLevelExclusions;
+
+  private static final Set<String> topLevelPlusTablesExclusions;
+
+  static {
+    TreeSet<String> temp;
+
+    temp = new TreeSet<String>();
+    temp.add(METADATA_FOLDER_NAME);
+    temp.add(LOGGING_FOLDER_NAME);
+    temp.add(STALE_FORMS_FOLDER_NAME);
+    temp.add(STALE_FRAMEWORK_FOLDER_NAME);
+    topLevelExclusions = Collections.unmodifiableSet(temp);
+
+    temp = new TreeSet<String>();
+    temp.add(METADATA_FOLDER_NAME);
+    temp.add(LOGGING_FOLDER_NAME);
+    temp.add(STALE_FORMS_FOLDER_NAME);
+    temp.add(STALE_FRAMEWORK_FOLDER_NAME);
+    temp.add(TABLES_FOLDER_NAME);
+    topLevelPlusTablesExclusions = Collections.unmodifiableSet(temp);
+  }
+
+  public static Set<String> getDirectoriesToExcludeFromSync(boolean excludeTablesDirectory) {
+    if ( excludeTablesDirectory ) {
+      return topLevelPlusTablesExclusions;
+    } else {
+      return topLevelExclusions;
+    }
+  }
 
   /**
    * Get the name of the logging folder, without a path.
