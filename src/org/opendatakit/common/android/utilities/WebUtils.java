@@ -77,7 +77,7 @@ public final class WebUtils {
   private static final String DATE_HEADER = "Date";
 
   public static final String HTTP_CONTENT_TYPE_TEXT_XML = "text/xml";
-  public static final int CONNECTION_TIMEOUT = 30000;
+  public static final int CONNECTION_TIMEOUT = 45000;
 
   private static final GregorianCalendar g = new GregorianCalendar(TimeZone.getTimeZone("GMT"));
 
