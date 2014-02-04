@@ -1,14 +1,18 @@
 /*
  * Copyright (C) 2012-2013 University of Washington
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License
- * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- * or implied. See the License for the specific language governing permissions and limitations under
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express
+ * or implied. See the License for the specific language governing permissions
+ * and limitations under
  * the License.
  */
 
@@ -16,6 +20,7 @@ package org.opendatakit.common.android.provider;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,23 +52,25 @@ public abstract class FileProvider extends ContentProvider {
   public static final String CONTENT_ITEM_TYPE = "vnd.android.cursor.item/vnd.opendatakit.file";
   private static String SCHEME_HTTP = "http";
 
+  private static SimpleWebServer server = null;
+
   private static String getApkPart(Context c) {
-	    String pkgName = c.getApplicationInfo().packageName;
-	    String trailing = pkgName.substring(pkgName.lastIndexOf('.')+1);
-	    if ( trailing.equals("android") ) {
-	    	pkgName = pkgName.substring(0,pkgName.lastIndexOf('.'));
-	    }
-	    trailing = pkgName.substring(pkgName.lastIndexOf('.')+1);
-	    return trailing;
+    String pkgName = c.getApplicationInfo().packageName;
+    String trailing = pkgName.substring(pkgName.lastIndexOf('.') + 1);
+    if (trailing.equals("android")) {
+      pkgName = pkgName.substring(0, pkgName.lastIndexOf('.'));
+    }
+    trailing = pkgName.substring(pkgName.lastIndexOf('.') + 1);
+    return trailing;
   }
 
   public static String getFileProviderAuthority(Context c) {
-	  return "org.opendatakit.common.android.provider.files";
+    return "org.opendatakit.common.android.provider.files";
   }
 
   public static Uri getWebViewContentUri(Context c) {
-    return Uri.parse(SCHEME_HTTP + "://" + SimpleWebServer.HOSTNAME +
-        ":" + Integer.toString(SimpleWebServer.PORT) + "/");
+    return Uri.parse(SCHEME_HTTP + "://" + SimpleWebServer.HOSTNAME + ":"
+        + Integer.toString(SimpleWebServer.PORT) + "/");
   }
 
   public static Uri getFileProviderContentUri(Context c) {
@@ -71,8 +78,7 @@ public abstract class FileProvider extends ContentProvider {
   }
 
   public static String getFileOriginString(Context c) {
-    return "http_" + SimpleWebServer.HOSTNAME +
-        "_" + Integer.toString(SimpleWebServer.PORT);
+    return "http_" + SimpleWebServer.HOSTNAME + "_" + Integer.toString(SimpleWebServer.PORT);
   }
 
   /**
@@ -134,6 +140,7 @@ public abstract class FileProvider extends ContentProvider {
     File f = getAsFileObject(context, getAsFileProviderUri(context, appName, uriFragment));
     return f;
   }
+
   /**
    * The constructed URI may be invalid if it references a file that is in a
    * legacy directory or an inaccessible directory.
@@ -142,7 +149,8 @@ public abstract class FileProvider extends ContentProvider {
    *
    * File file;
    *
-   * FileProvider.getAsFileProviderUri(this, appName, ODKFileUtils.asUriFragment(appName, file));
+   * FileProvider.getAsFileProviderUri(this, appName,
+   * ODKFileUtils.asUriFragment(appName, file));
    *
    * @param context
    * @param appName
@@ -168,7 +176,8 @@ public abstract class FileProvider extends ContentProvider {
    *
    * File file;
    *
-   * FileProvider.getAsWebViewUri(this, appName, ODKFileUtils.asUriFragment(appName, file));
+   * FileProvider.getAsWebViewUri(this, appName,
+   * ODKFileUtils.asUriFragment(appName, file));
    *
    * @param context
    * @param appName
@@ -198,19 +207,22 @@ public abstract class FileProvider extends ContentProvider {
 
     Log.i(this.getClass().getSimpleName(), "openFile: " + realFile.getAbsolutePath());
 
-    if ( mode.equals("rwt") || mode.equals("rw") ) {
-      if ( !realFile.getParentFile().exists() ) {
+    if (mode.equals("rwt") || mode.equals("rw")) {
+      if (!realFile.getParentFile().exists()) {
         realFile.getParentFile().mkdirs();
       }
-      if ( mode.equals("rwt") ) {
-        return ParcelFileDescriptor.open(realFile, ParcelFileDescriptor.MODE_READ_WRITE | ParcelFileDescriptor.MODE_TRUNCATE | ParcelFileDescriptor.MODE_WORLD_READABLE);
+      if (mode.equals("rwt")) {
+        return ParcelFileDescriptor.open(realFile, ParcelFileDescriptor.MODE_READ_WRITE
+            | ParcelFileDescriptor.MODE_TRUNCATE | ParcelFileDescriptor.MODE_WORLD_READABLE);
       } else {
-        return ParcelFileDescriptor.open(realFile, ParcelFileDescriptor.MODE_READ_WRITE | ParcelFileDescriptor.MODE_WORLD_READABLE);
+        return ParcelFileDescriptor.open(realFile, ParcelFileDescriptor.MODE_READ_WRITE
+            | ParcelFileDescriptor.MODE_WORLD_READABLE);
       }
     } else if (!realFile.isFile()) {
       throw new FileNotFoundException("Not a valid uri: " + uri + " is not a file.");
     } else {
-      return ParcelFileDescriptor.open(realFile, ParcelFileDescriptor.MODE_READ_ONLY | ParcelFileDescriptor.MODE_WORLD_READABLE);
+      return ParcelFileDescriptor.open(realFile, ParcelFileDescriptor.MODE_READ_ONLY
+          | ParcelFileDescriptor.MODE_WORLD_READABLE);
     }
   }
 
@@ -229,14 +241,38 @@ public abstract class FileProvider extends ContentProvider {
     return null;
   }
 
+  private static synchronized void startServer() {
+    if (server == null) {
+      SimpleWebServer testing = new SimpleWebServer();
+      try {
+        testing.start();
+        server = testing;
+      } catch (IOException e) {
+        Log.e("FileProvider", "Exception: " + e.toString());
+      }
+    }
+  }
+
+  private static synchronized void stopServer() {
+    if (server != null) {
+      try {
+        server.stop();
+      } catch (Exception e) {
+        // ignore...
+      }
+      server = null;
+    }
+  }
+
   @Override
   public boolean onCreate() {
+    startServer();
     return true;
   }
 
   @Override
   public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,
-      String sortOrder) {
+                      String sortOrder) {
     return null;
   }
 

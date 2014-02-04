@@ -2,14 +2,16 @@
  * Copyright (C) 2007 The Android Open Source Project
  * Copyright (C) 2011-2013 University of Washington
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy
+ * of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License
- * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- * or implied. See the License for the specific language governing permissions and limitations under
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
  */
 
@@ -32,8 +34,6 @@ import org.opendatakit.common.android.database.DataModelDatabaseHelper;
 import org.opendatakit.common.android.provider.FormsColumns;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 
-import fi.iki.elonen.SimpleWebServer;
-
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.SQLException;
@@ -54,8 +54,6 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
   static ExecutorService executor = Executors.newFixedThreadPool(1);
   private static boolean bInitialScan = false; // set to true during first scan
 
-  private static SimpleWebServer server = null;
-
   /**
    * During initialization, a pool of content providers are created. We only
    * need to fire off one initial app scan. Use this synchronized method to do
@@ -70,10 +68,6 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       try {
         observer = new ODKFolderObserver(self);
         bInitialScan = true;
-        if ( server == null ) {
-          server = new SimpleWebServer();
-          server.start();
-        }
       } catch (Exception e) {
         Log.e(t, "Exception: " + e.toString());
         bInitialScan = false;
@@ -86,14 +80,6 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
   static synchronized void stopScan() {
     observer.stopWatching();
     bInitialScan = false;
-    if ( server != null ) {
-      try {
-        server.stop();
-      } catch ( Exception e ) {
-        // ignore...
-      }
-      server = null;
-    }
   }
 
   @Override
@@ -102,13 +88,13 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     try {
       ODKFileUtils.verifyExternalStorageAvailability();
       File f = new File(ODKFileUtils.getOdkFolder());
-      if ( !f.exists() ) {
+      if (!f.exists()) {
         f.mkdir();
-      } else if ( !f.isDirectory() ) {
+      } else if (!f.isDirectory()) {
         Log.e(t, f.getAbsolutePath() + " is not a directory!");
         return false;
       }
-    } catch ( Exception e ) {
+    } catch (Exception e) {
       Log.e(t, "External storage not available -- purging dbHelpers");
       return false;
     }
@@ -128,7 +114,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
 
   @Override
   public Cursor query(Uri uri, String[] projection, String where, String[] whereArgs,
-      String sortOrder) {
+                      String sortOrder) {
     List<String> segments = uri.getPathSegments();
 
     if (segments.size() < 1 || segments.size() > 2) {
@@ -169,20 +155,20 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     Cursor c = null;
     try {
       DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
-      if ( dbh == null ) {
+      if (dbh == null) {
         Log.w(t, "Unable to access database for appName " + appName);
         return null;
       }
 
       SQLiteDatabase db = dbh.getReadableDatabase();
       c = db.query(DataModelDatabaseHelper.FORMS_TABLE_NAME, projection, whereId, whereIdArgs,
-        null, null, sortOrder);
-    } catch ( Exception e ) {
+          null, null, sortOrder);
+    } catch (Exception e) {
       Log.w(t, "Unable to query database for appName: " + appName);
       return null;
     }
 
-    if ( c == null ) {
+    if (c == null) {
       Log.w(t, "Unable to query database for appName: " + appName);
       return null;
     }
@@ -240,7 +226,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     // First, construct the full file path...
     String path = values.getAsString(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH);
     File mediaPath;
-    if ( path.startsWith(File.separator) ) {
+    if (path.startsWith(File.separator)) {
       mediaPath = new File(path);
     } else {
       mediaPath = ODKFileUtils.asAppFile(appName, path);
@@ -254,11 +240,12 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
 
     if (!ODKFileUtils.isPathUnderAppName(appName, mediaPath)) {
       throw new IllegalArgumentException(
-          "Form definition is not contained within the application: " + appName);
+                                         "Form definition is not contained within the application: "
+                                             + appName);
     }
 
     values.put(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH,
-               ODKFileUtils.asRelativePath(appName, mediaPath));
+        ODKFileUtils.asRelativePath(appName, mediaPath));
 
     // require that it contain a formDef file
     File formDefFile = new File(mediaPath, ODKFileUtils.FORMDEF_JSON_FILENAME);
@@ -275,7 +262,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     File xformsFile = new File(mediaPath, ODKFileUtils.FILENAME_XFORMS_XML);
     if (xformsFile.exists()) {
       values.put(FormsColumns.APP_RELATIVE_FORM_FILE_PATH,
-                 ODKFileUtils.asRelativePath(appName, xformsFile));
+          ODKFileUtils.asRelativePath(appName, xformsFile));
     }
 
     // compute FORM_PATH...
@@ -311,11 +298,13 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     // ODK2: require FORM_MEDIA_PATH (different behavior -- ODK1 and
     // required FORM_FILE_PATH)
     if (!values.containsKey(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH)) {
-      throw new IllegalArgumentException(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + " must be specified.");
+      throw new IllegalArgumentException(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH
+          + " must be specified.");
     }
 
     // Normalize path...
-    File mediaPath = ODKFileUtils.asAppFile(appName, values.getAsString(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH));
+    File mediaPath = ODKFileUtils.asAppFile(appName,
+        values.getAsString(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH));
 
     // require that the form directory actually exists
     if (!mediaPath.exists()) {
@@ -328,7 +317,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     if (values.containsKey(FormsColumns.DISPLAY_SUBTEXT) == false) {
       Date today = new Date();
       String ts = new SimpleDateFormat(getContext().getString(R.string.added_on_date_at_time),
-          Locale.getDefault()).format(today);
+                                       Locale.getDefault()).format(today);
       values.put(FormsColumns.DISPLAY_SUBTEXT, ts);
     }
 
@@ -337,13 +326,15 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     }
 
     // first try to see if a record with this filename already exists...
-    String[] projection = { FormsColumns.FORM_ID, FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH };
-    String[] selectionArgs = {  ODKFileUtils.asRelativePath(appName, mediaPath) };
+    String[] projection = { FormsColumns.FORM_ID, FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH
+    };
+    String[] selectionArgs = { ODKFileUtils.asRelativePath(appName, mediaPath)
+    };
     String selection = FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + "=?";
     Cursor c = null;
 
     DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
-    if ( dbh == null ) {
+    if (dbh == null) {
       Log.w(t, "Unable to access database for appName " + appName);
       throw new SQLException("FAILED Insert into " + uri
           + " -- unable to access metadata directory for appName: " + appName);
@@ -362,15 +353,14 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
         throw new SQLException("FAILED Insert into " + uri
             + " -- row already exists for form directory: " + mediaPath.getAbsolutePath());
       }
-    } catch ( Exception e ) {
-      Log.w(t, "FAILED Insert into " + uri +
-            " -- query for existing row failed: " + e.toString());
+    } catch (Exception e) {
+      Log.w(t, "FAILED Insert into " + uri + " -- query for existing row failed: " + e.toString());
 
-      if ( e instanceof SQLException ) {
+      if (e instanceof SQLException) {
         throw (SQLException) e;
       } else {
-        throw new SQLException("FAILED Insert into " + uri +
-            " -- query for existing row failed: " + e.toString());
+        throw new SQLException("FAILED Insert into " + uri + " -- query for existing row failed: "
+            + e.toString());
       }
     } finally {
       if (c != null) {
@@ -393,15 +383,14 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
 
         return formUri;
       }
-    } catch ( Exception e ) {
-      Log.w(t, "FAILED Insert into " + uri +
-            " -- insert of row failed: " + e.toString());
+    } catch (Exception e) {
+      Log.w(t, "FAILED Insert into " + uri + " -- insert of row failed: " + e.toString());
 
-      if ( e instanceof SQLException ) {
+      if (e instanceof SQLException) {
         throw (SQLException) e;
       } else {
-        throw new SQLException("FAILED Insert into " + uri +
-            " -- insert of row failed: " + e.toString());
+        throw new SQLException("FAILED Insert into " + uri + " -- insert of row failed: "
+            + e.toString());
       }
     }
 
@@ -413,7 +402,8 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     FORMS, FRAMEWORK, OTHER
   };
 
-  private void moveDirectory(String appName, DirType mediaType, File mediaDirectory) throws IOException {
+  private void moveDirectory(String appName, DirType mediaType, File mediaDirectory)
+      throws IOException {
 
     if (mediaDirectory.exists() && mediaType != DirType.OTHER) {
       // it is a directory under our control
@@ -503,10 +493,10 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     Integer idValue = null;
     String tableIdValue = null;
     String formIdValue = null;
-    HashMap<File,DirType> mediaDirs = new HashMap<File,DirType>();
+    HashMap<File, DirType> mediaDirs = new HashMap<File, DirType>();
     try {
       del = this.query(uri, null, whereId, whereIdArgs, null);
-      if ( del == null ) {
+      if (del == null) {
         throw new SQLException("FAILED Delete into " + uri
             + " -- unable to query for existing records");
       }
@@ -517,17 +507,16 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
         formIdValue = del.getString(del.getColumnIndex(FormsColumns.FORM_ID));
         File mediaDir = ODKFileUtils.asAppFile(appName,
             del.getString(del.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH)));
-        mediaDirs.put(mediaDir, (tableIdValue == null) ? DirType.FRAMEWORK : DirType.FORMS );
+        mediaDirs.put(mediaDir, (tableIdValue == null) ? DirType.FRAMEWORK : DirType.FORMS);
       }
-    } catch ( Exception e ) {
-      Log.w(t, "FAILED Delete from " + uri +
-            " -- query for existing row failed: " + e.toString());
+    } catch (Exception e) {
+      Log.w(t, "FAILED Delete from " + uri + " -- query for existing row failed: " + e.toString());
 
-      if ( e instanceof SQLException ) {
+      if (e instanceof SQLException) {
         throw (SQLException) e;
       } else {
-        throw new SQLException("FAILED Delete from " + uri +
-            " -- query for existing row failed: " + e.toString());
+        throw new SQLException("FAILED Delete from " + uri + " -- query for existing row failed: "
+            + e.toString());
       }
     } finally {
       if (del != null && !del.isClosed()) {
@@ -538,18 +527,18 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     int count;
     try {
       DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
-      if ( dbh == null ) {
+      if (dbh == null) {
         Log.w(t, "Unable to access database for appName " + appName);
         return 0;
       }
 
       SQLiteDatabase db = dbh.getWritableDatabase();
-      if ( db == null ) {
+      if (db == null) {
         Log.w(t, "Unable to access database for appName " + appName);
         return 0;
       }
       count = db.delete(DataModelDatabaseHelper.FORMS_TABLE_NAME, whereId, whereIdArgs);
-    } catch ( Exception e ) {
+    } catch (Exception e) {
       e.printStackTrace();
       Log.w(t, "Unable to perform deletion " + e.toString());
       return 0;
@@ -558,7 +547,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     // and attempt to move these directories to the stale forms location
     // so that they do not immediately get rescanned...
 
-    for (HashMap.Entry<File,DirType> entry : mediaDirs.entrySet() ) {
+    for (HashMap.Entry<File, DirType> entry : mediaDirs.entrySet()) {
       try {
         moveDirectory(appName, entry.getValue(), entry.getKey());
       } catch (IOException e) {
@@ -601,9 +590,9 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       FormIdVersion that = (FormIdVersion) o;
 
       // identical if id and version matches...
-      return tableId.equals(that.tableId) &&
-          formId.equals(that.formId) &&
-          ((formVersion == null) ? (that.formVersion == null)
+      return tableId.equals(that.tableId)
+          && formId.equals(that.formId)
+          && ((formVersion == null) ? (that.formVersion == null)
               : (that.formVersion != null && formVersion.equals(that.formVersion)));
     }
   }
@@ -661,9 +650,9 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     Cursor c = null;
     try {
       c = this.query(uri, null, whereId, whereIdArgs, null);
-      if ( c == null ) {
-        throw new SQLException("FAILED Update of " + uri +
-            " -- query for existing row did not return a cursor");
+      if (c == null) {
+        throw new SQLException("FAILED Update of " + uri
+            + " -- query for existing row did not return a cursor");
       }
       if (c.getCount() >= 1) {
         FormIdVersion ref = null;
@@ -680,7 +669,8 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
           int appRelativeMediaPathIdx = c.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH);
           String mediaPath = c.getString(appRelativeMediaPathIdx);
           if (mediaPath != null) {
-            mediaDirs.put(ODKFileUtils.asAppFile(appName,mediaPath), (tableIdValue == null) ? DirType.FRAMEWORK : DirType.FORMS);
+            mediaDirs.put(ODKFileUtils.asAppFile(appName, mediaPath),
+                (tableIdValue == null) ? DirType.FRAMEWORK : DirType.FORMS);
           }
 
           if (ref != null && !ref.equals(cur)) {
@@ -691,15 +681,14 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
           }
         }
       }
-    } catch ( Exception e ) {
-      Log.w(t, "FAILED Update of " + uri +
-            " -- query for existing row failed: " + e.toString());
+    } catch (Exception e) {
+      Log.w(t, "FAILED Update of " + uri + " -- query for existing row failed: " + e.toString());
 
-      if ( e instanceof SQLException ) {
+      if (e instanceof SQLException) {
         throw (SQLException) e;
       } else {
-        throw new SQLException("FAILED Update of " + uri +
-            " -- query for existing row failed: " + e.toString());
+        throw new SQLException("FAILED Update of " + uri + " -- query for existing row failed: "
+            + e.toString());
       }
     } finally {
       if (c != null) {
@@ -717,8 +706,9 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       // we are not a multiset and we are setting the media path
       // try to move all the existing non-matching media paths to
       // somewhere else...
-      File mediaPath = ODKFileUtils.asAppFile(appName,values.getAsString(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH));
-      for (HashMap.Entry<File,DirType> entry : mediaDirs.entrySet()) {
+      File mediaPath = ODKFileUtils.asAppFile(appName,
+          values.getAsString(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH));
+      for (HashMap.Entry<File, DirType> entry : mediaDirs.entrySet()) {
         File altPath = entry.getKey();
         if (!altPath.equals(mediaPath)) {
           try {
@@ -741,7 +731,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     if (values.containsKey(FormsColumns.DATE) == true) {
       Date today = new Date();
       String ts = new SimpleDateFormat(getContext().getString(R.string.added_on_date_at_time),
-          Locale.getDefault()).format(today);
+                                       Locale.getDefault()).format(today);
       values.put(FormsColumns.DISPLAY_SUBTEXT, ts);
     }
 
@@ -749,19 +739,19 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     try {
       // OK Finally, now do the update...
       DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
-      if ( dbh == null ) {
+      if (dbh == null) {
         Log.w(t, "Unable to access database for appName " + appName);
         return 0;
       }
 
       SQLiteDatabase db = dbh.getWritableDatabase();
-      if ( db == null ) {
+      if (db == null) {
         Log.w(t, "Unable to access metadata directory for appName " + appName);
         return 0;
       }
 
       count = db.update(DataModelDatabaseHelper.FORMS_TABLE_NAME, values, whereId, whereIdArgs);
-    } catch ( Exception e ) {
+    } catch (Exception e) {
       e.printStackTrace();
       Log.w(t, "Unable to perform update " + uri);
       return 0;
