@@ -32,21 +32,21 @@ public class DataTableColumns implements BaseColumns {
 
   // tablename is chosen by user...
   public static final String ID = TableConstants.ID;
-  public static final String URI_ACCESS_CONTROL = TableConstants.URI_ACCESS_CONTROL;
-  public static final String SYNC_TAG = TableConstants.SYNC_TAG;
+  public static final String ROW_ETAG = TableConstants.ROW_ETAG;
   public static final String SYNC_STATE = TableConstants.SYNC_STATE;
   public static final String CONFLICT_TYPE = TableConstants.CONFLICT_TYPE;
 
   /**
-   * (_savepoint_timestamp, _savepoint_type, _form_id, _locale) are the tuple
-   * written and managed by ODK Survey when a record is updated. ODK Tables
-   * needs to update these appropriately when a cell is directly edited based
+   * (_savepoint_timestamp, _savepoint_creator, _savepoint_type, _form_id, _locale)
+   * are the tuple written and managed by ODK Survey when a record is updated. ODK
+   * Tables needs to update these appropriately when a cell is directly edited based
    * upon whether or not the table is 'form-managed' or not.
    *
    * _savepoint_timestamp is the currentTimeMillis.
    * It is stored as an Integer on the client, and as a string on the server.
    */
   public static final String SAVEPOINT_TIMESTAMP = TableConstants.SAVEPOINT_TIMESTAMP;
+  public static final String SAVEPOINT_CREATOR = TableConstants.SAVEPOINT_CREATOR;
   public static final String SAVEPOINT_TYPE = TableConstants.SAVEPOINT_TYPE;
   public static final String FORM_ID = TableConstants.FORM_ID;
   public static final String LOCALE = TableConstants.LOCALE;
@@ -55,8 +55,8 @@ public class DataTableColumns implements BaseColumns {
   // there is nothing included. This has been a problem when downloading a
   // table from the server.
   public static final String DEFAULT_LOCALE= "";
-  public static final String DEFAULT_URI_USER = "";
-  public static final String DEFAULT_SYNC_TAG = "";
+  public static final String DEFAULT_SAVEPOINT_CREATOR = "";
+  public static final String DEFAULT_ROW_ETAG = null;
 
   // This class cannot be instantiated
   private DataTableColumns() {

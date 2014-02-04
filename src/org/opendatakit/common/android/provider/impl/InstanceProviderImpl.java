@@ -28,6 +28,7 @@ import java.util.Map;
 import org.apache.commons.io.FileUtils;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
+import org.opendatakit.aggregate.odktables.rest.TableConstants;
 import org.opendatakit.common.android.R;
 import org.opendatakit.common.android.database.DataModelDatabaseHelper;
 import org.opendatakit.common.android.database.DataModelDatabaseHelper.ColumnDefinition;
@@ -172,11 +173,11 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
      .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
         .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(",");
     // add the dataTable metadata except for _ID (which conflicts with InstanceColumns._ID)
-    b.append(dbTableName).append(".").append(DataTableColumns.URI_ACCESS_CONTROL).append(",")
-     .append(dbTableName).append(".").append(DataTableColumns.SYNC_TAG).append(",")
+    b.append(dbTableName).append(".").append(DataTableColumns.ROW_ETAG).append(",")
      .append(dbTableName).append(".").append(DataTableColumns.SYNC_STATE).append(",")
      .append(dbTableName).append(".").append(DataTableColumns.CONFLICT_TYPE).append(",")
      .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_TIMESTAMP).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_CREATOR).append(",")
      .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_TYPE).append(",")
      .append(dbTableName).append(".").append(DataTableColumns.FORM_ID).append(",")
      .append(dbTableName).append(".").append(DataTableColumns.LOCALE).append(",");
@@ -207,7 +208,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
         .append(" ELSE ").append(InstanceColumns.DISPLAY_SUBTEXT).append(" END as ")
         .append(InstanceColumns.DISPLAY_SUBTEXT).append(",");
     if ( ids.instanceName == null ) {
-      b.append( "datetime(").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append("/1000, 'unixepoch', 'localtime')");
+      b.append( "datetime(").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append("/1000000, 'unixepoch', 'localtime')");
     } else {
       b.append(ids.instanceName);
     }
@@ -466,7 +467,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     // update the values string...
     if (values.containsKey(InstanceColumns.XML_PUBLISH_STATUS)) {
       Date xmlPublishDate = new Date();
-      values.put(InstanceColumns.XML_PUBLISH_TIMESTAMP, xmlPublishDate.getTime());
+      values.put(InstanceColumns.XML_PUBLISH_TIMESTAMP, TableConstants.nanoSecondsFromMillis(xmlPublishDate.getTime()));
       String xmlPublishStatus = values.getAsString(InstanceColumns.XML_PUBLISH_STATUS);
       if (values.containsKey(InstanceColumns.DISPLAY_SUBTEXT) == false) {
         String text = getDisplaySubtext(xmlPublishStatus, xmlPublishDate);

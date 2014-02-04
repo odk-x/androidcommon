@@ -60,7 +60,7 @@ public final class InstanceColumns implements BaseColumns {
            + DATA_INSTANCE_ID + " text, "
            + DATA_TABLE_TABLE_ID + " text, "
            + XML_PUBLISH_FORM_ID + " text, "
-           + XML_PUBLISH_TIMESTAMP + " integer, "
+           + XML_PUBLISH_TIMESTAMP + " text, "
            + XML_PUBLISH_STATUS + " text, "
            + DISPLAY_SUBTEXT + " text)";
      //@formatter:on
