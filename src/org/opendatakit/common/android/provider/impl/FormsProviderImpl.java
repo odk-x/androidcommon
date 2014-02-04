@@ -530,7 +530,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
             " -- query for existing row failed: " + e.toString());
       }
     } finally {
-      if (del != null) {
+      if (del != null && !del.isClosed()) {
         del.close();
       }
     }

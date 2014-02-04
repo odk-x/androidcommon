@@ -1,14 +1,18 @@
 /*
  * Copyright (C) 2013 University of Washington
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except
  * in compliance with the License. You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License
- * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- * or implied. See the License for the specific language governing permissions and limitations under
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express
+ * or implied. See the License for the specific language governing permissions
+ * and limitations under
  * the License.
  */
 
@@ -51,7 +55,8 @@ public final class FormsDiscoveryRunnable implements Runnable {
     return newCount;
   }
 
-  public FormsDiscoveryRunnable(FormsProviderImpl impl, String appName, String tableDirName, String formDirName) {
+  public FormsDiscoveryRunnable(FormsProviderImpl impl, String appName, String tableDirName,
+                                String formDirName) {
     context = impl.getContext();
     formsProviderContentUri = Uri.parse("content://" + impl.getFormsAuthority());
     this.appName = appName;
@@ -83,8 +88,9 @@ public final class FormsDiscoveryRunnable implements Runnable {
       c = context.getContentResolver().query(
           Uri.withAppendedPath(formsProviderContentUri, appName), null, null, null, null);
 
-      if ( c == null ) {
-        Log.w(t, "[" + instanceCounter + "] removeStaleFormInfo " + appName + " null cursor returned from query.");
+      if (c == null) {
+        Log.w(t, "[" + instanceCounter + "] removeStaleFormInfo " + appName
+            + " null cursor returned from query.");
         return;
       }
 
@@ -94,10 +100,11 @@ public final class FormsDiscoveryRunnable implements Runnable {
           Uri otherUri = Uri.withAppendedPath(
               Uri.withAppendedPath(formsProviderContentUri, appName), id);
 
-          int appRelativeFormMediaPathIdx = c.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH);
-          if ( appRelativeFormMediaPathIdx == -1) {
-            throw new IllegalStateException("Column " +
-                FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + " missing from database table. Incompatible versions?");
+          int appRelativeFormMediaPathIdx = c
+              .getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH);
+          if (appRelativeFormMediaPathIdx == -1) {
+            throw new IllegalStateException("Column " + FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH
+                + " missing from database table. Incompatible versions?");
           }
           String appRelativeFormMediaPath = c.getString(appRelativeFormMediaPathIdx);
           File f = ODKFileUtils.asAppFile(appName, appRelativeFormMediaPath);
@@ -113,7 +120,6 @@ public final class FormsDiscoveryRunnable implements Runnable {
           "[" + instanceCounter + "] removeStaleFormInfo " + appName + " exception: "
               + e.toString());
       e.printStackTrace();
-      return;
     } finally {
       if (c != null && !c.isClosed()) {
         c.close();
@@ -126,7 +132,16 @@ public final class FormsDiscoveryRunnable implements Runnable {
           t,
           "[" + instanceCounter + "] removeStaleFormInfo: " + appName + " deleting: "
               + badUri.toString());
-      context.getContentResolver().delete(badUri, null, null);
+      try {
+        context.getContentResolver().delete(badUri, null, null);
+      } catch (Exception e) {
+        Log.e(
+            t,
+            "[" + instanceCounter + "] removeStaleFormInfo " + appName + " exception: "
+                + e.toString());
+        e.printStackTrace();
+        // and continue -- don't throw an error
+      }
     }
     Log.i(t, "[" + instanceCounter + "] removeStaleFormInfo " + appName + " end");
   }
@@ -160,7 +175,8 @@ public final class FormsDiscoveryRunnable implements Runnable {
 
   /**
    * Scan the given formDir and update the Forms database. If it is the
-   * formsFolder, then any 'framework' forms should be forbidden. If it is not the
+   * formsFolder, then any 'framework' forms should be forbidden. If it is not
+   * the
    * formsFolder, only 'framework' forms should be allowed
    *
    * @param mediaPath
@@ -182,19 +198,22 @@ public final class FormsDiscoveryRunnable implements Runnable {
       File formDef = new File(formDir, ODKFileUtils.FORMDEF_JSON_FILENAME);
 
       String selection = FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + "=?";
-      String[] selectionArgs = { ODKFileUtils.asRelativePath(appName, formDir) };
+      String[] selectionArgs = { ODKFileUtils.asRelativePath(appName, formDir)
+      };
       c = context.getContentResolver().query(
           Uri.withAppendedPath(formsProviderContentUri, appName), null, selection, selectionArgs,
           null);
 
-      if ( c == null ) {
-        Log.w(t, "[" + instanceCounter + "] updateFormDir: " + formDirectoryPath + " null cursor -- cannot update!");
+      if (c == null) {
+        Log.w(t, "[" + instanceCounter + "] updateFormDir: " + formDirectoryPath
+            + " null cursor -- cannot update!");
         return;
       }
 
       if (c.getCount() > 1) {
         c.close();
-        Log.w(t, "[" + instanceCounter + "] updateFormDir: " + formDirectoryPath + " multiple records from cursor -- delete all and restore!");
+        Log.w(t, "[" + instanceCounter + "] updateFormDir: " + formDirectoryPath
+            + " multiple records from cursor -- delete all and restore!");
         // we have multiple records for this one directory.
         // Rename the directory. Delete the records, and move the
         // directory back.
@@ -297,41 +316,61 @@ public final class FormsDiscoveryRunnable implements Runnable {
     String selection;
     String[] selectionArgs;
     if (fi.formVersion == null) {
-      selection = FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + "!=? AND " + FormsColumns.FORM_ID + "=? AND "
-          + FormsColumns.FORM_VERSION + " IS NULL";
-      String[] temp = { ODKFileUtils.asRelativePath(appName, formDir), fi.formId };
+      selection = FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + "!=? AND " + FormsColumns.FORM_ID
+          + "=? AND " + FormsColumns.FORM_VERSION + " IS NULL";
+      String[] temp = { ODKFileUtils.asRelativePath(appName, formDir), fi.formId
+      };
       selectionArgs = temp;
     } else {
-      selection = FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + "!=? AND " + FormsColumns.FORM_ID + "=? AND "
-          + "( " + FormsColumns.FORM_VERSION + " IS NULL" + " OR " + FormsColumns.FORM_VERSION
-          + " <=?" + " )";
-      String[] temp = { ODKFileUtils.asRelativePath(appName, formDir), fi.formId, fi.formVersion };
+      selection = FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + "!=? AND " + FormsColumns.FORM_ID
+          + "=? AND " + "( " + FormsColumns.FORM_VERSION + " IS NULL" + " OR "
+          + FormsColumns.FORM_VERSION + " <=?" + " )";
+      String[] temp = { ODKFileUtils.asRelativePath(appName, formDir), fi.formId, fi.formVersion
+      };
       selectionArgs = temp;
     }
 
-    context.getContentResolver().delete(Uri.withAppendedPath(formsProviderContentUri, appName),
-        selection, selectionArgs);
+    try {
+      context.getContentResolver().delete(Uri.withAppendedPath(formsProviderContentUri, appName),
+          selection, selectionArgs);
+    } catch (SQLiteException e) {
+      e.printStackTrace();
+      Log.e(
+          t,
+          "[" + instanceCounter + "] updateFormDir: " + formDirectoryPath + " exception: "
+              + e.toString());
+      return;
+    } catch (Exception e) {
+      e.printStackTrace();
+      Log.e(
+          t,
+          "[" + instanceCounter + "] updateFormDir: " + formDirectoryPath + " exception: "
+              + e.toString());
+      return;
+    }
 
     // See if we have any newer versions already present...
     if (fi.formVersion == null) {
-      selection = FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + "!=? AND " + FormsColumns.FORM_ID + "=? AND "
-          + FormsColumns.FORM_VERSION + " IS NOT NULL";
-      String[] temp = { ODKFileUtils.asRelativePath(appName, formDir), fi.formId };
+      selection = FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + "!=? AND " + FormsColumns.FORM_ID
+          + "=? AND " + FormsColumns.FORM_VERSION + " IS NOT NULL";
+      String[] temp = { ODKFileUtils.asRelativePath(appName, formDir), fi.formId
+      };
       selectionArgs = temp;
     } else {
-      selection = FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + "!=? AND " + FormsColumns.FORM_ID + "=? AND "
-          + FormsColumns.FORM_VERSION + " >?";
-      String[] temp = { ODKFileUtils.asRelativePath(appName, formDir), fi.formId, fi.formVersion };
+      selection = FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + "!=? AND " + FormsColumns.FORM_ID
+          + "=? AND " + FormsColumns.FORM_VERSION + " >?";
+      String[] temp = { ODKFileUtils.asRelativePath(appName, formDir), fi.formId, fi.formVersion
+      };
       selectionArgs = temp;
     }
 
     try {
       Uri uriApp = Uri.withAppendedPath(formsProviderContentUri, appName);
-      c = context.getContentResolver().query(uriApp, null, selection, selectionArgs,
-          null);
+      c = context.getContentResolver().query(uriApp, null, selection, selectionArgs, null);
 
-      if ( c == null ) {
-        Log.w(t, "[" + instanceCounter + "] updateFormDir: " + uriApp.toString() + " null cursor -- cannot update!");
+      if (c == null) {
+        Log.w(t, "[" + instanceCounter + "] updateFormDir: " + uriApp.toString()
+            + " null cursor -- cannot update!");
         return;
       }
 
@@ -400,8 +439,8 @@ public final class FormsDiscoveryRunnable implements Runnable {
   private final void updateFormInfo() {
     Log.i(t, "[" + instanceCounter + "] updateFormInfo: " + appName + " begin");
 
-    if ( !isFramework ) {
-      if ( tableDirName != null && formDirName != null ) {
+    if (!isFramework) {
+      if (tableDirName != null && formDirName != null) {
         // specifically target this form...
         File formDir = new File(ODKFileUtils.getFormFolder(appName, tableDirName, formDirName));
         Log.i(t, "[" + instanceCounter + "] updateFormInfo: form: " + formDir.getAbsolutePath());
@@ -409,7 +448,8 @@ public final class FormsDiscoveryRunnable implements Runnable {
       }
     } else {
       File frameworkDir = new File(ODKFileUtils.getFrameworkFolder(appName));
-      Log.i(t, "[" + instanceCounter + "] updateFormInfo: framework: " + frameworkDir.getAbsolutePath());
+      Log.i(t,
+          "[" + instanceCounter + "] updateFormInfo: framework: " + frameworkDir.getAbsolutePath());
       updateFormDir(frameworkDir, false, ODKFileUtils.getStaleFrameworkFolder(appName)
           + File.separator);
     }
@@ -428,28 +468,29 @@ public final class FormsDiscoveryRunnable implements Runnable {
         // this task was created after the start of the last task that searched
         // and updated the appName tree. So we should execute it.
         int startCounter = counter;
-        Log.i(t, "[" + instanceCounter + "] doInBackground removeStaleFormInfo() begins! " + appName + " baseCounter: "
-            + ic + " startCounter: " + startCounter);
+        Log.i(t, "[" + instanceCounter + "] doInBackground removeStaleFormInfo() begins! "
+            + appName + " baseCounter: " + ic + " startCounter: " + startCounter);
 
         try {
           removeStaleFormInfo();
         } finally {
-          Log.i(t, "[" + instanceCounter + "] doInBackground removeStaleFormInfo() ends! " + appName);
+          Log.i(t, "[" + instanceCounter + "] doInBackground removeStaleFormInfo() ends! "
+              + appName);
           appInstanceCounterStart.put(appName, startCounter);
         }
       } else {
-        Log.i(t, "[" + instanceCounter + "] doInBackground removeStaleFormInfo() skipped! " + appName + " baseCounter: "
-            + ic);
+        Log.i(t, "[" + instanceCounter + "] doInBackground removeStaleFormInfo() skipped! "
+            + appName + " baseCounter: " + ic);
       }
 
-      Log.i(t, "[" + instanceCounter + "] doInBackground updateFormInfo() begins! " + appName + " baseCounter: "
-          + ic);
+      Log.i(t, "[" + instanceCounter + "] doInBackground updateFormInfo() begins! " + appName
+          + " baseCounter: " + ic);
 
       try {
         updateFormInfo();
       } finally {
-        Log.i(t, "[" + instanceCounter + "] doInBackground updateFormInfo() ends! " + appName + " baseCounter: "
-          + ic);
+        Log.i(t, "[" + instanceCounter + "] doInBackground updateFormInfo() ends! " + appName
+            + " baseCounter: " + ic);
       }
     }
   }
