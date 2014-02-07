@@ -24,7 +24,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.opendatakit.common.android.provider.ColumnDefinitionsColumns;
-import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.FormsColumns;
 import org.opendatakit.common.android.provider.InstanceColumns;
 import org.opendatakit.common.android.provider.KeyValueStoreColumns;
@@ -42,7 +41,7 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
 
   static final String APP_KEY = "org.opendatakit.common";
   static final int APP_VERSION = 1;
-  
+
   static final String t = "DataModelDatabaseHelper";
 
   /**
@@ -118,26 +117,26 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
     // for now, upgrade and creation use the same codepath...
     commonTableDefn(db);
   }
-  
+
   public static void deleteTableAndData(SQLiteDatabase db, String formId) {
     try {
       IdInstanceNameStruct ids = getIds(db, formId);
-      
+
       String whereClause = TableDefinitionsColumns.TABLE_ID + " = ?";
       String[] whereArgs = { ids.tableId };
-      
+
       db.beginTransaction();
-      
+
       // Drop the table used for the formId
       db.execSQL("DROP TABLE IF EXISTS " + ids.tableId + ";");
-      
+
       // Delete the table definition for the tableId
       int count = db.delete(TABLE_DEFS_TABLE_NAME, whereClause, whereArgs);
-      
+
       // Delete the column definitions for this tableId
       db.delete(COLUMN_DEFINITIONS_TABLE_NAME, whereClause, whereArgs);
-      
-      // Delete the uploads for the tableId 
+
+      // Delete the uploads for the tableId
       String uploadWhereClause = InstanceColumns.DATA_TABLE_TABLE_ID + " = ?";
       db.delete(UPLOADS_TABLE_NAME, uploadWhereClause, whereArgs);
 
@@ -146,9 +145,9 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
       db.delete(KEY_VALUE_STORE_ACTIVE_TABLE_NAME, whereClause, whereArgs);
       db.delete(KEY_VALUE_STORE_SERVER_TABLE_NAME, whereClause, whereArgs);
       db.delete(KEY_VALULE_STORE_SYNC_TABLE_NAME, whereClause, whereArgs);
-      
+
       db.setTransactionSuccessful();
-      
+
     } catch (Exception ex) {
       Log.e(t, "Exception during deletion of data for formId:" + formId + " exception: " + ex.toString());
     } finally {
