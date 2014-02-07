@@ -20,7 +20,6 @@ package org.opendatakit.common.android.provider;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,8 +50,6 @@ import fi.iki.elonen.SimpleWebServer;
 public abstract class FileProvider extends ContentProvider {
   public static final String CONTENT_ITEM_TYPE = "vnd.android.cursor.item/vnd.opendatakit.file";
   private static String SCHEME_HTTP = "http";
-
-  private static SimpleWebServer server = null;
 
   private static String getApkPart(Context c) {
     String pkgName = c.getApplicationInfo().packageName;
@@ -241,32 +238,8 @@ public abstract class FileProvider extends ContentProvider {
     return null;
   }
 
-  private static synchronized void startServer() {
-    if (server == null) {
-      SimpleWebServer testing = new SimpleWebServer();
-      try {
-        testing.start();
-        server = testing;
-      } catch (IOException e) {
-        Log.e("FileProvider", "Exception: " + e.toString());
-      }
-    }
-  }
-
-  private static synchronized void stopServer() {
-    if (server != null) {
-      try {
-        server.stop();
-      } catch (Exception e) {
-        // ignore...
-      }
-      server = null;
-    }
-  }
-
   @Override
   public boolean onCreate() {
-    startServer();
     return true;
   }
 
