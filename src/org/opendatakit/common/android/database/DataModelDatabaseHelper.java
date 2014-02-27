@@ -32,6 +32,7 @@ import org.opendatakit.common.android.utilities.ODKFileUtils;
 
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.util.Log;
 
 /**
  * This class helps open, create, and upgrade the database file.
@@ -40,6 +41,8 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
 
   static final String APP_KEY = "org.opendatakit.common";
   static final int APP_VERSION = 1;
+
+  static final String t = "DataModelDatabaseHelper";
 
   /**
    * key-value store table
@@ -113,6 +116,43 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
   public void onUpgradeAppVersion(SQLiteDatabase db, int oldVersion, int newVersion) {
     // for now, upgrade and creation use the same codepath...
     commonTableDefn(db);
+  }
+
+  public static void deleteTableAndData(SQLiteDatabase db, String formId) {
+    try {
+      IdInstanceNameStruct ids = getIds(db, formId);
+
+      String whereClause = TableDefinitionsColumns.TABLE_ID + " = ?";
+      String[] whereArgs = { ids.tableId };
+
+      db.beginTransaction();
+
+      // Drop the table used for the formId
+      db.execSQL("DROP TABLE IF EXISTS " + ids.tableId + ";");
+
+      // Delete the table definition for the tableId
+      int count = db.delete(TABLE_DEFS_TABLE_NAME, whereClause, whereArgs);
+
+      // Delete the column definitions for this tableId
+      db.delete(COLUMN_DEFINITIONS_TABLE_NAME, whereClause, whereArgs);
+
+      // Delete the uploads for the tableId
+      String uploadWhereClause = InstanceColumns.DATA_TABLE_TABLE_ID + " = ?";
+      db.delete(UPLOADS_TABLE_NAME, uploadWhereClause, whereArgs);
+
+      // Delete the values from the 4 key value stores
+      db.delete(KEY_VALUE_STORE_DEFAULT_TABLE_NAME, whereClause, whereArgs);
+      db.delete(KEY_VALUE_STORE_ACTIVE_TABLE_NAME, whereClause, whereArgs);
+      db.delete(KEY_VALUE_STORE_SERVER_TABLE_NAME, whereClause, whereArgs);
+      db.delete(KEY_VALULE_STORE_SYNC_TABLE_NAME, whereClause, whereArgs);
+
+      db.setTransactionSuccessful();
+
+    } catch (Exception ex) {
+      Log.e(t, "Exception during deletion of data for formId:" + formId + " exception: " + ex.toString());
+    } finally {
+      db.endTransaction();
+    }
   }
 
   /**

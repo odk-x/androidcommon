@@ -26,8 +26,10 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.commons.io.FileUtils;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -45,16 +47,17 @@ import android.util.Log;
  * @author Carl Hartung (carlhartung@gmail.com)
  */
 public class ODKFileUtils {
+  private final static String t = "FileUtils";
+
+  // base path
   private static final String ODK_FOLDER_NAME = "opendatakit";
 
-  private static final String TABLES_FOLDER_NAME = "tables";
-  public static final String FORMS_FOLDER_NAME = "forms";
-  private static final String INSTANCES_FOLDER_NAME = "instances";
+  // 1st level -- appId
 
+  // 2nd level -- directories
   private static final String METADATA_FOLDER_NAME = "metadata";
-  private static final String WEB_DB_FOLDER_NAME = "webDb";
-  private static final String GEO_CACHE_FOLDER_NAME = "geoCache";
-  private static final String APP_CACHE_FOLDER_NAME = "appCache";
+
+  public static final String TABLES_FOLDER_NAME = "tables";
 
   private static final String LOGGING_FOLDER_NAME = "logging";
 
@@ -64,20 +67,44 @@ public class ODKFileUtils {
 
   private static final String STALE_FORMS_FOLDER_NAME = "forms.old";
 
-  private final static String t = "FileUtils";
+  // under the tables directory...
+  public static final String FORMS_FOLDER_NAME = "forms";
+  public static final String INSTANCES_FOLDER_NAME = "instances";
 
-  /**
-   * Directories at the application name level that are inaccessible. e.g.,
-   * legacy ODK Collect directories.
-   */
-  private static final List<String> LEGACY_DIRECTORIES;
+  // under the metadata directory...
+  private static final String WEB_DB_FOLDER_NAME = "webDb";
+  private static final String GEO_CACHE_FOLDER_NAME = "geoCache";
+  private static final String APP_CACHE_FOLDER_NAME = "appCache";
+
+  private static final Set<String> topLevelExclusions;
+
+  private static final Set<String> topLevelPlusTablesExclusions;
+
   static {
-    LEGACY_DIRECTORIES = new ArrayList<String>();
-//    LEGACY_DIRECTORIES.add(FORMS_FOLDER_NAME);
-//    LEGACY_DIRECTORIES.add(INSTANCES_FOLDER_NAME);
-//    LEGACY_DIRECTORIES.add(".cache");
-//    LEGACY_DIRECTORIES.add(METADATA_FOLDER_NAME);
-//    LEGACY_DIRECTORIES.add("config");
+    TreeSet<String> temp;
+
+    temp = new TreeSet<String>();
+    temp.add(METADATA_FOLDER_NAME);
+    temp.add(LOGGING_FOLDER_NAME);
+    temp.add(STALE_FORMS_FOLDER_NAME);
+    temp.add(STALE_FRAMEWORK_FOLDER_NAME);
+    topLevelExclusions = Collections.unmodifiableSet(temp);
+
+    temp = new TreeSet<String>();
+    temp.add(METADATA_FOLDER_NAME);
+    temp.add(LOGGING_FOLDER_NAME);
+    temp.add(STALE_FORMS_FOLDER_NAME);
+    temp.add(STALE_FRAMEWORK_FOLDER_NAME);
+    temp.add(TABLES_FOLDER_NAME);
+    topLevelPlusTablesExclusions = Collections.unmodifiableSet(temp);
+  }
+
+  public static Set<String> getDirectoriesToExcludeFromSync(boolean excludeTablesDirectory) {
+    if ( excludeTablesDirectory ) {
+      return topLevelPlusTablesExclusions;
+    } else {
+      return topLevelExclusions;
+    }
   }
 
   /**
@@ -154,10 +181,6 @@ public class ODKFileUtils {
     return path;
   }
 
-  public static boolean isValidAppName(String name) {
-    return !LEGACY_DIRECTORIES.contains(name);
-  }
-
   public static File[] getAppFolders() {
     File odk = new File(getOdkFolder());
 
@@ -167,7 +190,7 @@ public class ODKFileUtils {
       public boolean accept(File pathname) {
         if (!pathname.isDirectory())
           return false;
-        return !LEGACY_DIRECTORIES.contains(pathname.getName());
+        return true;
       }
     });
 
@@ -229,10 +252,6 @@ public class ODKFileUtils {
     if (terms == null || terms.length < 1) {
       return null;
     }
-    // exclude LEGACY_DIRECTORIES...
-    if (LEGACY_DIRECTORIES.contains(terms[0])) {
-      return null;
-    }
     File f = new File(new File(getOdkFolder()), appPath);
     return f;
   }
@@ -244,10 +263,6 @@ public class ODKFileUtils {
       String[] app = partialPath.split(File.separator);
       if (app == null || app.length < 1) {
         Log.w(t, "Missing file path (nothing under '" + ODK_FOLDER_NAME + "'): " + fullpath);
-        return null;
-      }
-      if (LEGACY_DIRECTORIES.contains(app[0])) {
-        Log.w(t, "File path detected as legacy directory: " + fullpath);
         return null;
       }
       return partialPath;
@@ -275,11 +290,6 @@ public class ODKFileUtils {
         Log.w(t, "File path is not under expected '" + ODK_FOLDER_NAME +
             "' Folder (" + path + ") missing file path (nothing under '" +
             ODK_FOLDER_NAME + "'): " + fullpath);
-        return null;
-      }
-      if (LEGACY_DIRECTORIES.contains(app[0])) {
-        Log.w(t, "File path is not under expected '" + ODK_FOLDER_NAME +
-            "' Folder (" + path + ") detected as legacy directory: " + fullpath);
         return null;
       }
 
@@ -331,6 +341,15 @@ public class ODKFileUtils {
       String path = getFormsFolder(appName, tableId) + File.separator + formId;
       return path;
     }
+  }
+
+  public static String getInstancesFolder(String appName, String tableId) {
+    String path;
+    path = getTablesFolder(appName, tableId) + File.separator + INSTANCES_FOLDER_NAME;
+
+    File f = new File(path);
+    f.mkdirs();
+    return f.getAbsolutePath();
   }
 
   public static String getInstanceFolder(String appName, String tableId, String instanceId) {
