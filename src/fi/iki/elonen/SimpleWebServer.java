@@ -164,22 +164,25 @@ public class SimpleWebServer extends NanoHTTPD {
         String uri = session.getUri();
 
         {
-            int firstSlash = uri.indexOf("/");
-            String appName = (firstSlash == -1) ? uri : uri.substring(0, firstSlash);
-            StringBuilder b = new StringBuilder();
-            b.append(session.getMethod()).append(" '").append(uri).append("' \n");
+            if ( uri.startsWith("/") ) {
+              int nextSlash = uri.indexOf("/", 1);
+              String appName = uri.substring(1,nextSlash);
 
-            Iterator<String> e = header.keySet().iterator();
-            while (e.hasNext()) {
-                String value = e.next();
-                b.append("  HDR: '").append(value).append("' = '").append(header.get(value)).append("'\n");
+              StringBuilder b = new StringBuilder();
+              b.append(session.getMethod()).append(" '").append(uri).append("' \n");
+
+              Iterator<String> e = header.keySet().iterator();
+              while (e.hasNext()) {
+                  String value = e.next();
+                  b.append("  HDR: '").append(value).append("' = '").append(header.get(value)).append("'\n");
+              }
+              e = parms.keySet().iterator();
+              while (e.hasNext()) {
+                  String value = e.next();
+                  b.append("  PRM: '").append(value).append("' = '").append(header.get(value)).append("'\n");
+              }
+              WebLogger.getLogger(appName).i(t,b.toString());
             }
-            e = parms.keySet().iterator();
-            while (e.hasNext()) {
-                String value = e.next();
-                b.append("  PRM: '").append(value).append("' = '").append(header.get(value)).append("'\n");
-            }
-            WebLogger.getLogger(appName).i(t,b.toString());
         }
 
         // Make sure we won't die of an exception later
