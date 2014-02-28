@@ -57,6 +57,8 @@ public class ODKFileUtils {
   // 2nd level -- directories
   private static final String METADATA_FOLDER_NAME = "metadata";
 
+  private static final String OUTPUT_FOLDER_NAME = "output";
+
   public static final String TABLES_FOLDER_NAME = "tables";
 
   private static final String LOGGING_FOLDER_NAME = "logging";
@@ -83,16 +85,27 @@ public class ODKFileUtils {
   static {
     TreeSet<String> temp;
 
+    /**
+     * Going forward, we do not want to sync the framework directory
+     * or any of the stale, local or output directories.
+     *
+     * Only the assets directory should be sync'd.
+     */
+
     temp = new TreeSet<String>();
-    temp.add(METADATA_FOLDER_NAME);
+    temp.add(FRAMEWORK_FOLDER_NAME);
     temp.add(LOGGING_FOLDER_NAME);
+    temp.add(METADATA_FOLDER_NAME);
+    temp.add(OUTPUT_FOLDER_NAME);
     temp.add(STALE_FORMS_FOLDER_NAME);
     temp.add(STALE_FRAMEWORK_FOLDER_NAME);
     topLevelExclusions = Collections.unmodifiableSet(temp);
 
     temp = new TreeSet<String>();
-    temp.add(METADATA_FOLDER_NAME);
+    temp.add(FRAMEWORK_FOLDER_NAME);
     temp.add(LOGGING_FOLDER_NAME);
+    temp.add(METADATA_FOLDER_NAME);
+    temp.add(OUTPUT_FOLDER_NAME);
     temp.add(STALE_FORMS_FOLDER_NAME);
     temp.add(STALE_FRAMEWORK_FOLDER_NAME);
     temp.add(TABLES_FOLDER_NAME);
