@@ -28,8 +28,7 @@ public class ODKDatabaseUtils {
   }
   
   /*
-   * This is a test function that will be used to query
-   * the current database for its user defined columns
+   * Query the current database for all columns
    */
   public static final String[] getAllColumnNames(SQLiteDatabase db, String tableName)
   {
@@ -40,7 +39,7 @@ public class ODKDatabaseUtils {
   }
   
   /*
-   * Function to query the current database for user defined columns
+   * Query the current database for user defined columns
    */
   public static final Map<String, String> getUserDefinedColumnsAndTypes(SQLiteDatabase db, String tableName)
   {
@@ -63,14 +62,31 @@ public class ODKDatabaseUtils {
   }
   
   /* 
-   * Create a user defined database table
+   * Create a user defined database table with a transaction
    */
   public static final void createOrOpenDBTable(SQLiteDatabase db, String tableName)
+  { 
+    try {
+      db.beginTransaction();
+      createDBTable(db, tableName);
+      db.setTransactionSuccessful();
+    } catch (Exception e) {
+      e.printStackTrace();
+      Log.e(t, "Transaction error while adding table " + tableName);
+    } finally {
+      db.endTransaction();
+    }
+  }
+  
+  /* 
+   * Create a user defined database table
+   */
+  private static final void createDBTable(SQLiteDatabase db, String tableName)
   { 
     if (tableName == null || tableName.length() <= 0){
       throw new IllegalArgumentException(t + ": application name and table name must be specified");
     }
-     
+      
     String createSensorTableCmd = "CREATE TABLE IF NOT EXISTS " + tableName + " (" 
          + DataTableColumns.ID + " TEXT NOT NULL, " 
          + DataTableColumns.ROW_ETAG + " TEXT NULL, "
@@ -82,21 +98,12 @@ public class ODKDatabaseUtils {
          + DataTableColumns.FORM_ID + " TEXT NULL,"
          + DataTableColumns.LOCALE + " TEXT NULL);";
       
-    try {
-      db.beginTransaction();
       try {
         db.execSQL(createSensorTableCmd);
-        db.setTransactionSuccessful();
       } catch (Exception e) {
         Log.e(t, "Error while creating table " + tableName);
         e.printStackTrace();
-      } finally {
-        db.endTransaction();
-      }
-    } catch (Exception e) {
-      e.printStackTrace();
-      Log.e(t, "Transaction error while adding table " + tableName);
-    }
+      } 
   
     // Add the table id into table definitions
     ContentValues cvTableDef = new ContentValues();
@@ -216,48 +223,11 @@ public class ODKDatabaseUtils {
       e.printStackTrace();
       Log.e(t, "Error while trying to write table values into the active key value store " +  tableName);
     } 
+      
   }
   
   /*
-   * Function used to write String data into a user defined database table
-   */
-  public static final void writeDataIntoExistingDBTable(SQLiteDatabase db, String tableName, String key, String value)
-  { 
-    ContentValues cvDataTableVal;
-    String nullString = null;
-    
-    Map<String, String> userDefCols = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName); 
-    if (userDefCols.isEmpty())
-    {
-      throw new IllegalArgumentException(t + ": No user defined columns exist in " + tableName + " - cannot insert data");
-    }
-
-    // manufacture a rowId for this record...
-    String rowId = "uuid:" + UUID.randomUUID().toString();
-    String timeStamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
-    
-    cvDataTableVal = new ContentValues();
-    cvDataTableVal.put(DataTableColumns.ID, rowId);
-    cvDataTableVal.put(DataTableColumns.ROW_ETAG, nullString);
-    cvDataTableVal.put(DataTableColumns.SYNC_STATE, "inserting");
-    cvDataTableVal.put(DataTableColumns.CONFLICT_TYPE, nullString);
-    cvDataTableVal.put(DataTableColumns.SAVEPOINT_TIMESTAMP, timeStamp);
-    cvDataTableVal.put(DataTableColumns.SAVEPOINT_CREATOR, nullString);
-    cvDataTableVal.put(DataTableColumns.SAVEPOINT_TYPE, "COMPLETE");
-    cvDataTableVal.put(DataTableColumns.FORM_ID, nullString);
-    cvDataTableVal.put(DataTableColumns.LOCALE, Locale.ENGLISH.getLanguage()); 
-    cvDataTableVal.put(key, value);
-  
-    try {
-      db.replaceOrThrow (tableName, null, cvDataTableVal);
-    } catch (Exception e) {
-      e.printStackTrace();
-      Log.e(t, "Error - Could NOT write data " + value + " into table " + tableName);
-    } 
-  }
-  
-  /*
-   * Function used to write integer data into a user defined database table
+   * Write data into a user defined database table
    */
   public static final void writeDataIntoExistingDBTable(SQLiteDatabase db, String tableName, ContentValues cvValues)
   { 
@@ -299,11 +269,27 @@ public class ODKDatabaseUtils {
     } 
   }
   
-  /*
-   * This is a test function that will be used to create
-   * a new column in the database
+  /* 
+   * Create a new column in a database table with a transaction
    */
   public static final void createNewColumnIntoExistingDBTable(SQLiteDatabase db, String tableName, String colName, String colType)
+  { 
+    try {
+      db.beginTransaction();
+      createNewColumn(db, tableName, colName, colType);
+      db.setTransactionSuccessful();
+    } catch (Exception e) {
+      e.printStackTrace();
+      Log.e(t, "Transaction error while creating column " + colName + " in table " + tableName);
+    } finally {
+      db.endTransaction();
+    }
+  }
+  
+  /*
+   * Create a new column in the database
+   */
+  private static final void createNewColumn(SQLiteDatabase db, String tableName, String colName, String colType)
   {
     ArrayList<ContentValues> cvColValKVS = new ArrayList<ContentValues>();
     
@@ -427,12 +413,6 @@ public class ODKDatabaseUtils {
     Map<String, String> userDefinedCols = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     StringBuilder tableDefCol = new StringBuilder();
     
-    // CAL: I don't think that I have to do this any more
-    // column definitions should already be added
-    //if (userDefinedCols.isEmpty()) {
-    //  tableDefCol.append("\"").append(colName).append("\"");
-    // } 
-    
     if (userDefinedCols.isEmpty()) {
       throw new IllegalArgumentException(t + ": No user defined columns exist in " + tableName);
     } 
@@ -459,11 +439,9 @@ public class ODKDatabaseUtils {
   }
   
   /**
-   * Uses mElementKeyToColumnProperties to construct a temporary database table
-   * to save the current table, then creates a new table and copies the data
-   * back in.
+   * Construct a temporary database table to save the current table, 
+   * then creates a new table and copies the data back in.
    *
-   * @param db
    */
   public static final void reformTable(SQLiteDatabase db, String tableName, String colName, String colType) {
     
@@ -489,11 +467,6 @@ public class ODKDatabaseUtils {
     // Create Table Code
     Map<String, String> userDefinedCols = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     StringBuilder userDefColStrBld = new StringBuilder();
-    
-    // At this point the column should already be added into the column definition table
-    //if (userDefinedCols.isEmpty()) {
-    //  userDefColStrBld.append(", ").append(mColName).append(" ").append(mColType).append(" NULL");
-    //}
 
     for (Map.Entry<String, String> entry : userDefinedCols.entrySet()) {
       String key = entry.getKey();
@@ -522,5 +495,4 @@ public class ODKDatabaseUtils {
     db.execSQL("INSERT INTO " + tableName + "(" + csv + ") SELECT " + csv + " FROM backup_");
     db.execSQL("DROP TABLE backup_");
   }
-
 }
