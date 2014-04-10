@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 University of Washington
+ * Copyright (C) 2014 University of Washington
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -12,29 +12,19 @@
  * the License.
  */
 
-package org.opendatakit.common.android.provider.impl;
+package org.opendatakit.common.android.database;
 
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.opendatakit.common.android.database.DataModelDatabaseHelper;
-import org.opendatakit.common.android.database.WebDbDefinition;
-import org.opendatakit.common.android.database.WebSqlDatabaseHelper;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
+import org.opendatakit.common.android.utilities.WebLogger;
 
-import android.content.ContentProvider;
 import android.content.Context;
-import android.util.Log;
 
-/**
- * Common base class for content providers. This holds the access logic to the
- * underlying shared database used by all the content providers.
- *
- * @author mitchellsundt@gmail.com
- *
- */
-public abstract class CommonContentProvider extends ContentProvider {
+public class DataModelDatabaseHelperFactory {
+
   // array of the underlying database handles used by all the content provider
   // instances
   private static final Map<String, DataModelDatabaseHelper> dbHelpers = new HashMap<String, DataModelDatabaseHelper>();
@@ -46,11 +36,12 @@ public abstract class CommonContentProvider extends ContentProvider {
    * @return an entry in dbHelpers
    */
   public synchronized static DataModelDatabaseHelper getDbHelper(Context context, String appName) {
+    WebLogger log = WebLogger.getLogger(appName);
 
     try {
       ODKFileUtils.verifyExternalStorageAvailability();
     } catch ( Exception e ) {
-      Log.e("CommonContentProvider", "External storage not available -- purging dbHelpers");
+      log.e("DataModelDatabaseHelperFactory", "External storage not available -- purging dbHelpers");
       dbHelpers.clear();
       return null;
     }
@@ -63,7 +54,7 @@ public abstract class CommonContentProvider extends ContentProvider {
 
     // the assert above should have created it...
     if ( !webDb.exists() || !webDb.isDirectory()) {
-      Log.e("CommonContentProvider", "webDb directory not available -- purging dbHelpers");
+      log.e("DataModelDatabaseHelperFactory", "webDb directory not available -- purging dbHelpers");
       dbHelpers.clear();
       return null;
     }
@@ -71,11 +62,11 @@ public abstract class CommonContentProvider extends ContentProvider {
     DataModelDatabaseHelper dbHelper = dbHelpers.get(appName);
     if (dbHelper == null) {
       WebSqlDatabaseHelper h;
-      h = new WebSqlDatabaseHelper(context, path);
+      h = new WebSqlDatabaseHelper(context, path, appName);
       WebDbDefinition defn = h.getWebKitDatabaseInfoHelper();
       if (defn != null) {
         defn.dbFile.getParentFile().mkdirs();
-        dbHelper = new DataModelDatabaseHelper(defn.dbFile.getParent(), defn.dbFile.getName());
+        dbHelper = new DataModelDatabaseHelper(appName, defn.dbFile.getParent(), defn.dbFile.getName());
         dbHelpers.put(appName, dbHelper);
       }
     }

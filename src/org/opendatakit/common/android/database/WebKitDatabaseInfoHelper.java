@@ -42,9 +42,9 @@ public abstract class WebKitDatabaseInfoHelper extends ODKSQLiteOpenHelper {
   private String appKey;
   private int version;
 
-  public WebKitDatabaseInfoHelper(String path, String name, CursorFactory factory, String appKey,
+  public WebKitDatabaseInfoHelper(String appName, String path, String name, CursorFactory factory, String appKey,
       int version) {
-    super(path, name, factory, WEBKIT_VERSION);
+    super(appName, path, name, factory, WEBKIT_VERSION);
     this.appKey = appKey;
     this.version = version;
   }

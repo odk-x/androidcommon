@@ -58,8 +58,8 @@ public class WebDbDatabaseHelper extends ODKSQLiteOpenHelper {
     return path;
   }
 
-  public WebDbDatabaseHelper(Context context, String path) {
-    super(dbPath(path), WEBDB_DATABASE_NAME, null, WEBDB_VERSION);
+  public WebDbDatabaseHelper(Context context, String appName, String path) {
+    super(appName, dbPath(path), WEBDB_DATABASE_NAME, null, WEBDB_VERSION);
     this.context = context;
   }
 

@@ -18,6 +18,8 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.opendatakit.common.android.utilities.WebLogger;
+
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -28,8 +30,10 @@ public class WebSqlDatabaseHelper {
 
   private List<WebDbDefinition> webDatabasePaths;
 
-  public WebSqlDatabaseHelper(Context context, String path) {
-    WebDbDatabaseHelper mWebDb = new WebDbDatabaseHelper(context, path);
+  public WebSqlDatabaseHelper(Context context, String path, String appName) {
+    WebLogger log = WebLogger.getLogger(appName);
+
+    WebDbDatabaseHelper mWebDb = new WebDbDatabaseHelper(context, appName, path);
 
     List<WebDbDefinition> dbCandidates = new ArrayList<WebDbDefinition>();
 
@@ -40,7 +44,7 @@ public class WebSqlDatabaseHelper {
       c = db.query(WebDbDatabaseHelper.WEBDB_DATABASES_TABLE, null, null, null, null, null, null);
 
       if ( c == null ) {
-        Log.i(t, "Null cursor returned from  WebDbDatabaseHelper path: " + path);
+        log.i(t, "Null cursor returned from  WebDbDatabaseHelper path: " + path);
         return;
       }
 
@@ -68,7 +72,7 @@ public class WebSqlDatabaseHelper {
     }
 
     webDatabasePaths = dbCandidates;
-    Log.i(t, "Number of web databases found: " + webDatabasePaths.size());
+    log.i(t, "Number of web databases found: " + webDatabasePaths.size());
   }
 
   public WebDbDefinition getWebKitDatabaseInfoHelper() {

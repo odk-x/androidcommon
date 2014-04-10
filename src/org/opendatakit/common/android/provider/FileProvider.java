@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.opendatakit.common.android.utilities.ODKFileUtils;
+import org.opendatakit.common.android.utilities.WebLogger;
 
 import android.content.ContentProvider;
 import android.content.ContentResolver;
@@ -32,7 +33,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
-import android.util.Log;
 import fi.iki.elonen.SimpleWebServer;
 
 /**
@@ -201,8 +201,10 @@ public abstract class FileProvider extends ContentProvider {
     }
 
     File realFile = ODKFileUtils.fromAppPath(path);
+    String appName = ODKFileUtils.extractAppNameFromPath(realFile);
+    WebLogger log = WebLogger.getLogger(appName);
 
-    Log.i(this.getClass().getSimpleName(), "openFile: " + realFile.getAbsolutePath());
+    log.i(this.getClass().getSimpleName(), "openFile: " + realFile.getAbsolutePath());
 
     if (mode.equals("rwt") || mode.equals("rw")) {
       if (!realFile.getParentFile().exists()) {

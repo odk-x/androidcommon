@@ -29,6 +29,7 @@ import org.opendatakit.common.android.provider.InstanceColumns;
 import org.opendatakit.common.android.provider.KeyValueStoreColumns;
 import org.opendatakit.common.android.provider.TableDefinitionsColumns;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
+import org.opendatakit.common.android.utilities.WebLogger;
 
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -91,8 +92,8 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
 
   public static final String FORMS_TABLE_NAME = "_formDefs";
 
-  public DataModelDatabaseHelper(String dbPath, String databaseName) {
-    super(dbPath, databaseName, null, APP_KEY, APP_VERSION);
+  public DataModelDatabaseHelper(String appName, String dbPath, String databaseName) {
+    super(appName, dbPath, databaseName, null, APP_KEY, APP_VERSION);
   }
 
   private void commonTableDefn(SQLiteDatabase db) {
@@ -148,8 +149,6 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
 
       db.setTransactionSuccessful();
 
-    } catch (Exception ex) {
-      Log.e(t, "Exception during deletion of data for formId:" + formId + " exception: " + ex.toString());
     } finally {
       db.endTransaction();
     }

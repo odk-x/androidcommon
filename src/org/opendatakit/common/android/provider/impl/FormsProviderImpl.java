@@ -31,9 +31,12 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.opendatakit.common.android.R;
 import org.opendatakit.common.android.database.DataModelDatabaseHelper;
+import org.opendatakit.common.android.database.DataModelDatabaseHelperFactory;
 import org.opendatakit.common.android.provider.FormsColumns;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
+import org.opendatakit.common.android.utilities.WebLogger;
 
+import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.SQLException;
@@ -45,7 +48,7 @@ import android.util.Log;
 /**
  *
  */
-public abstract class FormsProviderImpl extends CommonContentProvider {
+public abstract class FormsProviderImpl extends ContentProvider {
   static final String t = "FormsProvider";
 
   public abstract String getFormsAuthority();
@@ -122,6 +125,8 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     }
 
     String appName = segments.get(0);
+    WebLogger log = WebLogger.getLogger(appName);
+
     String uriFormId = ((segments.size() == 2) ? segments.get(1) : null);
     boolean isNumericId = StringUtils.isNumeric(uriFormId);
 
@@ -154,9 +159,9 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     // Get the database and run the query
     Cursor c = null;
     try {
-      DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
+      DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(getContext(), appName);
       if (dbh == null) {
-        Log.w(t, "Unable to access database for appName " + appName);
+        log.w(t, "Unable to access database for appName " + appName);
         return null;
       }
 
@@ -164,12 +169,12 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
       c = db.query(DataModelDatabaseHelper.FORMS_TABLE_NAME, projection, whereId, whereIdArgs,
           null, null, sortOrder);
     } catch (Exception e) {
-      Log.w(t, "Unable to query database for appName: " + appName);
+      log.w(t, "Unable to query database for appName: " + appName);
       return null;
     }
 
     if (c == null) {
-      Log.w(t, "Unable to query database for appName: " + appName);
+      log.w(t, "Unable to query database for appName: " + appName);
       return null;
     }
     // Tell the cursor what uri to watch, so it knows when its source data
@@ -287,6 +292,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     }
 
     String appName = segments.get(0);
+    WebLogger log = WebLogger.getLogger(appName);
 
     ContentValues values;
     if (initialValues != null) {
@@ -333,9 +339,9 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     String selection = FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + "=?";
     Cursor c = null;
 
-    DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
+    DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(getContext(), appName);
     if (dbh == null) {
-      Log.w(t, "Unable to access database for appName " + appName);
+      log.w(t, "Unable to access database for appName " + appName);
       throw new SQLException("FAILED Insert into " + uri
           + " -- unable to access metadata directory for appName: " + appName);
     }
@@ -354,7 +360,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
             + " -- row already exists for form directory: " + mediaPath.getAbsolutePath());
       }
     } catch (Exception e) {
-      Log.w(t, "FAILED Insert into " + uri + " -- query for existing row failed: " + e.toString());
+      log.w(t, "FAILED Insert into " + uri + " -- query for existing row failed: " + e.toString());
 
       if (e instanceof SQLException) {
         throw (SQLException) e;
@@ -384,7 +390,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
         return formUri;
       }
     } catch (Exception e) {
-      Log.w(t, "FAILED Insert into " + uri + " -- insert of row failed: " + e.toString());
+      log.w(t, "FAILED Insert into " + uri + " -- insert of row failed: " + e.toString());
 
       if (e instanceof SQLException) {
         throw (SQLException) e;
@@ -404,6 +410,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
 
   private void moveDirectory(String appName, DirType mediaType, File mediaDirectory)
       throws IOException {
+    WebLogger log = WebLogger.getLogger(appName);
 
     if (mediaDirectory.exists() && mediaType != DirType.OTHER) {
       // it is a directory under our control
@@ -433,10 +440,10 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
               break;
             }
           }
-          Log.i(t, "Successful delete of stale directory: " + staleMediaPathName);
+          log.i(t, "Successful delete of stale directory: " + staleMediaPathName);
         } catch (IOException ex) {
           ex.printStackTrace();
-          Log.i(t, "Unable to delete stale directory: " + staleMediaPathName);
+          log.i(t, "Unable to delete stale directory: " + staleMediaPathName);
         }
         staleMediaPathName = staleMediaPathBase + rootName + "_" + rev;
         staleMediaPath = new File(staleMediaPathName);
@@ -460,6 +467,8 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     }
 
     String appName = segments.get(0);
+    WebLogger log = WebLogger.getLogger(appName);
+
     String uriFormId = ((segments.size() == 2) ? segments.get(1) : null);
     boolean isNumericId = StringUtils.isNumeric(uriFormId);
 
@@ -510,7 +519,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
         mediaDirs.put(mediaDir, (tableIdValue == null) ? DirType.FRAMEWORK : DirType.FORMS);
       }
     } catch (Exception e) {
-      Log.w(t, "FAILED Delete from " + uri + " -- query for existing row failed: " + e.toString());
+      log.w(t, "FAILED Delete from " + uri + " -- query for existing row failed: " + e.toString());
 
       if (e instanceof SQLException) {
         throw (SQLException) e;
@@ -526,21 +535,21 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
 
     int count;
     try {
-      DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
+      DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(getContext(), appName);
       if (dbh == null) {
-        Log.w(t, "Unable to access database for appName " + appName);
+        log.w(t, "Unable to access database for appName " + appName);
         return 0;
       }
 
       SQLiteDatabase db = dbh.getWritableDatabase();
       if (db == null) {
-        Log.w(t, "Unable to access database for appName " + appName);
+        log.w(t, "Unable to access database for appName " + appName);
         return 0;
       }
       count = db.delete(DataModelDatabaseHelper.FORMS_TABLE_NAME, whereId, whereIdArgs);
     } catch (Exception e) {
       e.printStackTrace();
-      Log.w(t, "Unable to perform deletion " + e.toString());
+      log.w(t, "Unable to perform deletion " + e.toString());
       return 0;
     }
 
@@ -552,7 +561,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
         moveDirectory(appName, entry.getValue(), entry.getKey());
       } catch (IOException e) {
         e.printStackTrace();
-        Log.e(t, "Unable to move directory " + e.toString());
+        log.e(t, "Unable to move directory " + e.toString());
       }
     }
 
@@ -606,6 +615,8 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     }
 
     String appName = segments.get(0);
+    WebLogger log = WebLogger.getLogger(appName);
+
     String uriFormId = ((segments.size() == 2) ? segments.get(1) : null);
     boolean isNumericId = StringUtils.isNumeric(uriFormId);
 
@@ -682,7 +693,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
         }
       }
     } catch (Exception e) {
-      Log.w(t, "FAILED Update of " + uri + " -- query for existing row failed: " + e.toString());
+      log.w(t, "FAILED Update of " + uri + " -- query for existing row failed: " + e.toString());
 
       if (e instanceof SQLException) {
         throw (SQLException) e;
@@ -715,7 +726,7 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
             moveDirectory(appName, entry.getValue(), altPath);
           } catch (IOException e) {
             e.printStackTrace();
-            Log.e(t, "Attempt to move " + altPath.getAbsolutePath() + " failed: " + e.toString());
+            log.e(t, "Attempt to move " + altPath.getAbsolutePath() + " failed: " + e.toString());
           }
         }
       }
@@ -738,22 +749,22 @@ public abstract class FormsProviderImpl extends CommonContentProvider {
     int count;
     try {
       // OK Finally, now do the update...
-      DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
+      DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(getContext(), appName);
       if (dbh == null) {
-        Log.w(t, "Unable to access database for appName " + appName);
+        log.w(t, "Unable to access database for appName " + appName);
         return 0;
       }
 
       SQLiteDatabase db = dbh.getWritableDatabase();
       if (db == null) {
-        Log.w(t, "Unable to access metadata directory for appName " + appName);
+        log.w(t, "Unable to access metadata directory for appName " + appName);
         return 0;
       }
 
       count = db.update(DataModelDatabaseHelper.FORMS_TABLE_NAME, values, whereId, whereIdArgs);
     } catch (Exception e) {
       e.printStackTrace();
-      Log.w(t, "Unable to perform update " + uri);
+      log.w(t, "Unable to perform update " + uri);
       return 0;
     }
 

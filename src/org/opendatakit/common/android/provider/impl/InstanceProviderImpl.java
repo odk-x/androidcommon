@@ -33,10 +33,12 @@ import org.opendatakit.common.android.R;
 import org.opendatakit.common.android.database.DataModelDatabaseHelper;
 import org.opendatakit.common.android.database.DataModelDatabaseHelper.ColumnDefinition;
 import org.opendatakit.common.android.database.DataModelDatabaseHelper.IdInstanceNameStruct;
+import org.opendatakit.common.android.database.DataModelDatabaseHelperFactory;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.InstanceColumns;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 
+import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.SQLException;
@@ -46,7 +48,7 @@ import android.net.Uri;
 /**
  * TODO: convert to true app-scoped instance provider
  */
-public abstract class InstanceProviderImpl extends CommonContentProvider {
+public abstract class InstanceProviderImpl extends ContentProvider {
 
   // private static final String t = "InstancesProviderImpl";
 
@@ -88,7 +90,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     // _ID in UPLOADS_TABLE_NAME
     String instanceId = (segments.size() == 3 ? segments.get(2) : null);
 
-    DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
+    DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(getContext(), appName);
     if ( dbh == null ) {
       throw new SQLException("Unable to access database for " + uri);
     }
@@ -318,7 +320,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     // _ID in UPLOADS_TABLE_NAME
     String instanceId = (segments.size() == 3 ? segments.get(2) : null);
 
-    DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
+    DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(getContext(), appName);
     if ( dbh == null ) {
       throw new SQLException("Unable to access database for " + uri);
     }
@@ -413,7 +415,7 @@ public abstract class InstanceProviderImpl extends CommonContentProvider {
     // _ID in UPLOADS_TABLE_NAME
     String instanceId = segments.get(2);
 
-    DataModelDatabaseHelper dbh = getDbHelper(getContext(), appName);
+    DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(getContext(), appName);
     if ( dbh == null ) {
       throw new SQLException("Unable to access database for " + uri);
     }
