@@ -21,7 +21,6 @@ import org.opendatakit.common.android.utilities.WebLogger;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteDatabase.CursorFactory;
 import android.database.sqlite.SQLiteException;
-import android.util.Log;
 
 /**
  * We've taken this from Android's SQLiteOpenHelper. However, we can't appropriately lock the

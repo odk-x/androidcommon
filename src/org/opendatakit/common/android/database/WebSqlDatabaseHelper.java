@@ -23,7 +23,6 @@ import org.opendatakit.common.android.utilities.WebLogger;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.util.Log;
 
 public class WebSqlDatabaseHelper {
   private static final String t = "WebSqlDatabaseHelper";
