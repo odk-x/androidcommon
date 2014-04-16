@@ -68,14 +68,24 @@ public class SimpleWebServer extends NanoHTTPD {
     /**
      * Default Index file names.
      */
-    public static final List<String> INDEX_FILE_NAMES = new ArrayList<String>() {{
+    public static final List<String> INDEX_FILE_NAMES = new ArrayList<String>() {/**
+       *
+       */
+      private static final long serialVersionUID = 1L;
+
+    {
         add("index.html");
         add("index.htm");
     }};
     /**
      * Hashtable mapping (String)FILENAME_EXTENSION -> (String)MIME_TYPE
      */
-    private static final Map<String, String> MIME_TYPES = new HashMap<String, String>() {{
+    private static final Map<String, String> MIME_TYPES = new HashMap<String, String>() {/**
+       *
+       */
+      private static final long serialVersionUID = 1L;
+
+    {
         put("css", "text/css");
         put("htm", "text/html");
         put("html", "text/html");
@@ -106,6 +116,7 @@ public class SimpleWebServer extends NanoHTTPD {
     /**
      * The distribution licence
      */
+    @SuppressWarnings("unused")
     private static final String LICENCE =
         "Copyright (c) 2012-2013 by Paul S. Hawke, 2001,2005-2013 by Jarno Elonen, 2010 by Konstantinos Togias\n"
             + "\n"
