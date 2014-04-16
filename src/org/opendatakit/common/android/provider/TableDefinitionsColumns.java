@@ -20,7 +20,6 @@ public class TableDefinitionsColumns implements BaseColumns {
 
   public static final String TABLE_ID = "_table_id";
   public static final String DB_TABLE_NAME = "_db_table_name";
-  // DB_TYPE entries must be one of the types defined in TableType.
   public static final String SYNC_TAG = "_sync_tag";
   public static final String LAST_SYNC_TIME = "_last_sync_time";
   public static final String SYNC_STATE = "_sync_state";
