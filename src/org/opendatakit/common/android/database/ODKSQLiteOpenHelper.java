@@ -118,6 +118,7 @@ public abstract class ODKSQLiteOpenHelper {
 
   private synchronized SQLiteDatabase getPrivateWritableDatabase() {
     if (mDatabase != null && mDatabase.isOpen() && !mDatabase.isReadOnly()) {
+      mDatabase.acquireReference();
       return mDatabase; // The database is already open for business
     }
 
@@ -198,6 +199,7 @@ public abstract class ODKSQLiteOpenHelper {
   public synchronized SQLiteDatabase getReadableDatabase() {
     WebLogger log = WebLogger.getLogger(mAppName);
     if (mDatabase != null && mDatabase.isOpen()) {
+      mDatabase.acquireReference();
       return mDatabase; // The database is already open for business
     }
 
