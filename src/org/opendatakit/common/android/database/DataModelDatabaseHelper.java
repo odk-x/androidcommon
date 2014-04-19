@@ -48,9 +48,7 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
    */
 
   // tablenames for the various key value stores
-  public static final String KEY_VALUE_STORE_DEFAULT_TABLE_NAME = "_key_value_store_default";
   public static final String KEY_VALUE_STORE_ACTIVE_TABLE_NAME = "_key_value_store_active";
-  public static final String KEY_VALUE_STORE_SERVER_TABLE_NAME = "_key_value_store_server";
   public static final String KEY_VALULE_STORE_SYNC_TABLE_NAME = "_key_value_store_sync";
 
   /**
@@ -99,9 +97,7 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
     db.execSQL(InstanceColumns.getTableCreateSql(UPLOADS_TABLE_NAME));
     db.execSQL(FormsColumns.getTableCreateSql(FORMS_TABLE_NAME));
     db.execSQL(ColumnDefinitionsColumns.getTableCreateSql(COLUMN_DEFINITIONS_TABLE_NAME));
-    db.execSQL(KeyValueStoreColumns.getTableCreateSql(KEY_VALUE_STORE_DEFAULT_TABLE_NAME));
     db.execSQL(KeyValueStoreColumns.getTableCreateSql(KEY_VALUE_STORE_ACTIVE_TABLE_NAME));
-    db.execSQL(KeyValueStoreColumns.getTableCreateSql(KEY_VALUE_STORE_SERVER_TABLE_NAME));
     db.execSQL(KeyValueStoreColumns.getTableCreateSql(KEY_VALULE_STORE_SYNC_TABLE_NAME));
     db.execSQL(TableDefinitionsColumns.getTableCreateSql(TABLE_DEFS_TABLE_NAME));
   }
@@ -140,9 +136,7 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
       db.delete(UPLOADS_TABLE_NAME, uploadWhereClause, whereArgs);
 
       // Delete the values from the 4 key value stores
-      db.delete(KEY_VALUE_STORE_DEFAULT_TABLE_NAME, whereClause, whereArgs);
       db.delete(KEY_VALUE_STORE_ACTIVE_TABLE_NAME, whereClause, whereArgs);
-      db.delete(KEY_VALUE_STORE_SERVER_TABLE_NAME, whereClause, whereArgs);
       db.delete(KEY_VALULE_STORE_SYNC_TABLE_NAME, whereClause, whereArgs);
 
       db.setTransactionSuccessful();
