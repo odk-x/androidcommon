@@ -82,6 +82,27 @@ public class ODKFileUtils {
   private static final String GEO_CACHE_FOLDER_NAME = "geoCache";
   private static final String APP_CACHE_FOLDER_NAME = "appCache";
 
+  // under the output directory...
+
+  /** The name of the folder where the debug objects are written. */
+  private static final String DEBUG_FOLDER_NAME = "debug";
+
+  /**
+   * Miscellaneous well-known file names
+   */
+
+  /** Filename for the top-level configuration file (in assets) */
+  private static final String ODK_TABLES_CONFIG_PROPERTIES_FILENAME =
+      "tables.properties";
+
+  /** Filename for the top-level configuration file (in assets) */
+  private static final String ODK_SURVEY_CONFIG_PROPERTIES_FILENAME =
+      "survey.properties";
+
+  /** Filename for the ODK Tables home screen (in assets) */
+  private static final String ODK_TABLES_HOME_SCREEN_FILE_NAME =
+      "index.html";
+
   private static final Set<String> topLevelExclusions;
 
   private static final Set<String> topLevelPlusTablesExclusions;
@@ -215,11 +236,13 @@ public class ODKFileUtils {
   }
 
   public static void assertDirectoryStructure(String appName) {
-    String[] dirs = { ODKFileUtils.getAppFolder(appName), ODKFileUtils.getTablesFolder(appName),
+    String[] dirs = { ODKFileUtils.getAppFolder(appName), ODKFileUtils.getAssetsFolder(appName),
+        ODKFileUtils.getTablesFolder(appName),
         ODKFileUtils.getStaleFormsFolder(appName), ODKFileUtils.getFrameworkFolder(appName),
         ODKFileUtils.getStaleFrameworkFolder(appName), ODKFileUtils.getLoggingFolder(appName),
         ODKFileUtils.getMetadataFolder(appName), ODKFileUtils.getAppCacheFolder(appName),
-        ODKFileUtils.getGeoCacheFolder(appName), ODKFileUtils.getWebDbFolder(appName) };
+        ODKFileUtils.getGeoCacheFolder(appName), ODKFileUtils.getWebDbFolder(appName),
+        ODKFileUtils.getOutputFolder(appName), ODKFileUtils.getTablesDebugObjectFolder(appName)};
 
     for (String dirName : dirs) {
       File dir = new File(dirName);
@@ -422,9 +445,48 @@ public class ODKFileUtils {
     return result;
   }
 
+  public static String getTablesDebugObjectFolder(String appName) {
+    String outputFolder = ODKFileUtils.getOutputFolder(appName);
+    String result = outputFolder + File.separator + DEBUG_FOLDER_NAME;
+    return result;
+  }
+
   public static String getAssetsFolder(String appName) {
     String appFolder = ODKFileUtils.getAppFolder(appName);
     String result = appFolder + File.separator + ASSETS_FOLDER_NAME;
+    return result;
+  }
+
+  /**
+   * Get the path to the tables configuration file for the given app.
+   * @param appName
+   * @return
+   */
+  public static String getTablesConfigurationFile(String appName) {
+    String assetsFolder = ODKFileUtils.getAssetsFolder(appName);
+    String result = assetsFolder + File.separator + ODK_TABLES_CONFIG_PROPERTIES_FILENAME;
+    return result;
+  }
+
+  /**
+   * Get the path to the survey configuration file for the given app.
+   * @param appName
+   * @return
+   */
+  public static String getSurveyConfigurationFile(String appName) {
+    String assetsFolder = ODKFileUtils.getAssetsFolder(appName);
+    String result = assetsFolder + File.separator + ODK_SURVEY_CONFIG_PROPERTIES_FILENAME;
+    return result;
+  }
+
+  /**
+   * Get the path to the user-defined home screen file.
+   * @param appName
+   * @return
+   */
+  public static String getTablesHomeScreenFile(String appName) {
+    String assetsFolder = ODKFileUtils.getAssetsFolder(appName);
+    String result = assetsFolder + File.separator + ODK_TABLES_HOME_SCREEN_FILE_NAME;
     return result;
   }
 
