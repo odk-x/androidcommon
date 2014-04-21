@@ -15,6 +15,7 @@
 
 package org.opendatakit.common.android.utilities;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileFilter;
@@ -22,6 +23,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -31,6 +33,7 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.CharEncoding;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -260,31 +263,62 @@ public class ODKFileUtils {
     }
   }
 
-  public static boolean isConfiguredApp(String appName) {
-    File[] files = new File(getTablesFolder(appName)).listFiles(new FileFilter() {
+  public static boolean isConfiguredSurveyApp(String appName, String apkVersion) {
+    return isConfiguredOdkApp(appName, "survey.version", apkVersion);
+  }
 
-      @Override
-      public boolean accept(File pathname) {
-        if ( !pathname.isDirectory() ) {
-          return false;
+  public static boolean isConfiguredTablesApp(String appName, String apkVersion) {
+    return isConfiguredOdkApp(appName, "tables.version", apkVersion);
+  }
+
+  private static boolean isConfiguredOdkApp(String appName, String odkAppVersionFile, String apkVersion) {
+    File versionFile = new File(getAssetsFolder(appName), odkAppVersionFile);
+
+    if ( !versionFile.exists() ) {
+      return false;
+    }
+
+    String versionLine = null;
+    FileInputStream fs = null;
+    InputStreamReader r = null;
+    BufferedReader br = null;
+    try {
+      fs = new FileInputStream(versionFile);
+      r = new InputStreamReader(fs, Charsets.UTF_8);
+      br = new BufferedReader(r);
+      versionLine = br.readLine();
+    } catch (IOException e) {
+      e.printStackTrace();
+      return false;
+    } finally {
+      if ( br != null ) {
+        try {
+          br.close();
+        } catch (IOException e) {
+          e.printStackTrace();
         }
-        File forms = new File(pathname, FORMS_FOLDER_NAME);
-        if ( !forms.exists() || !forms.isDirectory() ) {
-          return false;
-        }
-        File[] formDirs = forms.listFiles(new FileFilter() {
-
-          @Override
-          public boolean accept(File formDirName) {
-            return formDirName.isDirectory()
-                && new File(formDirName, FORMDEF_JSON_FILENAME).exists();
-          }});
-
-        return formDirs.length != 0;
       }
-    });
+      if ( r != null ) {
+        try {
+          r.close();
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+      }
+      try {
+        fs.close();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
 
-    return (files.length != 0);
+    String[] versionRange = versionLine.split(";");
+    for ( String version : versionRange ) {
+      if ( version.trim().equals(apkVersion) ) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public static File fromAppPath(String appPath) {
