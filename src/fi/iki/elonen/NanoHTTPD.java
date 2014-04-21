@@ -52,7 +52,6 @@ import java.util.StringTokenizer;
 import java.util.TimeZone;
 
 import org.apache.commons.lang3.CharEncoding;
-import org.apache.commons.lang3.LocaleUtils;
 
 /**
  * A simple, tiny, nicely embeddable HTTP server in Java
