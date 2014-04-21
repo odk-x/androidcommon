@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 
+import org.apache.commons.io.Charsets;
+import org.apache.commons.lang3.CharEncoding;
 import org.kxml2.io.KXmlParser;
 import org.kxml2.kdom.Document;
 import org.opendatakit.httpclientandroidlib.Header;
@@ -536,7 +538,7 @@ public final class WebUtils {
       HttpClient httpclient, String auth) {
     URI u = null;
     try {
-      URL url = new URL(URLDecoder.decode(urlString, "utf-8"));
+      URL url = new URL(URLDecoder.decode(urlString, CharEncoding.UTF_8));
       u = url.toURI();
     } catch (Exception e) {
       e.printStackTrace();
@@ -587,7 +589,7 @@ public final class WebUtils {
         InputStreamReader isr = null;
         try {
           is = entity.getContent();
-          isr = new InputStreamReader(is, "UTF-8");
+          isr = new InputStreamReader(is, Charsets.UTF_8);
           doc = new Document();
           KXmlParser parser = new KXmlParser();
           parser.setInput(isr);

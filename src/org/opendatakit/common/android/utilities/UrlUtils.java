@@ -19,12 +19,14 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
 
+import org.apache.commons.lang3.CharEncoding;
+
 public class UrlUtils {
 
   public static boolean isValidUrl(String url) {
 
     try {
-      new URL(URLDecoder.decode(url, "utf-8"));
+      new URL(URLDecoder.decode(url, CharEncoding.UTF_8));
       return true;
     } catch (MalformedURLException e) {
       return false;

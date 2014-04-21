@@ -26,6 +26,8 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
+import org.apache.commons.lang3.CharEncoding;
+
 import android.util.Log;
 
 /**
@@ -148,7 +150,7 @@ public class WebLogger {
       File f = new File(loggingDirectory, curDateStamp + ".log");
       try {
         FileOutputStream fo = new FileOutputStream(f, true);
-        logFile = new OutputStreamWriter(new BufferedOutputStream(fo), "UTF-8");
+        logFile = new OutputStreamWriter(new BufferedOutputStream(fo), CharEncoding.UTF_8);
         dateStamp = curDateStamp;
         // if we see a lot of these being logged, we have a problem
         logFile.write("---- starting ----\n");

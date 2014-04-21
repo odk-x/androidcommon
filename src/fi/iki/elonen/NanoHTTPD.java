@@ -51,6 +51,9 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TimeZone;
 
+import org.apache.commons.lang3.CharEncoding;
+import org.apache.commons.lang3.LocaleUtils;
+
 /**
  * A simple, tiny, nicely embeddable HTTP server in Java
  * <p/>
@@ -614,7 +617,7 @@ public abstract class NanoHTTPD {
             this.status = status;
             this.mimeType = mimeType;
             try {
-                this.data = txt != null ? new ByteArrayInputStream(txt.getBytes("UTF-8")) : null;
+                this.data = txt != null ? new ByteArrayInputStream(txt.getBytes(CharEncoding.UTF_8)) : null;
             } catch (java.io.UnsupportedEncodingException uee) {
                 uee.printStackTrace();
             }
@@ -639,12 +642,12 @@ public abstract class NanoHTTPD {
                 if (status == null) {
                     throw new Error("sendResponse(): Status can't be null.");
                 }
-                OutputStreamWriter writer = new OutputStreamWriter(outputStream, "UTF-8");
+                OutputStreamWriter writer = new OutputStreamWriter(outputStream, CharEncoding.UTF_8);
                 PrintWriter pw = new PrintWriter(writer);
                 pw.print("HTTP/1.1 " + status.getDescription() + " \r\n");
 
                 if (mime != null) {
-                  if ( mime.contains("charset=utf-8") ) {
+                  if ( mime.toLowerCase(Locale.ENGLISH).contains("charset=utf-8") ) {
                     pw.print("Content-Type: " + mime + "\r\n");
                   } else {
                     pw.print("Content-Type: " + mime + "; charset=utf-8\r\n");
@@ -917,7 +920,7 @@ public abstract class NanoHTTPD {
                 }
 
                 // Create a BufferedReader for parsing the header.
-                BufferedReader hin = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(buf, 0, rlen), "UTF-8"));
+                BufferedReader hin = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(buf, 0, rlen), CharEncoding.UTF_8));
 
                 // Decode the header into parms and header java properties
                 Map<String, String> pre = new HashMap<String, String>();
@@ -992,7 +995,7 @@ public abstract class NanoHTTPD {
 
                 // Create a BufferedReader for easily reading it as string.
                 InputStream bin = new FileInputStream(randomAccessFile.getFD());
-                in = new BufferedReader(new InputStreamReader(bin,"UTF-8"));
+                in = new BufferedReader(new InputStreamReader(bin,CharEncoding.UTF_8));
 
                 // If the method is POST, there may be parameters
                 // in data section, too, read it:

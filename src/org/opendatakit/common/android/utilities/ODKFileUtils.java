@@ -31,7 +31,9 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.CharEncoding;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.kxml2.kdom.Node;
 
@@ -55,6 +57,9 @@ public class ODKFileUtils {
   // 1st level -- appId
 
   // 2nd level -- directories
+
+  private static final String ASSETS_FOLDER_NAME = "assets";
+
   private static final String METADATA_FOLDER_NAME = "metadata";
 
   private static final String OUTPUT_FOLDER_NAME = "output";
@@ -412,6 +417,18 @@ public class ODKFileUtils {
     return path;
   }
 
+  public static String getOutputFolder(String appName) {
+    String appFolder = ODKFileUtils.getAppFolder(appName);
+    String result = appFolder + File.separator + OUTPUT_FOLDER_NAME;
+    return result;
+  }
+
+  public static String getAssetsFolder(String appName) {
+    String appFolder = ODKFileUtils.getAppFolder(appName);
+    String result = appFolder + File.separator + ASSETS_FOLDER_NAME;
+    return result;
+  }
+
   public static String getAppCacheFolder(String appName) {
     String path = getMetadataFolder(appName) + File.separator + APP_CACHE_FOLDER_NAME;
     return path;
@@ -706,7 +723,7 @@ public class ODKFileUtils {
       int length = (int) lLength;
 
       InputStream is = null;
-      is = new ByteArrayInputStream(contents.getBytes("UTF-8"));
+      is = new ByteArrayInputStream(contents.getBytes(CharEncoding.UTF_8));
 
       int l = 0;
       for (l = 0; l + chunkSize < length; l += chunkSize) {

@@ -18,6 +18,8 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import org.apache.commons.lang3.CharEncoding;
+
 /**
  * Wrapper class for accessing Base64 functionality. This allows API Level 7
  * deployment of ODK Survey while enabling API Level 8 and higher phone to
@@ -42,7 +44,7 @@ public class Base64Wrapper {
       Object[] argList = new Object[] { ba, FLAGS };
       Object o = m.invoke(null, argList);
       byte[] outArray = (byte[]) o;
-      String s = new String(outArray, "UTF-8");
+      String s = new String(outArray, CharEncoding.UTF_8);
       return s;
     } catch (SecurityException e) {
       e.printStackTrace();

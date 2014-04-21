@@ -45,6 +45,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 
+import org.apache.commons.lang3.CharEncoding;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
 
@@ -161,7 +162,7 @@ public class SimpleWebServer extends NanoHTTPD {
                 newUri += "%20";
             else {
                 try {
-                    newUri += URLEncoder.encode(tok, "UTF-8");
+                    newUri += URLEncoder.encode(tok, CharEncoding.UTF_8);
                 } catch (UnsupportedEncodingException ignored) {
                 }
             }
