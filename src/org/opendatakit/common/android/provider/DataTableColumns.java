@@ -35,6 +35,8 @@ public class DataTableColumns implements BaseColumns {
   public static final String ROW_ETAG = TableConstants.ROW_ETAG;
   public static final String SYNC_STATE = TableConstants.SYNC_STATE;
   public static final String CONFLICT_TYPE = TableConstants.CONFLICT_TYPE;
+  public static final String FILTER_TYPE = TableConstants.FILTER_TYPE;
+  public static final String FILTER_VALUE = TableConstants.FILTER_VALUE;
 
   /**
    * (_savepoint_timestamp, _savepoint_creator, _savepoint_type, _form_id, _locale)

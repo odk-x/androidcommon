@@ -157,6 +157,8 @@ public abstract class FormsProviderImpl extends ContentProvider {
     }
 
     // Get the database and run the query
+    SQLiteDatabase db = null;
+    boolean success = false;
     Cursor c = null;
     try {
       DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(getContext(), appName);
@@ -165,12 +167,17 @@ public abstract class FormsProviderImpl extends ContentProvider {
         return null;
       }
 
-      SQLiteDatabase db = dbh.getReadableDatabase();
+      db = dbh.getReadableDatabase();
       c = db.query(DataModelDatabaseHelper.FORMS_TABLE_NAME, projection, whereId, whereIdArgs,
           null, null, sortOrder);
+      success = true;
     } catch (Exception e) {
       log.w(t, "Unable to query database for appName: " + appName);
       return null;
+    } finally {
+      if ( !success && db != null ) {
+        db.close();
+      }
     }
 
     if (c == null) {
@@ -346,57 +353,66 @@ public abstract class FormsProviderImpl extends ContentProvider {
           + " -- unable to access metadata directory for appName: " + appName);
     }
 
+    SQLiteDatabase db = null;
     try {
-      SQLiteDatabase db = dbh.getWritableDatabase();
-      c = db.query(DataModelDatabaseHelper.FORMS_TABLE_NAME, projection, selection, selectionArgs,
-          null, null, null);
-      if (c == null) {
-        throw new SQLException("FAILED Insert into " + uri
-            + " -- unable to query for existing records: " + mediaPath.getAbsolutePath());
-      }
-      if (c.getCount() > 0) {
-        // already exists
-        throw new SQLException("FAILED Insert into " + uri
-            + " -- row already exists for form directory: " + mediaPath.getAbsolutePath());
-      }
-    } catch (Exception e) {
-      log.w(t, "FAILED Insert into " + uri + " -- query for existing row failed: " + e.toString());
+      db = dbh.getWritableDatabase();
+      db.beginTransaction();
+      try {
+        c = db.query(DataModelDatabaseHelper.FORMS_TABLE_NAME, projection, selection, selectionArgs,
+            null, null, null);
+        if (c == null) {
+          throw new SQLException("FAILED Insert into " + uri
+              + " -- unable to query for existing records: " + mediaPath.getAbsolutePath());
+        }
+        if (c.getCount() > 0) {
+          // already exists
+          throw new SQLException("FAILED Insert into " + uri
+              + " -- row already exists for form directory: " + mediaPath.getAbsolutePath());
+        }
+      } catch (Exception e) {
+        log.w(t, "FAILED Insert into " + uri + " -- query for existing row failed: " + e.toString());
 
-      if (e instanceof SQLException) {
-        throw (SQLException) e;
-      } else {
-        throw new SQLException("FAILED Insert into " + uri + " -- query for existing row failed: "
-            + e.toString());
+        if (e instanceof SQLException) {
+          throw (SQLException) e;
+        } else {
+          throw new SQLException("FAILED Insert into " + uri + " -- query for existing row failed: "
+              + e.toString());
+        }
+      } finally {
+        if (c != null) {
+          c.close();
+        }
+      }
+
+      try {
+        long rowId = db.insert(DataModelDatabaseHelper.FORMS_TABLE_NAME, null, values);
+        db.setTransactionSuccessful();
+        if (rowId > 0) {
+          Uri formUri = Uri.withAppendedPath(
+              Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()), appName),
+              values.getAsString(FormsColumns.FORM_ID));
+          getContext().getContentResolver().notifyChange(formUri, null);
+          Uri idUri = Uri.withAppendedPath(
+              Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()), appName),
+              Long.toString(rowId));
+          getContext().getContentResolver().notifyChange(idUri, null);
+
+          return formUri;
+        }
+      } catch (Exception e) {
+        log.w(t, "FAILED Insert into " + uri + " -- insert of row failed: " + e.toString());
+
+        if (e instanceof SQLException) {
+          throw (SQLException) e;
+        } else {
+          throw new SQLException("FAILED Insert into " + uri + " -- insert of row failed: "
+              + e.toString());
+        }
       }
     } finally {
-      if (c != null) {
-        c.close();
-      }
-    }
-
-    try {
-      SQLiteDatabase db = dbh.getWritableDatabase();
-      long rowId = db.insert(DataModelDatabaseHelper.FORMS_TABLE_NAME, null, values);
-      if (rowId > 0) {
-        Uri formUri = Uri.withAppendedPath(
-            Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()), appName),
-            values.getAsString(FormsColumns.FORM_ID));
-        getContext().getContentResolver().notifyChange(formUri, null);
-        Uri idUri = Uri.withAppendedPath(
-            Uri.withAppendedPath(Uri.parse("content://" + getFormsAuthority()), appName),
-            Long.toString(rowId));
-        getContext().getContentResolver().notifyChange(idUri, null);
-
-        return formUri;
-      }
-    } catch (Exception e) {
-      log.w(t, "FAILED Insert into " + uri + " -- insert of row failed: " + e.toString());
-
-      if (e instanceof SQLException) {
-        throw (SQLException) e;
-      } else {
-        throw new SQLException("FAILED Insert into " + uri + " -- insert of row failed: "
-            + e.toString());
+      if ( db != null ) {
+        db.endTransaction();
+        db.close();
       }
     }
 
@@ -533,6 +549,7 @@ public abstract class FormsProviderImpl extends ContentProvider {
       }
     }
 
+    SQLiteDatabase db = null;
     int count;
     try {
       DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(getContext(), appName);
@@ -541,16 +558,23 @@ public abstract class FormsProviderImpl extends ContentProvider {
         return 0;
       }
 
-      SQLiteDatabase db = dbh.getWritableDatabase();
+      db = dbh.getWritableDatabase();
       if (db == null) {
         log.w(t, "Unable to access database for appName " + appName);
         return 0;
       }
+      db.beginTransaction();
       count = db.delete(DataModelDatabaseHelper.FORMS_TABLE_NAME, whereId, whereIdArgs);
+      db.setTransactionSuccessful();
     } catch (Exception e) {
       e.printStackTrace();
       log.w(t, "Unable to perform deletion " + e.toString());
       return 0;
+    } finally {
+      if ( db != null ) {
+        db.endTransaction();
+        db.close();
+      }
     }
 
     // and attempt to move these directories to the stale forms location
@@ -746,6 +770,7 @@ public abstract class FormsProviderImpl extends ContentProvider {
       values.put(FormsColumns.DISPLAY_SUBTEXT, ts);
     }
 
+    SQLiteDatabase db = null;
     int count;
     try {
       // OK Finally, now do the update...
@@ -755,17 +780,23 @@ public abstract class FormsProviderImpl extends ContentProvider {
         return 0;
       }
 
-      SQLiteDatabase db = dbh.getWritableDatabase();
+      db = dbh.getWritableDatabase();
       if (db == null) {
         log.w(t, "Unable to access metadata directory for appName " + appName);
         return 0;
       }
-
+      db.beginTransaction();
       count = db.update(DataModelDatabaseHelper.FORMS_TABLE_NAME, values, whereId, whereIdArgs);
+      db.setTransactionSuccessful();
     } catch (Exception e) {
       e.printStackTrace();
       log.w(t, "Unable to perform update " + uri);
       return 0;
+    } finally {
+      if ( db != null ) {
+        db.endTransaction();
+        db.close();
+      }
     }
 
     if (count == 1) {
