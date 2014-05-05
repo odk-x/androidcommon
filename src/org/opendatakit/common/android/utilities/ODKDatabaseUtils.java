@@ -129,14 +129,7 @@ public class ODKDatabaseUtils {
     // Add the tables values into KVS
     ArrayList<ContentValues> cvTableValKVS = new ArrayList<ContentValues>();
 
-    ContentValues cvTableVal = new ContentValues();
-    cvTableVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-    cvTableVal.put(KeyValueStoreColumns.PARTITION, "Table");
-    cvTableVal.put(KeyValueStoreColumns.ASPECT, "default");
-    cvTableVal.put(KeyValueStoreColumns.KEY, "tableType");
-    cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
-    cvTableVal.put(KeyValueStoreColumns.VALUE, "data");
-    cvTableValKVS.add(cvTableVal);
+    ContentValues cvTableVal = null;
 
     cvTableVal = new ContentValues();
     cvTableVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
@@ -152,8 +145,8 @@ public class ODKDatabaseUtils {
     cvTableVal.put(KeyValueStoreColumns.PARTITION, "Table");
     cvTableVal.put(KeyValueStoreColumns.ASPECT, "default");
     cvTableVal.put(KeyValueStoreColumns.KEY, "displayName");
-    cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
-    cvTableVal.put(KeyValueStoreColumns.VALUE, tableName);
+    cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
+    cvTableVal.put(KeyValueStoreColumns.VALUE, "\"" + tableName + "\"");
     cvTableValKVS.add(cvTableVal);
 
     cvTableVal = new ContentValues();
@@ -161,17 +154,17 @@ public class ODKDatabaseUtils {
     cvTableVal.put(KeyValueStoreColumns.PARTITION, "Table");
     cvTableVal.put(KeyValueStoreColumns.ASPECT, "default");
     cvTableVal.put(KeyValueStoreColumns.KEY, "colOrder");
-    cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
-    cvTableVal.put(KeyValueStoreColumns.VALUE, "");
+    cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
+    cvTableVal.put(KeyValueStoreColumns.VALUE, "[]");
     cvTableValKVS.add(cvTableVal);
 
     cvTableVal = new ContentValues();
     cvTableVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
     cvTableVal.put(KeyValueStoreColumns.PARTITION, "Table");
     cvTableVal.put(KeyValueStoreColumns.ASPECT, "default");
-    cvTableVal.put(KeyValueStoreColumns.KEY, "primeCols");
-    cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
-    cvTableVal.put(KeyValueStoreColumns.VALUE, "");
+    cvTableVal.put(KeyValueStoreColumns.KEY, "groupByCols");
+    cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
+    cvTableVal.put(KeyValueStoreColumns.VALUE, "[]");
     cvTableValKVS.add(cvTableVal);
 
     cvTableVal = new ContentValues();
@@ -179,6 +172,15 @@ public class ODKDatabaseUtils {
     cvTableVal.put(KeyValueStoreColumns.PARTITION, "Table");
     cvTableVal.put(KeyValueStoreColumns.ASPECT, "default");
     cvTableVal.put(KeyValueStoreColumns.KEY, "sortCol");
+    cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
+    cvTableVal.put(KeyValueStoreColumns.VALUE, "");
+    cvTableValKVS.add(cvTableVal);
+
+    cvTableVal = new ContentValues();
+    cvTableVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+    cvTableVal.put(KeyValueStoreColumns.PARTITION, "Table");
+    cvTableVal.put(KeyValueStoreColumns.ASPECT, "default");
+    cvTableVal.put(KeyValueStoreColumns.KEY, "sortOrder");
     cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
     cvTableVal.put(KeyValueStoreColumns.VALUE, "");
     cvTableValKVS.add(cvTableVal);
@@ -196,27 +198,9 @@ public class ODKDatabaseUtils {
     cvTableVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
     cvTableVal.put(KeyValueStoreColumns.PARTITION, "Table");
     cvTableVal.put(KeyValueStoreColumns.ASPECT, "default");
-    cvTableVal.put(KeyValueStoreColumns.KEY, "currentViewType");
+    cvTableVal.put(KeyValueStoreColumns.KEY, "defaultViewType");
     cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
     cvTableVal.put(KeyValueStoreColumns.VALUE, "Spreadsheet");
-    cvTableValKVS.add(cvTableVal);
-
-    cvTableVal = new ContentValues();
-    cvTableVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-    cvTableVal.put(KeyValueStoreColumns.PARTITION, "Table");
-    cvTableVal.put(KeyValueStoreColumns.ASPECT, "default");
-    cvTableVal.put(KeyValueStoreColumns.KEY, "summaryDisplayFormat");
-    cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
-    cvTableVal.put(KeyValueStoreColumns.VALUE, "");
-    cvTableValKVS.add(cvTableVal);
-
-    cvTableVal = new ContentValues();
-    cvTableVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-    cvTableVal.put(KeyValueStoreColumns.PARTITION, "Table");
-    cvTableVal.put(KeyValueStoreColumns.ASPECT, "default");
-    cvTableVal.put(KeyValueStoreColumns.KEY, "currentQuery");
-    cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
-    cvTableVal.put(KeyValueStoreColumns.VALUE, "");
     cvTableValKVS.add(cvTableVal);
 
     // Now add Tables values into KVS
