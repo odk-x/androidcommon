@@ -185,9 +185,20 @@ public abstract class FileProvider extends ContentProvider {
     Uri u = FileProvider.getWebViewContentUri(context);
     // we need to escape the segments.
     u = Uri.withAppendedPath(u, Uri.encode(appName));
+    // We do not want to
+    // TODO: what about ?, =, &, etc--other meaningful characters that should
+    // not be encoded.
     String[] segments = uriFragment.split("/");
     for (String s : segments) {
-      u = Uri.withAppendedPath(u, Uri.encode(s));
+      // We do not want to encode something if it has a hash, as we need to
+      // preserve if someone is using the hash to pass variables.
+      // TODO: what about ?, =, &, etc--other meaningful characters that should
+      // not be encoded.
+      if (s.contains("#")) {
+        u = Uri.withAppendedPath(u, s);
+      } else {
+        u = Uri.withAppendedPath(u, Uri.encode(s));
+      }
     }
     return u.toString();
   }
