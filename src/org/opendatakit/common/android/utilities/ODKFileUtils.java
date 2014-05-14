@@ -98,12 +98,19 @@ public class ODKFileUtils {
    */
 
   /** Filename for the top-level configuration file (in assets) */
+  private static final String ODK_TABLES_INIT_FILENAME =
+      "tables.init";
+
+  /** Filename for the top-level configuration file (in assets) */
   private static final String ODK_TABLES_CONFIG_PROPERTIES_FILENAME =
       "tables.properties";
 
   /** Filename for the top-level configuration file (in assets) */
   private static final String ODK_SURVEY_CONFIG_PROPERTIES_FILENAME =
       "survey.properties";
+
+  private static final String ODK_SURVEY_TEMP_CONFIG_PROPERTIES_FILENAME =
+      "survey.temp";
 
   /** Filename for the ODK Tables home screen (in assets) */
   private static final String ODK_TABLES_HOME_SCREEN_FILE_NAME =
@@ -550,15 +557,26 @@ public class ODKFileUtils {
    * @param appName
    * @return
    */
-  public static String getTablesConfigurationFile(String appName) {
+  private static String getTablesConfigurationFile(String appName) {
     String assetsFolder = ODKFileUtils.getAssetsFolder(appName);
     String result = assetsFolder + File.separator + ODK_TABLES_CONFIG_PROPERTIES_FILENAME;
     return result;
   }
 
+  /**
+   * Get the path to the tables initialization file for the given app.
+   * @param appName
+   * @return
+   */
+  public static String getTablesInitializationFile(String appName) {
+    String assetsFolder = ODKFileUtils.getAssetsFolder(appName);
+    String result = assetsFolder + File.separator + ODK_TABLES_INIT_FILENAME;
+    return result;
+  }
+
   public static String getTablesInitializationCompleteMarkerFile(String appName) {
     String metadataFolder = ODKFileUtils.getMetadataFolder(appName);
-    String result = metadataFolder + File.separator + "tables.init";
+    String result = metadataFolder + File.separator + ODK_TABLES_INIT_FILENAME;
     return result;
   }
   /**
@@ -569,6 +587,18 @@ public class ODKFileUtils {
   public static String getSurveyConfigurationFile(String appName) {
     String assetsFolder = ODKFileUtils.getAssetsFolder(appName);
     String result = assetsFolder + File.separator + ODK_SURVEY_CONFIG_PROPERTIES_FILENAME;
+    return result;
+  }
+
+  /**
+   * Temporary configuration file we write to and then rename to the real one.
+   *
+   * @param appName
+   * @return
+   */
+  public static String getSurveyTempConfigurationFile(String appName) {
+    String assetsFolder = ODKFileUtils.getAssetsFolder(appName);
+    String result = assetsFolder + File.separator + ODK_SURVEY_TEMP_CONFIG_PROPERTIES_FILENAME;
     return result;
   }
 
@@ -968,39 +998,4 @@ public class ODKFileUtils {
 
     return text;
   }
-
-  /**
-   * Copyright (C) 2012 The Android Open Source Project
-   *
-   * Licensed under the Apache License, Version 2.0 (the "License"); you may not
-   * use this file except in compliance with the License. You may obtain a copy
-   * of the License at
-   *
-   * http://www.apache.org/licenses/LICENSE-2.0
-   *
-   * Unless required by applicable law or agreed to in writing, software
-   * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-   * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-   * License for the specific language governing permissions and limitations
-   * under the License.
-   *
-   * Returns the file name (without full path) for an Expansion APK file from
-   * the given context.
-   *
-   * Taken verbatim from the Android SDK:
-   * extras/google/play_apk_expansion/downloader_library/src
-   * com.google.android.vending.expansion.downloader.Helpers.java
-   *
-   * @param c
-   *          the context
-   * @param mainFile
-   *          true for main file, false for patch file
-   * @param versionCode
-   *          the version of the file
-   * @return String the file name of the expansion file
-   */
-  public static String getExpansionAPKFileName(Context c, boolean mainFile, int versionCode) {
-    return (mainFile ? "main." : "patch.") + versionCode + "." + c.getPackageName() + ".obb";
-  }
-
 }
