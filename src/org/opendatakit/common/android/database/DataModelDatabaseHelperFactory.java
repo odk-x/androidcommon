@@ -36,12 +36,16 @@ public class DataModelDatabaseHelperFactory {
    * @return an entry in dbHelpers
    */
   public synchronized static DataModelDatabaseHelper getDbHelper(Context context, String appName) {
-    WebLogger log = WebLogger.getLogger(appName);
+    WebLogger log = null;
 
     try {
       ODKFileUtils.verifyExternalStorageAvailability();
+      ODKFileUtils.assertDirectoryStructure(appName);
+      log = WebLogger.getLogger(appName);
     } catch ( Exception e ) {
-      log.e("DataModelDatabaseHelperFactory", "External storage not available -- purging dbHelpers");
+      if ( log != null ) {
+        log.e("DataModelDatabaseHelperFactory", "External storage not available -- purging dbHelpers");
+      }
       dbHelpers.clear();
       return null;
     }
