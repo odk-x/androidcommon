@@ -125,6 +125,8 @@ public abstract class FormsProviderImpl extends ContentProvider {
     }
 
     String appName = segments.get(0);
+    ODKFileUtils.verifyExternalStorageAvailability();
+    ODKFileUtils.assertDirectoryStructure(appName);
     WebLogger log = WebLogger.getLogger(appName);
 
     String uriFormId = ((segments.size() == 2) ? segments.get(1) : null);
@@ -299,6 +301,8 @@ public abstract class FormsProviderImpl extends ContentProvider {
     }
 
     String appName = segments.get(0);
+    ODKFileUtils.verifyExternalStorageAvailability();
+    ODKFileUtils.assertDirectoryStructure(appName);
     WebLogger log = WebLogger.getLogger(appName);
 
     ContentValues values;
@@ -483,6 +487,8 @@ public abstract class FormsProviderImpl extends ContentProvider {
     }
 
     String appName = segments.get(0);
+    ODKFileUtils.verifyExternalStorageAvailability();
+    ODKFileUtils.assertDirectoryStructure(appName);
     WebLogger log = WebLogger.getLogger(appName);
 
     String uriFormId = ((segments.size() == 2) ? segments.get(1) : null);
@@ -639,6 +645,8 @@ public abstract class FormsProviderImpl extends ContentProvider {
     }
 
     String appName = segments.get(0);
+    ODKFileUtils.verifyExternalStorageAvailability();
+    ODKFileUtils.assertDirectoryStructure(appName);
     WebLogger log = WebLogger.getLogger(appName);
 
     String uriFormId = ((segments.size() == 2) ? segments.get(1) : null);

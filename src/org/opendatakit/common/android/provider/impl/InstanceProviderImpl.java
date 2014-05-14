@@ -86,6 +86,8 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     }
 
     String appName = segments.get(0);
+    ODKFileUtils.verifyExternalStorageAvailability();
+    ODKFileUtils.assertDirectoryStructure(appName);
     String uriFormId = segments.get(1);
     // _ID in UPLOADS_TABLE_NAME
     String instanceId = (segments.size() == 3 ? segments.get(2) : null);
@@ -335,6 +337,8 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     }
 
     String appName = segments.get(0);
+    ODKFileUtils.verifyExternalStorageAvailability();
+    ODKFileUtils.assertDirectoryStructure(appName);
     String uriFormId = segments.get(1);
     // _ID in UPLOADS_TABLE_NAME
     String instanceId = (segments.size() == 3 ? segments.get(2) : null);
@@ -438,6 +442,9 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     }
 
     String appName = segments.get(0);
+    ODKFileUtils.verifyExternalStorageAvailability();
+    ODKFileUtils.assertDirectoryStructure(appName);
+
     String uriFormId = segments.get(1);
     // _ID in UPLOADS_TABLE_NAME
     String instanceId = segments.get(2);
