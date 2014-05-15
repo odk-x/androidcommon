@@ -1,7 +1,8 @@
 package org.opendatakit.common.android.utilities;
 
 public class ODKDatabaseUserDefinedTypes {
-  
+
+  public static final String BOOLEAN = "boolean";
   public static final String STRING = "string";
   public static final String INTEGER = "integer";
   public static final String NUMBER = "number";
