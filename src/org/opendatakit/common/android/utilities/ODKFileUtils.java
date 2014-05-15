@@ -42,7 +42,6 @@ import org.apache.commons.lang3.CharEncoding;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.kxml2.kdom.Node;
 
-import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Environment;
