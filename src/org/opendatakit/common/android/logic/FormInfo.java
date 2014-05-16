@@ -135,6 +135,8 @@ public class FormInfo {
         ret[i] = formPath;
       } else if (FormsColumns.MD5_HASH.equals(s)) {
         ret[i] = "-placeholder-"; // removed by FormsProvider
+      } else if (FormsColumns.JSON_MD5_HASH.equals(s)) {
+        ret[i] = "-placeholder-"; // removed by FormsProvider
       } else if (FormsColumns.DATE.equals(s)) {
         ret[i] = Long.toString(lastModificationDate);
       } else if (FormsColumns.DEFAULT_FORM_LOCALE.equals(s)) {

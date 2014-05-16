@@ -115,6 +115,18 @@ public class ODKFileUtils {
   private static final String ODK_TABLES_HOME_SCREEN_FILE_NAME =
       "index.html";
 
+  /**
+   * Filename of the tables/tableId/properties.csv file
+   * that holds all kvs properties for this tableId.
+   */
+  private static final String PROPERTIES_CSV = "properties.csv";
+
+  /**
+   * Filename of the tables/tableId/definition.csv file
+   * that holds the table schema for this tableId.
+   */
+  private static final String DEFINITION_CSV = "definition.csv";
+
   private static final Set<String> topLevelExclusions;
 
   private static final Set<String> topLevelPlusTablesExclusions;
@@ -287,7 +299,6 @@ public class ODKFileUtils {
       versionFile.getParentFile().mkdirs();
     }
 
-    String versionLine = null;
     FileOutputStream fs = null;
     OutputStreamWriter w = null;
     BufferedWriter bw = null;
@@ -457,6 +468,29 @@ public class ODKFileUtils {
     File f = new File(path);
     f.mkdirs();
     return f.getAbsolutePath();
+  }
+
+  public static String getTableDefinitionCsvFile(String appName, String tableId) {
+    return getTablesFolder(appName, tableId) + "/" + DEFINITION_CSV;
+  }
+
+  public static String getTablePropertiesCsvFile(String appName, String tableId) {
+    return getTablesFolder(appName, tableId) + "/" + PROPERTIES_CSV;
+  }
+
+  public static String getOutputTableCsvFile(String appName, String tableId, String fileQualifier) {
+    return ODKFileUtils.getOutputFolder(appName) + "/csv/" + tableId +
+        ((fileQualifier != null && fileQualifier.length() != 0) ? ("." + fileQualifier) : "") + ".csv";
+  }
+
+  public static String getOutputTableDefinitionCsvFile(String appName, String tableId, String fileQualifier) {
+    return ODKFileUtils.getOutputFolder(appName) + "/csv/" + tableId +
+        ((fileQualifier != null && fileQualifier.length() != 0) ? ("." + fileQualifier) : "") + "." + DEFINITION_CSV;
+  }
+
+  public static String getOutputTablePropertiesCsvFile(String appName, String tableId, String fileQualifier) {
+    return ODKFileUtils.getOutputFolder(appName) + "/csv/" + tableId +
+        ((fileQualifier != null && fileQualifier.length() != 0) ? ("." + fileQualifier) : "") + "." + DEFINITION_CSV;
   }
 
   public static String getFormsFolder(String appName, String tableId) {

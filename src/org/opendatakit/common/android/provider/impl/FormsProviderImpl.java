@@ -24,8 +24,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -53,38 +51,6 @@ public abstract class FormsProviderImpl extends ContentProvider {
 
   public abstract String getFormsAuthority();
 
-  private static ODKFolderObserver observer = null;
-  static ExecutorService executor = Executors.newFixedThreadPool(1);
-  private static boolean bInitialScan = false; // set to true during first scan
-
-  /**
-   * During initialization, a pool of content providers are created. We only
-   * need to fire off one initial app scan. Use this synchronized method to do
-   * that one scan and to set up the single FileObserver that listens for
-   * changes to the odk tree and fires off subsequent scans.
-   *
-   * @param self
-   */
-  private static synchronized ODKFolderObserver doInitialAppsScan(final FormsProviderImpl self) {
-    if (!bInitialScan) {
-      // observer will start monitoring and trigger forms discovery
-      try {
-        observer = new ODKFolderObserver(self);
-        bInitialScan = true;
-      } catch (Exception e) {
-        Log.e(t, "Exception: " + e.toString());
-        bInitialScan = false;
-        stopScan();
-      }
-    }
-    return observer;
-  }
-
-  static synchronized void stopScan() {
-    observer.stopWatching();
-    bInitialScan = false;
-  }
-
   @Override
   public boolean onCreate() {
 
@@ -102,16 +68,6 @@ public abstract class FormsProviderImpl extends ContentProvider {
       return false;
     }
 
-    // fire off background thread to scan directories...
-    final FormsProviderImpl self = this;
-    Thread r = new Thread() {
-      @Override
-      public void run() {
-        ODKFolderObserver obs = doInitialAppsScan(self);
-        obs.start(); // triggers re-evaluation of everything
-      }
-    };
-    r.start();
     return true;
   }
 
@@ -229,6 +185,11 @@ public abstract class FormsProviderImpl extends ContentProvider {
       values.remove(FormsColumns.MD5_HASH);
     }
 
+    // don't let users put in a manual json md5 hash
+    if (values.containsKey(FormsColumns.JSON_MD5_HASH)) {
+      values.remove(FormsColumns.JSON_MD5_HASH);
+    }
+
     // if we are not updating FORM_MEDIA_PATH, we don't need to recalc any
     // of the above
     if (!values.containsKey(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH)) {
@@ -290,6 +251,9 @@ public abstract class FormsProviderImpl extends ContentProvider {
       md5 = "-none-";
     }
     values.put(FormsColumns.MD5_HASH, md5);
+
+    md5 = ODKFileUtils.getMd5Hash(formDefFile);
+    values.put(FormsColumns.JSON_MD5_HASH, md5);
   }
 
   @Override

@@ -68,11 +68,13 @@ public final class FormsColumns implements BaseColumns {
   // want)
   public static final String DISPLAY_SUBTEXT = "displaySubtext";
   public static final String MD5_HASH = "md5Hash";
+  public static final String JSON_MD5_HASH = "jsonMd5Hash";
   public static final String DATE = "date"; // last modification date
 
   // NOTE: this omits _ID (the primary key)
   public static final String[] formsDataColumnNames = { DISPLAY_NAME, DISPLAY_SUBTEXT, DESCRIPTION,
-      TABLE_ID, FORM_ID, FORM_VERSION, APP_RELATIVE_FORM_FILE_PATH, APP_RELATIVE_FORM_MEDIA_PATH, FORM_PATH, MD5_HASH, DATE,
+      TABLE_ID, FORM_ID, FORM_VERSION, APP_RELATIVE_FORM_FILE_PATH, APP_RELATIVE_FORM_MEDIA_PATH, FORM_PATH, MD5_HASH,
+      JSON_MD5_HASH, DATE,
       DEFAULT_FORM_LOCALE, INSTANCE_NAME, XML_SUBMISSION_URL, XML_BASE64_RSA_PUBLIC_KEY,
       XML_DEVICE_ID_PROPERTY_NAME, XML_USER_ID_PROPERTY_NAME, XML_ROOT_ELEMENT_NAME };
 
@@ -95,6 +97,7 @@ public final class FormsColumns implements BaseColumns {
 	            + APP_RELATIVE_FORM_MEDIA_PATH + " text not null, "
 	            + FORM_PATH + " text not null, "
 	            + MD5_HASH + " text not null, "
+	            + JSON_MD5_HASH + " text not null, "
 	            + DATE + " integer not null, " // milliseconds
 	            + DEFAULT_FORM_LOCALE + " text, "
 	            + INSTANCE_NAME + " text, "
