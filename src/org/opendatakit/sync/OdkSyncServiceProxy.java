@@ -3,6 +3,8 @@ package org.opendatakit.sync;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.opendatakit.sync.service.OdkSyncServiceInterface;
+import org.opendatakit.sync.service.SyncProgressState;
+import org.opendatakit.sync.service.SyncStatus;
 
 import android.content.ComponentName;
 import android.content.Context;
@@ -14,87 +16,107 @@ import android.util.Log;
 
 public class OdkSyncServiceProxy implements ServiceConnection {
 
-	private final static String LOGTAG = OdkSyncServiceProxy.class
-			.getSimpleName();
+  private final static String LOGTAG = OdkSyncServiceProxy.class.getSimpleName();
 
-	private OdkSyncServiceInterface sensorSvcProxy;
+  private OdkSyncServiceInterface sensorSvcProxy;
 
-	protected Context componentContext;
-	protected final AtomicBoolean isBoundToService = new AtomicBoolean(false);
+  protected Context componentContext;
+  protected final AtomicBoolean isBoundToService = new AtomicBoolean(false);
 
-	public OdkSyncServiceProxy(Context context) {
-		componentContext = context;
-		Intent bind_intent = new Intent();
-		bind_intent.setClassName(SyncConsts.SYNC_SERVICE_PACKAGE,
-				SyncConsts.SYNC_SERVICE_CLASS);
-		componentContext.bindService(bind_intent, this,
-				Context.BIND_AUTO_CREATE);
-	}
+  public OdkSyncServiceProxy(Context context) {
+    componentContext = context;
+    Intent bind_intent = new Intent();
+    bind_intent.setClassName(SyncConsts.SYNC_SERVICE_PACKAGE, SyncConsts.SYNC_SERVICE_CLASS);
+    componentContext.bindService(bind_intent, this, Context.BIND_AUTO_CREATE);
+  }
 
-	public void shutdown() {
-		Log.d(LOGTAG, "Application shutdown - unbinding from Syncervice");
-		if (isBoundToService.get()) {
-			try {
-				componentContext.unbindService(this);
-				isBoundToService.set(false);
-				Log.d(LOGTAG, "unbound to service");
-			} catch (Exception ex) {
-				Log.e(LOGTAG, "service shutdown threw exception");
-				ex.printStackTrace();
-			}
-		}
-	}
+  public void shutdown() {
+    Log.d(LOGTAG, "Application shutdown - unbinding from Syncervice");
+    if (isBoundToService.get()) {
+      try {
+        componentContext.unbindService(this);
+        isBoundToService.set(false);
+        Log.d(LOGTAG, "unbound to service");
+      } catch (Exception ex) {
+        Log.e(LOGTAG, "service shutdown threw exception");
+        ex.printStackTrace();
+      }
+    }
+  }
 
-	@Override
-	public void onServiceConnected(ComponentName className, IBinder service) {
-		Log.d(LOGTAG, "Bound to service");
-		sensorSvcProxy = OdkSyncServiceInterface.Stub.asInterface(service);
-		isBoundToService.set(true);
-	}
+  @Override
+  public void onServiceConnected(ComponentName className, IBinder service) {
+    Log.d(LOGTAG, "Bound to service");
+    sensorSvcProxy = OdkSyncServiceInterface.Stub.asInterface(service);
+    isBoundToService.set(true);
+  }
 
-	@Override
-	public void onServiceDisconnected(ComponentName arg0) {
-		Log.d(LOGTAG, "unbound to service");
-		isBoundToService.set(false);
-	}
+  @Override
+  public void onServiceDisconnected(ComponentName arg0) {
+    Log.d(LOGTAG, "unbound to service");
+    isBoundToService.set(false);
+  }
 
-	public String getSyncStatus(String appName) throws RemoteException {
-		if(appName == null)
-			throw new IllegalArgumentException("App Name cannot be null");
-		try {
-			return sensorSvcProxy.getSyncStatus(appName);
-		} catch (RemoteException rex) {
-			rex.printStackTrace();
-			throw rex;
-		}
-	}
+  public SyncStatus getSyncStatus(String appName) throws RemoteException {
+    if (appName == null)
+      throw new IllegalArgumentException("App Name cannot be null");
+    try {
+      return sensorSvcProxy.getSyncStatus(appName);
+    } catch (RemoteException rex) {
+      rex.printStackTrace();
+      throw rex;
+    }
+  }
 
-	public boolean pushToServer(String appName) throws RemoteException {
-		if(appName == null)
-			throw new IllegalArgumentException("App Name cannot be null");
+  public boolean pushToServer(String appName) throws RemoteException {
+    if (appName == null)
+      throw new IllegalArgumentException("App Name cannot be null");
 
-		try {
-			return sensorSvcProxy.push(appName);
-		} catch (RemoteException rex) {
-			rex.printStackTrace();
-			throw rex;
-		}
-	}
+    try {
+      return sensorSvcProxy.push(appName);
+    } catch (RemoteException rex) {
+      rex.printStackTrace();
+      throw rex;
+    }
+  }
 
-	public boolean synchronizeFromServer(String appName) throws RemoteException {
-		if(appName == null)
-			throw new IllegalArgumentException("App Name cannot be null");
+  public boolean synchronizeFromServer(String appName) throws RemoteException {
+    if (appName == null)
+      throw new IllegalArgumentException("App Name cannot be null");
 
-		try {
-			return sensorSvcProxy.synchronize(appName);
-		} catch (RemoteException rex) {
-			rex.printStackTrace();
-			throw rex;
-		}
-	}
+    try {
+      return sensorSvcProxy.synchronize(appName);
+    } catch (RemoteException rex) {
+      rex.printStackTrace();
+      throw rex;
+    }
+  }
 
-	public boolean isBoundToService() {
-		return isBoundToService.get();
-	}
+  public boolean isBoundToService() {
+    return isBoundToService.get();
+  }
 
+  public SyncProgressState getSyncProgress(String appName) throws RemoteException {
+    if (appName == null)
+      throw new IllegalArgumentException("App Name cannot be null");
+
+    try {
+      return sensorSvcProxy.getSyncProgress(appName);
+    } catch (RemoteException rex) {
+      rex.printStackTrace();
+      throw rex;
+    }
+  }
+
+  public String getSyncUpdateMessage(String appName) throws RemoteException {
+    if (appName == null)
+      throw new IllegalArgumentException("App Name cannot be null");
+
+    try {
+      return sensorSvcProxy.getSyncUpdateMessage(appName);
+    } catch (RemoteException rex) {
+      rex.printStackTrace();
+      throw rex;
+    }
+  }
 }
