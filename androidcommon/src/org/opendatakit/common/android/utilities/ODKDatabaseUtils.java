@@ -98,14 +98,14 @@ public class ODKDatabaseUtils {
     LinkedHashMap<String,String> userDefinedColumns = new LinkedHashMap<String,String>();
     String selection = "_table_id=? AND _is_unit_of_retention=?";
     String[] selectionArgs = {tableName, "1"};
-    String[] cols = {"_element_name", "_element_type"};
+    String[] cols = {"_element_key", "_element_type"};
     Cursor c = db.query(DataModelDatabaseHelper.COLUMN_DEFINITIONS_TABLE_NAME, cols, selection, selectionArgs, null, null, null);
 
-    int elemNameIndex = c.getColumnIndexOrThrow("_element_name");
+    int elemKeyIndex = c.getColumnIndexOrThrow("_element_key");
     int elemTypeIndex = c.getColumnIndexOrThrow("_element_type");
     c.moveToFirst();
     while (!c.isAfterLast()) {
-      userDefinedColumns.put(c.getString(elemNameIndex),c.getString(elemTypeIndex));
+      userDefinedColumns.put(c.getString(elemKeyIndex),c.getString(elemTypeIndex));
       c.moveToNext();
     }
 
