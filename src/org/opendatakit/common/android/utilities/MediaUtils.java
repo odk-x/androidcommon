@@ -382,7 +382,7 @@ public class MediaUtils {
   @SuppressLint("NewApi")
   public static String getPathFromUri(Context ctxt, Uri uri, String pathKey) {
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+    if (Build.VERSION.SDK_INT >= 19) {
       return getPath(ctxt, uri);
     }
     else{
@@ -408,7 +408,7 @@ public class MediaUtils {
       }
     }
   }
-  
+
   @SuppressLint("NewApi")
   /**
    * Get a file path from a Uri. This will get the the path for Storage Access
@@ -417,7 +417,7 @@ public class MediaUtils {
    * <br>
    * Callers should check whether the path is local before assuming it
    * represents a local file.
-   * 
+   *
    * @param context The context.
    * @param uri The Uri to query.
    * @see #isLocal(String)
@@ -426,7 +426,7 @@ public class MediaUtils {
    */
   public static String getPath(final Context context, final Uri uri) {
 
-      final boolean isKitKat = Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT;
+      final boolean isKitKat = Build.VERSION.SDK_INT >= 19;
 
       // DocumentProvider
       if (isKitKat && DocumentsContract.isDocumentUri(context, uri)) {
