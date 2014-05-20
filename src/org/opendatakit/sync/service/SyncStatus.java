@@ -4,7 +4,7 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 public enum SyncStatus implements Parcelable {
-  INIT, SYNCING, NETWORK_ERROR, AUTH_RESOLUTION, CONFLICT_RESOLUTION, SYNC_COMPLETE;
+  INIT, SYNCING, NETWORK_ERROR, FILE_ERROR, AUTH_RESOLUTION, CONFLICT_RESOLUTION, SYNC_COMPLETE;
 
   @Override
   public int describeContents() {
