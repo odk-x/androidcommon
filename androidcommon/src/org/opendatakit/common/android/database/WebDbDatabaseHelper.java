@@ -15,11 +15,11 @@
 package org.opendatakit.common.android.database;
 
 import org.opendatakit.common.android.utilities.ODKFileUtils;
-import org.opendatakit.common.android.provider.FileProvider;
 
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
+import fi.iki.elonen.SimpleWebServer;
 
 /**
  * Opens and manages the Databases.db database used by WebSQL and Java app.
@@ -53,6 +53,10 @@ public class WebDbDatabaseHelper extends ODKSQLiteOpenHelper {
 
   final Context context;
 
+  public static String getFileOriginString(Context c) {
+    return "http_" + SimpleWebServer.HOSTNAME + "_" + Integer.toString(SimpleWebServer.PORT);
+  }
+
   public static String dbPath(String path) {
     ODKFileUtils.createFolder(path);
     return path;
@@ -81,13 +85,13 @@ public class WebDbDatabaseHelper extends ODKSQLiteOpenHelper {
         + DATABASES_PATH + " text );");
 
     ContentValues ov = new ContentValues();
-    ov.put(COMMON_ORIGIN, FileProvider.getFileOriginString(context));
+    ov.put(COMMON_ORIGIN, getFileOriginString(context));
     ov.put(ORIGINS_QUOTA, 262144);
     db.insert(WEBDB_ORIGINS_TABLE, null, ov);
 
     ContentValues v = new ContentValues();
     v.put(DATABASES_GUID, 1);
-    v.put(COMMON_ORIGIN, FileProvider.getFileOriginString(context));
+    v.put(COMMON_ORIGIN, getFileOriginString(context));
     v.put(DATABASES_NAME, WEBDB_INSTANCE_DB_SHORT_NAME);
     v.put(DATABASES_DISPLAY_NAME, WEBDB_INSTANCE_DB_DISPLAY_NAME);
     v.put(DATABASES_ESTIMATED_SIZE, WEBDB_INSTANCE_DB_ESTIMATED_SIZE);

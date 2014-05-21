@@ -131,8 +131,22 @@ public class ODKFileUtils {
 
   private static final Set<String> topLevelPlusTablesExclusions;
 
+  /**
+   * directories within an application that are inaccessible via the
+   * getAsFile() API.
+   */
+  private static final Set<String> topLevelWebServerExclusions;
   static {
+
     TreeSet<String> temp;
+
+    temp = new TreeSet<String>();
+    temp.add(LOGGING_FOLDER_NAME);
+    temp.add(METADATA_FOLDER_NAME);
+    temp.add(OUTPUT_FOLDER_NAME);
+    temp.add(STALE_FORMS_FOLDER_NAME);
+    temp.add(STALE_FRAMEWORK_FOLDER_NAME);
+    topLevelWebServerExclusions = Collections.unmodifiableSet(temp);
 
     /**
      * Going forward, we do not want to sync the framework directory
@@ -159,6 +173,10 @@ public class ODKFileUtils {
     temp.add(STALE_FRAMEWORK_FOLDER_NAME);
     temp.add(TABLES_FOLDER_NAME);
     topLevelPlusTablesExclusions = Collections.unmodifiableSet(temp);
+  }
+
+  public static Set<String> getDirectoriesToExcludeFromWebServer() {
+    return topLevelWebServerExclusions;
   }
 
   public static Set<String> getDirectoriesToExcludeFromSync(boolean excludeTablesDirectory) {
@@ -748,6 +766,35 @@ public class ODKFileUtils {
       b.append(s);
     }
     return b.toString();
+  }
+
+  /**
+   * Reconstructs the full path from the appName and uriFragment
+   *
+   * @param appName
+   * @param uriFragment
+   * @return
+   */
+  public static File getAsFile(String appName, String uriFragment) {
+    // forward slash always...
+    if ( uriFragment == null || uriFragment.length() == 0 ) {
+      throw new IllegalArgumentException("Not a valid uriFragment: " +
+          appName + "/" + uriFragment +
+          " application or subdirectory not specified.");
+    }
+
+    File f = ODKFileUtils.fromAppPath(appName);
+    if (f == null || !f.exists() || !f.isDirectory()) {
+      throw new IllegalArgumentException("Not a valid uriFragment: " +
+            appName + "/" + uriFragment + " invalid application.");
+    }
+
+    String[] segments = uriFragment.split("/");
+    for ( int i = 0 ; i < segments.length ; ++i ) {
+      String s = segments[i];
+      f = new File(f, s);
+    }
+    return f;
   }
 
   /**
