@@ -508,7 +508,7 @@ public class ODKFileUtils {
 
   public static String getOutputTablePropertiesCsvFile(String appName, String tableId, String fileQualifier) {
     return ODKFileUtils.getOutputFolder(appName) + "/csv/" + tableId +
-        ((fileQualifier != null && fileQualifier.length() != 0) ? ("." + fileQualifier) : "") + "." + DEFINITION_CSV;
+        ((fileQualifier != null && fileQualifier.length() != 0) ? ("." + fileQualifier) : "") + "." + PROPERTIES_CSV;
   }
 
   public static String getFormsFolder(String appName, String tableId) {
