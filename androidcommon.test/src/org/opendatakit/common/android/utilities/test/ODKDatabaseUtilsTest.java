@@ -2028,4 +2028,8 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     db.execSQL("DROP TABLE " + tableName);
   }
 
+  public void testFailureForCheckins() {
+    assertTrue(false);
+  }
+  
 }
