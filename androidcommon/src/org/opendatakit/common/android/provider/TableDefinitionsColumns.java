@@ -18,6 +18,9 @@ import android.provider.BaseColumns;
 
 public class TableDefinitionsColumns implements BaseColumns {
 
+  public static final String CONTENT_TYPE = "vnd.android.cursor.dir/vnd.opendatakit.table";
+  public static final String CONTENT_ITEM_TYPE = "vnd.android.cursor.item/vnd.opendatakit.table";
+
   public static final String TABLE_ID = "_table_id";
   public static final String DB_TABLE_NAME = "_db_table_name";
   public static final String SYNC_TAG = "_sync_tag";

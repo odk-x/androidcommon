@@ -268,7 +268,7 @@ public class SimpleWebServer extends NanoHTTPD {
         File f = new File(homeDir, uri);
         canServeUri = f.exists();
         if ( canServeUri && !uri.contains("..")) {
-          Set<String> exclusions = ODKFileUtils.getDirectoriesToExcludeFromSync(false);
+          Set<String> exclusions = ODKFileUtils.getDirectoriesToExcludeFromWebServer();
           // further restrict uri to have an appName and to not reference one of the private directories
           String[] parts = uri.split("/");
           // TODO: ensure there are no ./ or ../ path elements
