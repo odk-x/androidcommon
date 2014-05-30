@@ -16,10 +16,13 @@ package org.opendatakit.common.android.utilities;
 
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLDecoder;
 
 import org.apache.commons.lang3.CharEncoding;
+import org.springframework.web.util.UriUtils;
 
 import android.content.Context;
 import android.net.Uri;
@@ -32,6 +35,26 @@ public class UrlUtils {
   public static Uri getWebViewContentUri(Context c) {
     return Uri.parse(SCHEME_HTTP + "://" + SimpleWebServer.HOSTNAME + ":"
         + Integer.toString(SimpleWebServer.PORT) + "/");
+  }
+
+  /**
+   * Handles properly encoding a path segment of a URL for use over the wire.
+   * Converts arbitrary characters into those appropriate for a segment in a
+   * URL path.
+   *
+   * @param segment
+   * @return encodedSegment
+   */
+  public static String encodeSegment(String segment) {
+    // the segment can have URI-inappropriate characters. Encode it first...
+    String encodedSegment = Uri.encode(segment, null);
+//    try {
+//      encodedSegment = UriUtils.encodePathSegment(segment, CharEncoding.US_ASCII);
+//    } catch (UnsupportedEncodingException e) {
+//      e.printStackTrace();
+//      throw new IllegalStateException("Should be able to encode with ASCII");
+//    }
+    return encodedSegment;
   }
 
   /**
@@ -52,7 +75,7 @@ public class UrlUtils {
   public static String getAsWebViewUri(Context context, String appName, String uriFragment) {
     Uri u = UrlUtils.getWebViewContentUri(context);
     // we need to escape the segments.
-    u = Uri.withAppendedPath(u, Uri.encode(appName));
+    u = Uri.withAppendedPath(u, encodeSegment(appName));
 
     String pathPart;
     String queryPart;
@@ -87,8 +110,9 @@ public class UrlUtils {
 
     String[] segments = pathPart.split("/");
     for (String s : segments) {
-      u = Uri.withAppendedPath(u, Uri.encode(s));
+      u = Uri.withAppendedPath(u, encodeSegment(s));
     }
+    // unclear what escaping is needed on query and hash parts...
     return u.toString() + queryPart + hashPart;
   }
 
@@ -96,11 +120,10 @@ public class UrlUtils {
   public static boolean isValidUrl(String url) {
 
     try {
-      new URL(URLDecoder.decode(url, CharEncoding.UTF_8));
+      @SuppressWarnings("unused")
+      URI uri = new URI(url);
       return true;
-    } catch (MalformedURLException e) {
-      return false;
-    } catch (UnsupportedEncodingException e) {
+    } catch (URISyntaxException e) {
       return false;
     }
 
