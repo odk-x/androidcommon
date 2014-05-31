@@ -14,15 +14,8 @@
 
 package org.opendatakit.common.android.utilities;
 
-import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.URLDecoder;
-
-import org.apache.commons.lang3.CharEncoding;
-import org.springframework.web.util.UriUtils;
 
 import android.content.Context;
 import android.net.Uri;
