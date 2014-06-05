@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2013 University of Washington
+ * Copyright (c) 2013-2014 University of Washington
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -202,17 +202,15 @@ public class SimpleWebServer extends NanoHTTPD {
         try {
           ODKFileUtils.verifyExternalStorageAvailability();
           if ( !root.exists() || !root.isDirectory()) {
-            return createResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT,
-                "INTERNAL ERRROR: given path is not a directory (" + root.getAbsolutePath() + ").");
+            return getInternalErrorResponse("given path is not a directory (" + root.getAbsolutePath() + ").");
           }
         } catch ( Exception e) {
-            return createResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT,
-                "INTERNAL ERRROR: exception " + e.toString() + " accessing directory (" + root.getAbsolutePath() + ").");
+            return getInternalErrorResponse("exception " + e.toString() + " accessing directory (" + root.getAbsolutePath() + ").");
         }
-        return respond(Collections.unmodifiableMap(header), uri);
+        return respond(Collections.unmodifiableMap(header), session, uri);
     }
 
-    private Response respond(Map<String, String> headers, String uri) {
+    private Response respond(Map<String, String> headers, IHTTPSession session, String uri) {
         // Remove URL arguments
         uri = uri.trim().replace(File.separatorChar, '/');
         if (uri.indexOf('?') >= 0) {
@@ -221,14 +219,14 @@ public class SimpleWebServer extends NanoHTTPD {
 
         // Prohibit getting out of current directory
         if (uri.startsWith("src/main") || uri.endsWith("src/main") || uri.contains("../")) {
-            return createResponse(Response.Status.FORBIDDEN, NanoHTTPD.MIME_PLAINTEXT, "FORBIDDEN: Won't serve ../ for security reasons.");
+            return getForbiddenResponse("Won't serve ../ for security reasons.");
         }
 
         boolean canServeUri = false;
         File homeDir = new File(ODKFileUtils.getOdkFolder());
         canServeUri = canServeUri(uri, homeDir);
         if (!canServeUri) {
-            return createResponse(Response.Status.NOT_FOUND, NanoHTTPD.MIME_PLAINTEXT, "Error 404, file not found.");
+            return getNotFoundResponse();
         }
 
         // Browsers get confused without '/' after the directory, send a redirect.
@@ -249,29 +247,46 @@ public class SimpleWebServer extends NanoHTTPD {
                     // No index file, list the directory if it is readable
                     return createResponse(Response.Status.OK, NanoHTTPD.MIME_HTML, listDirectory(uri, f));
                 } else {
-                    return createResponse(Response.Status.FORBIDDEN, NanoHTTPD.MIME_PLAINTEXT, "FORBIDDEN: No directory listing.");
+                    return getForbiddenResponse("No directory listing.");
                 }
             } else {
-                return respond(headers, uri + indexFile);
+                return respond(headers, session, uri + indexFile);
             }
         }
 
         String mimeTypeForFile = getMimeTypeForFile(uri);
         Response response = null;
         response = serveFile(uri, headers, f, mimeTypeForFile);
-        return response != null ? response :
-            createResponse(Response.Status.NOT_FOUND, NanoHTTPD.MIME_PLAINTEXT, "Error 404, file not found.");
+        return response != null ? response : getNotFoundResponse();
+    }
+
+    protected Response getNotFoundResponse() {
+        return createResponse(Response.Status.NOT_FOUND, NanoHTTPD.MIME_PLAINTEXT,
+            "Error 404, file not found.");
+    }
+
+    protected Response getForbiddenResponse(String s) {
+        return createResponse(Response.Status.FORBIDDEN, NanoHTTPD.MIME_PLAINTEXT, "FORBIDDEN: "
+            + s);
+    }
+
+    protected Response getInternalErrorResponse(String s) {
+        return createResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT,
+            "INTERNAL ERRROR: " + s);
     }
 
     private boolean canServeUri(String uri, File homeDir) {
         boolean canServeUri;
         File f = new File(homeDir, uri);
         canServeUri = f.exists();
-        if ( canServeUri && !uri.contains("..")) {
+        if ( canServeUri ) {
+          // TODO: more rigorous checks for handling "../"?
+          File base = f.getAbsoluteFile();
+          String appName = ODKFileUtils.extractAppNameFromPath(base);
+          String relativePath = ODKFileUtils.asRelativePath(appName, base);
           Set<String> exclusions = ODKFileUtils.getDirectoriesToExcludeFromWebServer();
-          // further restrict uri to have an appName and to not reference one of the private directories
-          String[] parts = uri.split("/");
-          // TODO: ensure there are no ./ or ../ path elements
+          // further restrict relativePath to not reference one of the private directories
+          String[] parts = relativePath.split("/");
           canServeUri = parts.length > 1 && !exclusions.contains(parts[1]);
         }
         return canServeUri;
@@ -344,7 +359,7 @@ public class SimpleWebServer extends NanoHTTPD {
                 }
             }
         } catch (IOException ioe) {
-            res = createResponse(Response.Status.FORBIDDEN, NanoHTTPD.MIME_PLAINTEXT, "FORBIDDEN: Reading file failed.");
+            res = getForbiddenResponse("Reading file failed.");
         }
 
         return res;
@@ -384,7 +399,7 @@ public class SimpleWebServer extends NanoHTTPD {
         return null;
     }
 
-    private String listDirectory(String uri, File f) {
+    protected String listDirectory(String uri, File f) {
         String heading = "Directory " + uri;
         StringBuilder msg = new StringBuilder("<html><head><title>" + heading + "</title><style><!--\n" +
             "span.dirname { font-weight: bold; }\n" +
