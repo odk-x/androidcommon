@@ -4,7 +4,7 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 public enum SyncProgressState implements Parcelable {
-  INIT, APP_FILES, TABLE_FILES, ROWS, COMPLETE;
+  INIT, APP_FILES, TABLE_FILES, ROWS, COMPLETE, ERROR;
 
   @Override
   public int describeContents() {
