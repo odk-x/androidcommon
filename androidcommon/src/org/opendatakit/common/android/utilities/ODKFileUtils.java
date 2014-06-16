@@ -64,6 +64,8 @@ public class ODKFileUtils {
 
   private static final String ASSETS_FOLDER_NAME = "assets";
 
+  private static final String CSV_FOLDER_NAME = "csv";
+
   private static final String METADATA_FOLDER_NAME = "metadata";
 
   private static final String OUTPUT_FOLDER_NAME = "output";
@@ -489,25 +491,25 @@ public class ODKFileUtils {
   }
 
   public static String getTableDefinitionCsvFile(String appName, String tableId) {
-    return getTablesFolder(appName, tableId) + "/" + DEFINITION_CSV;
+    return getTablesFolder(appName, tableId) + File.separator + DEFINITION_CSV;
   }
 
   public static String getTablePropertiesCsvFile(String appName, String tableId) {
-    return getTablesFolder(appName, tableId) + "/" + PROPERTIES_CSV;
+    return getTablesFolder(appName, tableId) + File.separator + PROPERTIES_CSV;
   }
 
   public static String getOutputTableCsvFile(String appName, String tableId, String fileQualifier) {
-    return ODKFileUtils.getOutputFolder(appName) + "/csv/" + tableId +
+    return ODKFileUtils.getOutputFolder(appName) + File.separator + CSV_FOLDER_NAME + File.separator + tableId +
         ((fileQualifier != null && fileQualifier.length() != 0) ? ("." + fileQualifier) : "") + ".csv";
   }
 
   public static String getOutputTableDefinitionCsvFile(String appName, String tableId, String fileQualifier) {
-    return ODKFileUtils.getOutputFolder(appName) + "/csv/" + tableId +
+    return ODKFileUtils.getOutputFolder(appName) + File.separator + CSV_FOLDER_NAME + File.separator + tableId +
         ((fileQualifier != null && fileQualifier.length() != 0) ? ("." + fileQualifier) : "") + "." + DEFINITION_CSV;
   }
 
   public static String getOutputTablePropertiesCsvFile(String appName, String tableId, String fileQualifier) {
-    return ODKFileUtils.getOutputFolder(appName) + "/csv/" + tableId +
+    return ODKFileUtils.getOutputFolder(appName) + File.separator + CSV_FOLDER_NAME + File.separator + tableId +
         ((fileQualifier != null && fileQualifier.length() != 0) ? ("." + fileQualifier) : "") + "." + PROPERTIES_CSV;
   }
 
@@ -600,6 +602,12 @@ public class ODKFileUtils {
   public static String getAssetsFolder(String appName) {
     String appFolder = ODKFileUtils.getAppFolder(appName);
     String result = appFolder + File.separator + ASSETS_FOLDER_NAME;
+    return result;
+  }
+
+  public static String getAssetsCsvFolder(String appName) {
+    String appFolder = ODKFileUtils.getAppFolder(appName);
+    String result = appFolder + File.separator + ASSETS_FOLDER_NAME + File.separator + CSV_FOLDER_NAME;
     return result;
   }
 
