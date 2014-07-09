@@ -2029,7 +2029,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
   }
 
   public void testFailureForCheckins() {
-    assertTrue(true);
+    assertTrue(false);
   }
   
 }
