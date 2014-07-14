@@ -924,7 +924,7 @@ public class ODKFileUtils {
       // CTS (6/15/2010) : stream file through digest instead of handing
       // it the byte[]
       MessageDigest md = MessageDigest.getInstance("MD5");
-      int chunkSize = 256;
+      int chunkSize = 8192;
 
       byte[] chunk = new byte[chunkSize];
 
