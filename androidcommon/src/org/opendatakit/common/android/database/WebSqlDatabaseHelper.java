@@ -18,6 +18,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.opendatakit.common.android.utilities.ODKDatabaseUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
 
 import android.content.Context;
@@ -49,13 +50,13 @@ public class WebSqlDatabaseHelper {
 
       if (c.moveToFirst()) {
         do {
-          String shortName = c.getString(c.getColumnIndex(WebDbDatabaseHelper.DATABASES_NAME));
-          String displayName = c.getString(c
-              .getColumnIndex(WebDbDatabaseHelper.DATABASES_DISPLAY_NAME));
-          String relPath = c.getString(c.getColumnIndex(WebDbDatabaseHelper.COMMON_ORIGIN));
-          String dbName = c.getString(c.getColumnIndex(WebDbDatabaseHelper.DATABASES_PATH));
-          Integer estimatedSize = c.getInt(c
-              .getColumnIndex(WebDbDatabaseHelper.DATABASES_ESTIMATED_SIZE));
+          String shortName = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(WebDbDatabaseHelper.DATABASES_NAME));
+          String displayName = ODKDatabaseUtils.getIndexAsString(c,
+              c.getColumnIndex(WebDbDatabaseHelper.DATABASES_DISPLAY_NAME));
+          String relPath = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(WebDbDatabaseHelper.COMMON_ORIGIN));
+          String dbName = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(WebDbDatabaseHelper.DATABASES_PATH));
+          Integer estimatedSize = ODKDatabaseUtils.getIndexAsType(c, Integer.class,
+              c.getColumnIndex(WebDbDatabaseHelper.DATABASES_ESTIMATED_SIZE));
 
           dbCandidates.add(new WebDbDefinition(shortName, displayName, estimatedSize, new File(path
               + File.separator + relPath + File.separator + dbName)));

@@ -31,6 +31,7 @@ import org.opendatakit.common.android.R;
 import org.opendatakit.common.android.database.DataModelDatabaseHelper;
 import org.opendatakit.common.android.database.DataModelDatabaseHelperFactory;
 import org.opendatakit.common.android.provider.FormsColumns;
+import org.opendatakit.common.android.utilities.ODKDatabaseUtils;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
 
@@ -497,11 +498,11 @@ public abstract class FormsProviderImpl extends ContentProvider {
       }
       del.moveToPosition(-1);
       while (del.moveToNext()) {
-        idValue = del.getInt(del.getColumnIndex(FormsColumns._ID));
-        tableIdValue = del.getString(del.getColumnIndex(FormsColumns.TABLE_ID));
-        formIdValue = del.getString(del.getColumnIndex(FormsColumns.FORM_ID));
+        idValue = ODKDatabaseUtils.getIndexAsType(del, Integer.class, del.getColumnIndex(FormsColumns._ID));
+        tableIdValue = ODKDatabaseUtils.getIndexAsString(del, del.getColumnIndex(FormsColumns.TABLE_ID));
+        formIdValue = ODKDatabaseUtils.getIndexAsString(del, del.getColumnIndex(FormsColumns.FORM_ID));
         File mediaDir = ODKFileUtils.asAppFile(appName,
-            del.getString(del.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH)));
+            ODKDatabaseUtils.getIndexAsString(del, del.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH)));
         mediaDirs.put(mediaDir, (tableIdValue == null) ? DirType.FRAMEWORK : DirType.FORMS);
       }
     } catch (Exception e) {
@@ -665,16 +666,16 @@ public abstract class FormsProviderImpl extends ContentProvider {
         FormIdVersion ref = null;
         c.moveToPosition(-1);
         while (c.moveToNext()) {
-          idValue = c.getInt(c.getColumnIndex(FormsColumns._ID));
-          tableIdValue = c.getString(c.getColumnIndex(FormsColumns.TABLE_ID));
-          formIdValue = c.getString(c.getColumnIndex(FormsColumns.FORM_ID));
-          String tableId = c.getString(c.getColumnIndex(FormsColumns.TABLE_ID));
-          String formId = c.getString(c.getColumnIndex(FormsColumns.FORM_ID));
-          String formVersion = c.getString(c.getColumnIndex(FormsColumns.FORM_VERSION));
+          idValue = ODKDatabaseUtils.getIndexAsType(c, Integer.class, c.getColumnIndex(FormsColumns._ID));
+          tableIdValue = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.TABLE_ID));
+          formIdValue = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_ID));
+          String tableId = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.TABLE_ID));
+          String formId = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_ID));
+          String formVersion = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_VERSION));
           FormIdVersion cur = new FormIdVersion(tableId, formId, formVersion);
 
           int appRelativeMediaPathIdx = c.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH);
-          String mediaPath = c.getString(appRelativeMediaPathIdx);
+          String mediaPath = ODKDatabaseUtils.getIndexAsString(c, appRelativeMediaPathIdx);
           if (mediaPath != null) {
             mediaDirs.put(ODKFileUtils.asAppFile(appName, mediaPath),
                 (tableIdValue == null) ? DirType.FRAMEWORK : DirType.FORMS);

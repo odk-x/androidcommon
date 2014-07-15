@@ -36,6 +36,7 @@ import org.opendatakit.common.android.database.DataModelDatabaseHelper.IdInstanc
 import org.opendatakit.common.android.database.DataModelDatabaseHelperFactory;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.InstanceColumns;
+import org.opendatakit.common.android.utilities.ODKDatabaseUtils;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 
 import android.content.ContentProvider;
@@ -396,8 +397,8 @@ public abstract class InstanceProviderImpl extends ContentProvider {
         del = this.query(uri, null, where, whereArgs, null);
         del.moveToPosition(-1);
         while (del.moveToNext()) {
-          String iId = del.getString(del.getColumnIndex(InstanceColumns._ID));
-          String iIdDataTable = del.getString(del.getColumnIndex(InstanceColumns.DATA_INSTANCE_ID));
+          String iId = ODKDatabaseUtils.getIndexAsString(del, del.getColumnIndex(InstanceColumns._ID));
+          String iIdDataTable = ODKDatabaseUtils.getIndexAsString(del, del.getColumnIndex(InstanceColumns.DATA_INSTANCE_ID));
           idStructs.add(new IdStruct(iId, iIdDataTable));
           String path = ODKFileUtils.getInstanceFolder(appName, ids.tableId, iIdDataTable);
           File f = new File(path);
@@ -492,8 +493,8 @@ public abstract class InstanceProviderImpl extends ContentProvider {
         if ( ref.getCount() != 0 ) {
           ref.moveToFirst();
           do {
-            String iId = ref.getString(ref.getColumnIndex(InstanceColumns._ID));
-            String iIdDataTable = ref.getString(ref.getColumnIndex(InstanceColumns.DATA_INSTANCE_ID));
+            String iId = ODKDatabaseUtils.getIndexAsString(ref, ref.getColumnIndex(InstanceColumns._ID));
+            String iIdDataTable = ODKDatabaseUtils.getIndexAsString(ref, ref.getColumnIndex(InstanceColumns.DATA_INSTANCE_ID));
             idStructs.add(new IdStruct(iId, iIdDataTable));
           } while (ref.moveToNext());
         }

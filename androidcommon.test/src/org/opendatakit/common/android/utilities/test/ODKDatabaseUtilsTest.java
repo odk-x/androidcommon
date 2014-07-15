@@ -25,31 +25,31 @@ import android.test.RenamingDelegatingContext;
 import android.util.Log;
 
 public class ODKDatabaseUtilsTest extends AndroidTestCase{
-  
+
   private static final String TAG = "ODKDatabaseUtilsTest";
-  
+
   private static final String TEST_FILE_PREFIX = "test_";
-  
+
   private static final String DATABASE_NAME = "test.db";
-  
+
   private static final int DATABASE_VERSION = 1;
-  
+
   private static final String testTable = "testTable";
-  
+
   private static SQLiteDatabase db;
-  
+
   private static final String colDefTable = "_column_definitions";
-  
+
   private static final String tableDefTable = "_table_definitions";
-  
+
   private static final String activeKVSTable = "_key_value_store_active";
-  
+
   private static final String elemKey = "_element_key";
   private static final String elemName = "_element_name";
   private static final String listChildElemKeys = "_list_child_element_keys";
   private static final String isUnitRet = "_is_unit_of_retention";
-  
-  
+
+
   private static class DatabaseHelper extends SQLiteOpenHelper {
 
     public DatabaseHelper(Context context) {
@@ -58,35 +58,35 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-      String createColCmd = "CREATE TABLE " + colDefTable + " (" + 
-        "_table_id TEXT NOT NULL, _element_key TEXT NOT NULL, _element_name TEXT NOT NULL, " + 
-        "_element_type TEXT NOT NULL, _list_child_element_keys TEXT NULL, _is_unit_of_retention " + 
+      String createColCmd = "CREATE TABLE " + colDefTable + " (" +
+        "_table_id TEXT NOT NULL, _element_key TEXT NOT NULL, _element_name TEXT NOT NULL, " +
+        "_element_type TEXT NOT NULL, _list_child_element_keys TEXT NULL, _is_unit_of_retention " +
         "INTEGER NOT NULL, PRIMARY KEY ( _table_id, _element_key) );";
- 
+
       try {
         db.execSQL(createColCmd);
       } catch (Exception e) {
         Log.e("test", "Error while creating table " + colDefTable);
         e.printStackTrace();
       }
-      
-      String createTableDefCmd = "CREATE TABLE " + tableDefTable + " (" + 
+
+      String createTableDefCmd = "CREATE TABLE " + tableDefTable + " (" +
         "_table_id TEXT NOT NULL PRIMARY KEY, _db_table_name TEXT NOT NULL UNIQUE," +
         "_sync_tag TEXT NULL,_last_sync_time TEXT NOT NULL, _sync_state TEXT NOT NULL, " +
         "_transactioning INTEGER NOT NULL);";
-   
+
       try {
         db.execSQL(createTableDefCmd);
       } catch (Exception e) {
         Log.e("test", "Error while creating table " + tableDefTable);
         e.printStackTrace();
       }
-        
-      String createKVSCmd = "CREATE TABLE " + activeKVSTable + " ("+ 
+
+      String createKVSCmd = "CREATE TABLE " + activeKVSTable + " ("+
         "_table_id TEXT NOT NULL, _partition TEXT NOT NULL, _aspect TEXT NOT NULL, "+
         "_key TEXT NOT NULL, _type TEXT NOT NULL, _value TEXT NOT NULL, PRIMARY KEY "+
         "( _table_id, _partition, _aspect, _key) );";
-     
+
       try {
         db.execSQL(createKVSCmd);
       } catch (Exception e) {
@@ -98,7 +98,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
       // TODO Auto-generated method stub
-      
+
     }
   }
 
@@ -110,38 +110,38 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
   protected void setUp() throws Exception {
     super.setUp();
 
-    RenamingDelegatingContext context 
+    RenamingDelegatingContext context
         = new RenamingDelegatingContext(getContext(), TEST_FILE_PREFIX);
-    
+
     DatabaseHelper mDbHelper = new DatabaseHelper(context);
     db = mDbHelper.getWritableDatabase();
-    
+
     File file = context.getDatabasePath(DATABASE_NAME);
     String path = file.getAbsolutePath();
-    
+
     Log.i("test", "The absolute path of the database is" + path);
   }
 
-  /* 
+  /*
    * Destroy all test data once tests are done(non-Javadoc)
    * @see android.test.AndroidTestCase#tearDown()
    */
   @Override
   protected void tearDown() throws Exception {
     super.tearDown();
-  
+
     if (db != null) {
       db.close();
     }
   }
 
   /*
-   *  Check that the database is setup 
+   *  Check that the database is setup
    */
   public void testPreConditions() {
     assertNotNull(db);
   }
-  
+
   /*
    * Test creation of user defined database table when table doesn't exist
    */
@@ -149,18 +149,18 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     // Create the database table
     String tableName = testTable;
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
-    
+
     // Check that the table exists
     Cursor cursor = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='" + tableName + "'", null);
     assertNotNull("Cursor is null", cursor);
     assertEquals("Cursor should only have 1 row", cursor.getCount(), 1);
     cursor.moveToFirst();
     assertEquals("Name of user defined table does not match", cursor.getString(0), tableName);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of user defined database table when table already exists
    */
@@ -169,18 +169,18 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String tableName = testTable;
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
-    
+
     // Check that the table exists
     Cursor cursor = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='" + tableName + "'", null);
     assertNotNull("Cursor is null", cursor);
     assertEquals("Cursor should only have 1 row", cursor.getCount(), 1);
     cursor.moveToFirst();
     assertEquals("Name of user defined table does not match", cursor.getString(0), tableName);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of user defined database tables when table is null
    */
@@ -188,7 +188,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
 	// Create the database table
     boolean thrown = false;
     String tableName = null;
-      
+
     try {
       ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
     } catch (Exception e) {
@@ -198,14 +198,14 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
 
     assertTrue(thrown);
   }
-  
+
   /*
-   * Test query when there is no data 
+   * Test query when there is no data
    */
   public void testQueryWithNoData_ExpectFail() {
     String tableName = testTable;
     boolean thrown = false;
-    
+
     try {
       ODKDatabaseUtils.query(db, false, tableName, null, null, null, null, null, null, null);
     } catch (Exception e) {
@@ -215,14 +215,14 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
 
     assertTrue(thrown);
   }
-  
+
   /*
    * Test query when there is data
    */
   public void testQueryWithData_ExpectPass() {
     String tableName = testTable;
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
-    
+
     // Check that the user defined rows are in the table
     Cursor cursor = ODKDatabaseUtils.query(db, false, tableName, null, null, null, null, null, null, null);
     Cursor refCursor = db.query(false, tableName, null, null, null, null, null, null, null);
@@ -261,11 +261,11 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
         }
       }
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test raw query when there is data
    */
@@ -273,7 +273,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String tableName = testTable;
     String query = "SELECT * FROM " + tableName;
     boolean thrown = false;
-    
+
     try {
       ODKDatabaseUtils.rawQuery(db, query, null);
     } catch (Exception e) {
@@ -283,7 +283,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
 
     assertTrue(thrown);
   }
-  
+
   /*
    * Test raw query when there is no data
    */
@@ -291,11 +291,11 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String tableName = testTable;
     String query = "SELECT * FROM " + tableName;
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
-    
+
     // Check that the user defined rows are in the table
     Cursor cursor = ODKDatabaseUtils.rawQuery(db, query, null);
     Cursor refCursor = db.rawQuery(query, null);
-    
+
     if (cursor != null && refCursor != null) {
       int index = 0;
       while (cursor.moveToNext() && refCursor.moveToNext()) {
@@ -330,11 +330,11 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
         }
       }
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of user defined database table with column when table does not exist
    */
@@ -345,22 +345,22 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     LinkedHashMap <String, String> col = new LinkedHashMap <String, String>();
     col.put(testCol, testColType);
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, col);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of user defined database table with column when table does exist
    */
@@ -372,22 +372,22 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     col.put(testCol, testColType);
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, col);
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, col);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of user defined database table with column when column is null
    */
@@ -403,11 +403,11 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     }
 
     assertTrue(thrown);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE IF EXISTS " + tableName);
   }
-  
+
   /*
    * Test creation of user defined database table with column when column is int
    */
@@ -418,22 +418,22 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     LinkedHashMap <String, String> col = new LinkedHashMap <String, String>();
     col.put(testCol, testColType);
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, col);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE IF EXISTS " + tableName);
   }
-  
+
   /*
    * Test creation of user defined database table with column when column is array
    */
@@ -446,18 +446,18 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     LinkedHashMap <String, String> col = new LinkedHashMap <String, String>();
     col.put(testCol, testColType);
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, col);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Select everything out of the table
     String sel = "SELECT * FROM " + colDefTable + " WHERE " + elemKey + " = ?";
     String[] selArgs = {"" + testCol};
@@ -470,19 +470,19 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       String valStr = cursor.getString(ind);
       String testVal = "[\"" + testColItems + "\"]";
       assertEquals(valStr, testVal);
-      
+
       ind = cursor.getColumnIndex(isUnitRet);
       type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
       int val = cursor.getInt(ind);
       assertEquals(val, 1);
     }
-    
+
     // Select everything out of the table
     sel = "SELECT * FROM " + colDefTable + " WHERE " + elemKey + " = ?";
     String [] selArgs2 = {testColItems};
     cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs2);
-    
+
 
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(elemName);
@@ -490,18 +490,18 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, itemsStr);
-      
+
       ind = cursor.getColumnIndex(isUnitRet);
       type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
       int val = cursor.getInt(ind);
       assertEquals(val, 0);
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of user defined database table with column when column is array
    */
@@ -512,22 +512,22 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     LinkedHashMap <String, String> col = new LinkedHashMap <String, String>();
     col.put(testCol, testColType);
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, col);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of user defined database table with column when column is string
    */
@@ -538,22 +538,22 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     LinkedHashMap <String, String> col = new LinkedHashMap <String, String>();
     col.put(testCol, testColType);
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, col);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of user defined database table with column when column is date
    */
@@ -564,22 +564,22 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     LinkedHashMap <String, String> col = new LinkedHashMap <String, String>();
     col.put(testCol, testColType);
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, col);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of user defined database table with column when column is datetime
    */
@@ -590,18 +590,18 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     LinkedHashMap <String, String> col = new LinkedHashMap <String, String>();
     col.put(testCol, testColType);
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, col);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
@@ -616,22 +616,22 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     LinkedHashMap <String, String> col = new LinkedHashMap <String, String>();
     col.put(testCol, testColType);
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, col);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of user defined database table with column when column is geopoint
    */
@@ -651,23 +651,23 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     LinkedHashMap <String, String> col = new LinkedHashMap <String, String>();
     col.put(testCol, testColType);
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, col);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 4);
     assertTrue(map.containsKey(testColLat));
     assertTrue(map.containsKey(testColLng));
     assertTrue(map.containsKey(testColAlt));
     assertTrue(map.containsKey(testColAcc));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String value = entry.getValue();
       assertTrue(value.equals(testColResType));
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of user defined database table with column when column is mimeUri
    */
@@ -682,18 +682,18 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     LinkedHashMap <String, String> col = new LinkedHashMap <String, String>();
     col.put(testCol, testColType);
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, col);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Select everything out of the table for element key
     String sel = "SELECT * FROM " + colDefTable + " WHERE " + elemKey + " = ?";
     String[] selArgs = {"" + testCol};
@@ -706,19 +706,19 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       String valStr = cursor.getString(ind);
       String testVal = "[\"" + testColUriFrag + "\",\"" + testColContType + "\"]";
       assertEquals(valStr, testVal);
-      
+
       ind = cursor.getColumnIndex(isUnitRet);
       type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
       int val = cursor.getInt(ind);
       assertEquals(val, 1);
     }
-    
+
     // Select everything out of the table for uriFragment
     sel = "SELECT * FROM " + colDefTable + " WHERE " + elemKey + " = ?";
     String [] selArgs2 = {testColUriFrag};
     cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs2);
-    
+
 
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(elemName);
@@ -726,19 +726,19 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, uriFrag);
-      
+
       ind = cursor.getColumnIndex(isUnitRet);
       type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
       int val = cursor.getInt(ind);
       assertEquals(val, 0);
     }
-    
+
     // Select everything out of the table for contentType
     sel = "SELECT * FROM " + colDefTable + " WHERE " + elemKey + " = ?";
     String [] selArgs3 = {testColContType};
     cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs3);
-    
+
 
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(elemName);
@@ -746,50 +746,50 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, conType);
-      
+
       ind = cursor.getColumnIndex(isUnitRet);
       type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
       int val = cursor.getInt(ind);
       assertEquals(val, 0);
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test getting all column names when columns exist
    */
   public void testGetAllColumnNamesWhenColumnsExist_ExpectPass() {
     String tableName = testTable;
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
-    
+
     String[] colNames = ODKDatabaseUtils.getAllColumnNames(db, tableName);
     boolean colLength = (colNames.length > 0);
     assertTrue(colLength);
-    
+
     String[] defCols = ODKDatabaseUtils.getDefaultUserDefinedTableColumns();
     assertEquals(colNames.length, defCols.length);
-    
+
     Arrays.sort(colNames);
     Arrays.sort(defCols);
-    
+
     for (int i = 0; i < colNames.length; i++) {
       assertEquals(colNames[i], defCols[i]);
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test getting all column names when table does not exist
    */
   public void testGetAllColumnNamesWhenTableDoesNotExist_ExpectFail() {
     String tableName = testTable;
     boolean thrown = false;
-    
+
     try {
       ODKDatabaseUtils.getAllColumnNames(db, tableName);
     } catch (Exception e) {
@@ -799,7 +799,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
 
     assertTrue(thrown);
   }
-  
+
   /*
    * Test getting user defined column names when columns exist
    */
@@ -809,13 +809,13 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     columns.put("testCol", ODKDatabaseUserDefinedTypes.STRING);
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
     LinkedHashMap<String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
-    
+
     assertEquals(map, columns);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test getting user defined column names when column does not exist
    */
@@ -824,7 +824,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     LinkedHashMap<String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertTrue(map.isEmpty());
   }
-  
+
   /*
    * Test getting user defined column names when table does not exist
    */
@@ -833,7 +833,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     LinkedHashMap<String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertTrue(map.isEmpty());
   }
-  
+
   /*
    * Test creation of new column when column does not already exist
    */
@@ -843,22 +843,22 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String testColType = ODKDatabaseUserDefinedTypes.INTEGER;
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
     ODKDatabaseUtils.createNewColumnIntoExistingDBTable(db, tableName, testCol, testColType);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of new column when column does exist
    */
@@ -869,22 +869,22 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
     ODKDatabaseUtils.createNewColumnIntoExistingDBTable(db, tableName, testCol, testColType);
     ODKDatabaseUtils.createNewColumnIntoExistingDBTable(db, tableName, testCol, testColType);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of new column when column is null
    */
@@ -901,11 +901,11 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     }
 
     assertTrue(thrown);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of new column when column is int
    */
@@ -915,22 +915,22 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String testColType = ODKDatabaseUserDefinedTypes.INTEGER;
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
     ODKDatabaseUtils.createNewColumnIntoExistingDBTable(db, tableName, testCol, testColType);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of new column when column is array
    */
@@ -942,18 +942,18 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String testColType = ODKDatabaseUserDefinedTypes.ARRAY;
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
     ODKDatabaseUtils.createNewColumnIntoExistingDBTable(db, tableName, testCol, testColType);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Select everything out of the table
     String sel = "SELECT * FROM " + colDefTable + " WHERE " + elemKey + " = ?";
     String[] selArgs = {"" + testCol};
@@ -966,19 +966,19 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       String valStr = cursor.getString(ind);
       String testVal = "[\"" + testColItems + "\"]";
       assertEquals(valStr, testVal);
-      
+
       ind = cursor.getColumnIndex(isUnitRet);
       type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
       int val = cursor.getInt(ind);
       assertEquals(val, 1);
     }
-    
+
     // Select everything out of the table
     sel = "SELECT * FROM " + colDefTable + " WHERE " + elemKey + " = ?";
     String [] selArgs2 = {testColItems};
     cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs2);
-    
+
 
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(elemName);
@@ -986,18 +986,18 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, itemsStr);
-      
+
       ind = cursor.getColumnIndex(isUnitRet);
       type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
       int val = cursor.getInt(ind);
       assertEquals(val, 0);
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of new column when column is boolean
    */
@@ -1007,22 +1007,22 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String testColType = ODKDatabaseUserDefinedTypes.BOOLEAN;
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
     ODKDatabaseUtils.createNewColumnIntoExistingDBTable(db, tableName, testCol, testColType);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of new column when column is string
    */
@@ -1032,22 +1032,22 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String testColType = ODKDatabaseUserDefinedTypes.STRING;
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
     ODKDatabaseUtils.createNewColumnIntoExistingDBTable(db, tableName, testCol, testColType);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of new column when column is date
    */
@@ -1057,22 +1057,22 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String testColType = ODKDatabaseUserDefinedTypes.DATE;
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
     ODKDatabaseUtils.createNewColumnIntoExistingDBTable(db, tableName, testCol, testColType);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of new column when column is date time
    */
@@ -1082,22 +1082,22 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String testColType = ODKDatabaseUserDefinedTypes.DATETIME;
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
     ODKDatabaseUtils.createNewColumnIntoExistingDBTable(db, tableName, testCol, testColType);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of new column when column is time
    */
@@ -1107,22 +1107,22 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String testColType = ODKDatabaseUserDefinedTypes.TIME;
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
     ODKDatabaseUtils.createNewColumnIntoExistingDBTable(db, tableName, testCol, testColType);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of new column when column is geopoint
    */
@@ -1141,19 +1141,19 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String testColResType = ODKDatabaseUserDefinedTypes.NUMBER;
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
     ODKDatabaseUtils.createNewColumnIntoExistingDBTable(db, tableName, testCol, testColType);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 4);
     assertTrue(map.containsKey(testColLat));
     assertTrue(map.containsKey(testColLng));
     assertTrue(map.containsKey(testColAlt));
     assertTrue(map.containsKey(testColAcc));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String value = entry.getValue();
       assertTrue(value.equals(testColResType));
     }
-      
+
     // Select everything out of the table for element key
     String sel = "SELECT * FROM " + colDefTable + " WHERE " + elemKey + " = ?";
     String[] selArgs = {"" + testCol};
@@ -1166,19 +1166,19 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       String valStr = cursor.getString(ind);
       String testVal = "[\"" + testColLat + "\",\"" + testColLng + "\",\"" + testColAlt + "\",\"" + testColAcc + "\"]";
       assertEquals(valStr, testVal);
-      
+
       ind = cursor.getColumnIndex(isUnitRet);
       type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
       int val = cursor.getInt(ind);
       assertEquals(val, 0);
     }
-    
+
     // Select everything out of the table for lat
     sel = "SELECT * FROM " + colDefTable + " WHERE " + elemKey + " = ?";
     String [] selArgs2 = {testColLat};
     cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs2);
-    
+
 
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(elemName);
@@ -1186,19 +1186,19 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, lat);
-      
+
       ind = cursor.getColumnIndex(isUnitRet);
       type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
       int val = cursor.getInt(ind);
       assertEquals(val, 1);
     }
-    
+
     // Select everything out of the table for long
     sel = "SELECT * FROM " + colDefTable + " WHERE " + elemKey + " = ?";
     String [] selArgs3 = {testColLng};
     cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs3);
-    
+
 
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(elemName);
@@ -1206,19 +1206,19 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, lng);
-      
+
       ind = cursor.getColumnIndex(isUnitRet);
       type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
       int val = cursor.getInt(ind);
       assertEquals(val, 1);
     }
-    
+
     // Select everything out of the table for alt
     sel = "SELECT * FROM " + colDefTable + " WHERE " + elemKey + " = ?";
     String [] selArgs4 = {testColAlt};
     cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs4);
-    
+
 
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(elemName);
@@ -1226,19 +1226,19 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, alt);
-      
+
       ind = cursor.getColumnIndex(isUnitRet);
       type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
       int val = cursor.getInt(ind);
       assertEquals(val, 1);
     }
-    
+
     // Select everything out of the table for acc
     sel = "SELECT * FROM " + colDefTable + " WHERE " + elemKey + " = ?";
     String [] selArgs5 = {testColAcc};
     cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs5);
-    
+
 
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(elemName);
@@ -1246,18 +1246,18 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, acc);
-      
+
       ind = cursor.getColumnIndex(isUnitRet);
       type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
       int val = cursor.getInt(ind);
       assertEquals(val, 1);
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test creation of new column when column is mimeUri
    */
@@ -1269,21 +1269,21 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String testColUriFrag = testCol + "_" + uriFrag;
     String testColContType = testCol + "_" + conType;
     String testColType = ODKDatabaseUserDefinedTypes.MIMEURI;
-    
+
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
     ODKDatabaseUtils.createNewColumnIntoExistingDBTable(db, tableName, testCol, testColType);
-    
+
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
     assertEquals(map.size(), 1);
     assertTrue(map.containsKey(testCol));
-   
+
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
       assertTrue(key.equals(testCol));
       assertTrue(value.equals(testColType));
     }
-    
+
     // Select everything out of the table for element key
     String sel = "SELECT * FROM " + colDefTable + " WHERE " + elemKey + " = ?";
     String[] selArgs = {"" + testCol};
@@ -1296,19 +1296,19 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       String valStr = cursor.getString(ind);
       String testVal = "[\"" + testColUriFrag + "\",\"" + testColContType + "\"]";
       assertEquals(valStr, testVal);
-      
+
       ind = cursor.getColumnIndex(isUnitRet);
       type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
       int val = cursor.getInt(ind);
       assertEquals(val, 1);
     }
-    
+
     // Select everything out of the table for uriFragment
     sel = "SELECT * FROM " + colDefTable + " WHERE " + elemKey + " = ?";
     String [] selArgs2 = {testColUriFrag};
     cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs2);
-    
+
 
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(elemName);
@@ -1316,19 +1316,19 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, uriFrag);
-      
+
       ind = cursor.getColumnIndex(isUnitRet);
       type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
       int val = cursor.getInt(ind);
       assertEquals(val, 0);
     }
-    
+
     // Select everything out of the table for contentType
     sel = "SELECT * FROM " + colDefTable + " WHERE " + elemKey + " = ?";
     String [] selArgs3 = {testColContType};
     cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs3);
-    
+
 
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(elemName);
@@ -1336,18 +1336,18 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, conType);
-      
+
       ind = cursor.getColumnIndex(isUnitRet);
       type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
       int val = cursor.getInt(ind);
       assertEquals(val, 0);
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test writing the data into the existing db table with all null values
    */
@@ -1357,10 +1357,10 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String testColType = ODKDatabaseUserDefinedTypes.INTEGER;
     boolean thrown = false;
     LinkedHashMap<String, String> columns = new LinkedHashMap<String,String>();
-    
+
     columns.put(testCol, testColType);
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
-    
+
     try {
       ODKDatabaseUtils.writeDataIntoExistingDBTable(db, tableName, null);
     } catch (Exception e) {
@@ -1369,11 +1369,11 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     }
 
     assertTrue(thrown);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test writing the data into the existing db table with valid values
    */
@@ -1384,18 +1384,18 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     int testVal = 5;
     LinkedHashMap<String, String> columns = new LinkedHashMap<String,String>();
     columns.put(testCol, testColType);
-    
+
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
-    
+
     ContentValues cvValues = new ContentValues();
     cvValues.put(testCol, testVal);
     ODKDatabaseUtils.writeDataIntoExistingDBTable(db, tableName, cvValues);
-    
+
     // Select everything out of the table
     String sel = "SELECT * FROM " + tableName + " WHERE "+ testCol + " = ?";
     String[] selArgs = {"" + testVal};
     Cursor cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs);
-    
+
     int val = 0;
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(testCol);
@@ -1403,13 +1403,13 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
       val = cursor.getInt(ind);
     }
-    
+
     assertEquals(val, testVal);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test writing the data into the existing db table with valid values and a certain id
    */
@@ -1420,20 +1420,20 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     int testVal = 5;
     LinkedHashMap<String, String> columns = new LinkedHashMap<String,String>();
     columns.put(testCol, testColType);
-    
+
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
-    
+
     ContentValues cvValues = new ContentValues();
     cvValues.put(testCol, 5);
-    
+
     String uuid = UUID.randomUUID().toString();
     ODKDatabaseUtils.writeDataIntoExistingDBTableWithId(db, tableName, cvValues, uuid);
-    
+
     // Select everything out of the table
     String sel = "SELECT * FROM " + tableName + " WHERE "+ testCol + " = ?";
     String[] selArgs = {"" + testVal};
     Cursor cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs);
-    
+
     int val = 0;
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(testCol);
@@ -1441,25 +1441,25 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
       val = cursor.getInt(ind);
     }
-    
+
     assertEquals(val, testVal);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test writing the data and metadata into the existing db table with valid values
    */
   public void testWriteDataAndMetadataIntoExistingDBTableWithValidValue_ExpectPass() {
     String tableName = testTable;
     String nullString = null;
-    
+
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
-    
+
     String uuid = UUID.randomUUID().toString();
     String timeStamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
-    
+
     ContentValues cvValues = new ContentValues();
     cvValues.put(DataTableColumns.ID, uuid);
     cvValues.put(DataTableColumns.ROW_ETAG, nullString);
@@ -1472,29 +1472,29 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     cvValues.put(DataTableColumns.SAVEPOINT_TYPE, nullString);
     cvValues.put(DataTableColumns.SAVEPOINT_TIMESTAMP, timeStamp);
     cvValues.put(DataTableColumns.SAVEPOINT_CREATOR, nullString);
-    
-   
+
+
     ODKDatabaseUtils.writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues);
-    
+
     // Select everything out of the table
     String sel = "SELECT * FROM " + tableName + " WHERE "+ DataTableColumns.ID + " = ?";
     String[] selArgs = {uuid};
     Cursor cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs);
-    
+
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(DataTableColumns.SAVEPOINT_TIMESTAMP);
       String ts = cursor.getString(ind);
       assertEquals(ts, timeStamp);
-      
+
       ind = cursor.getColumnIndex(DataTableColumns.SYNC_STATE);
       String ss = cursor.getString(ind);
       assertEquals(ss, SyncState.inserting.name());
     }
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test writing writing metadata into an existing table when the rowID is null
    */
@@ -1502,11 +1502,11 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String tableName = testTable;
     String nullString = null;
     boolean thrown = false;
-    
+
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
 
     String timeStamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
-    
+
     ContentValues cvValues = new ContentValues();
     cvValues.put(DataTableColumns.ID, nullString);
     cvValues.put(DataTableColumns.ROW_ETAG, nullString);
@@ -1519,20 +1519,20 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     cvValues.put(DataTableColumns.SAVEPOINT_TYPE, nullString);
     cvValues.put(DataTableColumns.SAVEPOINT_TIMESTAMP, timeStamp);
     cvValues.put(DataTableColumns.SAVEPOINT_CREATOR, nullString);
-    
+
     try {
-      ODKDatabaseUtils.writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues);      
+      ODKDatabaseUtils.writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues);
     } catch (Exception e) {
       thrown = true;
       e.printStackTrace();
     }
 
     assertTrue(thrown);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test writing metadata into the existing db table when sync state is null
    */
@@ -1540,12 +1540,12 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String tableName = testTable;
     String nullString = null;
     boolean thrown = false;
-    
+
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
 
     String uuid = UUID.randomUUID().toString();
     String timeStamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
-    
+
     ContentValues cvValues = new ContentValues();
     cvValues.put(DataTableColumns.ID, uuid);
     cvValues.put(DataTableColumns.ROW_ETAG, nullString);
@@ -1558,20 +1558,20 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     cvValues.put(DataTableColumns.SAVEPOINT_TYPE, nullString);
     cvValues.put(DataTableColumns.SAVEPOINT_TIMESTAMP, timeStamp);
     cvValues.put(DataTableColumns.SAVEPOINT_CREATOR, nullString);
-    
+
     try {
-      ODKDatabaseUtils.writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues);      
+      ODKDatabaseUtils.writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues);
     } catch (Exception e) {
       thrown = true;
       e.printStackTrace();
     }
 
     assertTrue(thrown);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test writing metadata into the existing db table when sync state is null
    */
@@ -1579,11 +1579,11 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String tableName = testTable;
     String nullString = null;
     boolean thrown = false;
-    
+
     ODKDatabaseUtils.createOrOpenDBTable(db, tableName);
 
     String uuid = UUID.randomUUID().toString();
-    
+
     ContentValues cvValues = new ContentValues();
     cvValues.put(DataTableColumns.ID, uuid);
     cvValues.put(DataTableColumns.ROW_ETAG, nullString);
@@ -1596,20 +1596,20 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     cvValues.put(DataTableColumns.SAVEPOINT_TYPE, nullString);
     cvValues.put(DataTableColumns.SAVEPOINT_TIMESTAMP, nullString);
     cvValues.put(DataTableColumns.SAVEPOINT_CREATOR, nullString);
-    
+
     try {
-      ODKDatabaseUtils.writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues);      
+      ODKDatabaseUtils.writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues);
     } catch (Exception e) {
       thrown = true;
       e.printStackTrace();
     }
 
     assertTrue(thrown);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test writing the data into the existing db table with array value
    */
@@ -1620,18 +1620,18 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String testVal = "item";
     LinkedHashMap<String, String> columns = new LinkedHashMap<String,String>();
     columns.put(testCol, testColType);
-    
+
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
-    
+
     ContentValues cvValues = new ContentValues();
     cvValues.put(testCol, testVal);
     ODKDatabaseUtils.writeDataIntoExistingDBTable(db, tableName, cvValues);
-    
+
     // Select everything out of the table
     String sel = "SELECT * FROM " + tableName + " WHERE "+ testCol + " = ?";
     String[] selArgs = {"" + testVal};
     Cursor cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs);
-    
+
     String val = null;
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(testCol);
@@ -1639,14 +1639,14 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       val = cursor.getString(ind);
     }
-    
+
     assertEquals(val, testVal);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
 
-  
+
   /*
    * Test writing the data into the existing db table with boolean value
    */
@@ -1657,18 +1657,18 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     int testVal = 1;
     LinkedHashMap<String, String> columns = new LinkedHashMap<String,String>();
     columns.put(testCol, testColType);
-    
+
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
-    
+
     ContentValues cvValues = new ContentValues();
     cvValues.put(testCol, testVal);
     ODKDatabaseUtils.writeDataIntoExistingDBTable(db, tableName, cvValues);
-    
+
     // Select everything out of the table
     String sel = "SELECT * FROM " + tableName + " WHERE "+ testCol + " = ?";
     String[] selArgs = {"" + testVal};
     Cursor cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs);
-    
+
     int val = 0;
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(testCol);
@@ -1676,13 +1676,13 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
       val = cursor.getInt(ind);
     }
-    
+
     assertEquals(val, testVal);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
    * Test writing the data into the existing db table with valid values
    */
@@ -1693,18 +1693,18 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String testVal = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
     LinkedHashMap<String, String> columns = new LinkedHashMap<String,String>();
     columns.put(testCol, testColType);
-    
+
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
-    
+
     ContentValues cvValues = new ContentValues();
     cvValues.put(testCol, testVal);
     ODKDatabaseUtils.writeDataIntoExistingDBTable(db, tableName, cvValues);
-    
+
     // Select everything out of the table
     String sel = "SELECT * FROM " + tableName + " WHERE "+ testCol + " = ?";
     String[] selArgs = {"" + testVal};
     Cursor cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs);
-    
+
     String val = null;
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(testCol);
@@ -1712,15 +1712,15 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       val = cursor.getString(ind);
     }
-    
+
     assertEquals(val, testVal);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
-   * Test writing the data into the existing db table with datetime 
+   * Test writing the data into the existing db table with datetime
    */
   public void testWriteDataIntoExisitingDbTableWithDatetime_ExpectPass() {
     String tableName = testTable;
@@ -1729,18 +1729,18 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String testVal = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
     LinkedHashMap<String, String> columns = new LinkedHashMap<String,String>();
     columns.put(testCol, testColType);
-    
+
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
-    
+
     ContentValues cvValues = new ContentValues();
     cvValues.put(testCol, testVal);
     ODKDatabaseUtils.writeDataIntoExistingDBTable(db, tableName, cvValues);
-    
+
     // Select everything out of the table
     String sel = "SELECT * FROM " + tableName + " WHERE "+ testCol + " = ?";
     String[] selArgs = {"" + testVal};
     Cursor cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs);
-    
+
     String val = null;
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(testCol);
@@ -1748,15 +1748,15 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       val = cursor.getString(ind);
     }
-    
+
     assertEquals(val, testVal);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
-   * Test writing the data into the existing db table with geopoint 
+   * Test writing the data into the existing db table with geopoint
    */
   public void testWriteDataIntoExisitingDbTableWithGeopoint_ExpectPass() {
     String tableName = testTable;
@@ -1772,22 +1772,22 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String testColType = ODKDatabaseUserDefinedTypes.GEOPOINT;
     LinkedHashMap<String, String> columns = new LinkedHashMap<String,String>();
     columns.put(testCol, testColType);
-    
+
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
-    
+
     ContentValues cvValues = new ContentValues();
     cvValues.put(testColLat, pos_lat);
     cvValues.put(testColLong, pos_long);
     cvValues.put(testColAlt, pos_alt);
     cvValues.put(testColAcc, pos_acc);
-    
+
     ODKDatabaseUtils.writeDataIntoExistingDBTable(db, tableName, cvValues);
-    
+
     // Select everything out of the table
     String sel = "SELECT * FROM " + tableName + " WHERE "+ testColLat + " = ?";
     String[] selArgs = {"" + pos_lat};
     Cursor cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs);
-    
+
     double valLat = 0;
     double valLong = 0;
     double valAlt = 0;
@@ -1797,34 +1797,34 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       int type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_FLOAT);
       valLat = cursor.getDouble(ind);
-      
+
       ind = cursor.getColumnIndex(testColLong);
       type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_FLOAT);
       valLong = cursor.getDouble(ind);
-      
+
       ind = cursor.getColumnIndex(testColAlt);
       type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_FLOAT);
       valAlt = cursor.getDouble(ind);
-      
+
       ind = cursor.getColumnIndex(testColAcc);
       type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_FLOAT);
       valAcc = cursor.getDouble(ind);
     }
-    
+
     assertEquals(valLat, pos_lat);
     assertEquals(valLong, pos_long);
     assertEquals(valAlt, pos_alt);
     assertEquals(valAcc, pos_acc);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
-   * Test writing the data into the existing db table with integer 
+   * Test writing the data into the existing db table with integer
    */
   public void testWriteDataIntoExisitingDbTableWithInteger_ExpectPass() {
     String tableName = testTable;
@@ -1833,18 +1833,18 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     int testVal = 5;
     LinkedHashMap<String, String> columns = new LinkedHashMap<String,String>();
     columns.put(testCol, testColType);
-    
+
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
-    
+
     ContentValues cvValues = new ContentValues();
     cvValues.put(testCol, testVal);
     ODKDatabaseUtils.writeDataIntoExistingDBTable(db, tableName, cvValues);
-    
+
     // Select everything out of the table
     String sel = "SELECT * FROM " + tableName + " WHERE "+ testCol + " = ?";
     String[] selArgs = {"" + testVal};
     Cursor cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs);
-    
+
     int val = 0;
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(testCol);
@@ -1852,15 +1852,15 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
       val = cursor.getInt(ind);
     }
-    
+
     assertEquals(val, testVal);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
-   * Test writing the data into the existing db table with mimeUri 
+   * Test writing the data into the existing db table with mimeUri
    */
   public void testWriteDataIntoExisitingDbTableWithMimeUri_ExpectPass() {
     String tableName = testTable;
@@ -1882,18 +1882,18 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String testVal = null;
     LinkedHashMap<String, String> columns = new LinkedHashMap<String,String>();
     columns.put(testCol, testColType);
-    
+
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
-    
+
     ContentValues cvValues = new ContentValues();
     cvValues.put(testCol, picJsonStr);
     ODKDatabaseUtils.writeDataIntoExistingDBTable(db, tableName, cvValues);
-    
+
     // Select everything out of the table
     String sel = "SELECT * FROM " + tableName + " WHERE "+ testCol + " = ?";
     String[] selArgs = {"" + testVal};
     Cursor cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs);
-    
+
     String val = null;
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(testCol);
@@ -1901,15 +1901,15 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       val = cursor.getString(ind);
     }
-    
+
     assertEquals(val, testVal);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
-   * Test writing the data into the existing db table with number 
+   * Test writing the data into the existing db table with number
    */
   public void testWriteDataIntoExisitingDbTableWithNumber_ExpectPass() {
     String tableName = testTable;
@@ -1918,18 +1918,18 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     double testVal = 5.5;
     LinkedHashMap<String, String> columns = new LinkedHashMap<String,String>();
     columns.put(testCol, testColType);
-    
+
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
-    
+
     ContentValues cvValues = new ContentValues();
     cvValues.put(testCol, testVal);
     ODKDatabaseUtils.writeDataIntoExistingDBTable(db, tableName, cvValues);
-    
+
     // Select everything out of the table
     String sel = "SELECT * FROM " + tableName + " WHERE "+ testCol + " = ?";
     String[] selArgs = {"" + testVal};
     Cursor cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs);
-    
+
     double val = 0;
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(testCol);
@@ -1937,15 +1937,15 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_FLOAT);
       val = cursor.getDouble(ind);
     }
-    
+
     assertEquals(val, testVal);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
-   * Test writing the data into the existing db table with string 
+   * Test writing the data into the existing db table with string
    */
   public void testWriteDataIntoExisitingDbTableWithString_ExpectPass() {
     String tableName = testTable;
@@ -1954,18 +1954,18 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String testVal = "test";
     LinkedHashMap<String, String> columns = new LinkedHashMap<String,String>();
     columns.put(testCol, testColType);
-    
+
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
-    
+
     ContentValues cvValues = new ContentValues();
     cvValues.put(testCol, testVal);
     ODKDatabaseUtils.writeDataIntoExistingDBTable(db, tableName, cvValues);
-    
+
     // Select everything out of the table
     String sel = "SELECT * FROM " + tableName + " WHERE "+ testCol + " = ?";
     String[] selArgs = {"" + testVal};
     Cursor cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs);
-    
+
     String val = null;
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(testCol);
@@ -1973,15 +1973,15 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       val = cursor.getString(ind);
     }
-    
+
     assertEquals(val, testVal);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
-  
+
   /*
-   * Test writing the data into the existing db table with time 
+   * Test writing the data into the existing db table with time
    */
   public void testWriteDataIntoExisitingDbTableWithTime_ExpectPass() {
     String tableName = testTable;
@@ -1990,7 +1990,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String interMed = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
     int pos = interMed.indexOf('T');
     String testVal = null;
-    
+
     if (pos > -1) {
       testVal = interMed.substring(pos+1);
     } else {
@@ -1999,21 +1999,21 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     }
 
     Log.i(TAG, "Time string is " + testVal);
-    
+
     LinkedHashMap<String, String> columns = new LinkedHashMap<String,String>();
     columns.put(testCol, testColType);
-    
+
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
-    
+
     ContentValues cvValues = new ContentValues();
     cvValues.put(testCol, testVal);
     ODKDatabaseUtils.writeDataIntoExistingDBTable(db, tableName, cvValues);
-    
+
     // Select everything out of the table
     String sel = "SELECT * FROM " + tableName + " WHERE "+ testCol + " = ?";
     String[] selArgs = {"" + testVal};
     Cursor cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs);
-    
+
     String val = null;
     while (cursor.moveToNext()) {
       int ind = cursor.getColumnIndex(testCol);
@@ -2021,9 +2021,9 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       val = cursor.getString(ind);
     }
-    
+
     assertEquals(val, testVal);
-    
+
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
@@ -2031,5 +2031,5 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
   public void testFailureForCheckins() {
     assertTrue(true);
   }
-  
+
 }

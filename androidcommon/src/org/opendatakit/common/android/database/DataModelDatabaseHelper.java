@@ -28,7 +28,7 @@ import org.opendatakit.common.android.provider.FormsColumns;
 import org.opendatakit.common.android.provider.InstanceColumns;
 import org.opendatakit.common.android.provider.KeyValueStoreColumns;
 import org.opendatakit.common.android.provider.TableDefinitionsColumns;
-import org.opendatakit.common.android.utilities.ODKFileUtils;
+import org.opendatakit.common.android.utilities.ODKDatabaseUtils;
 
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -161,7 +161,7 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
 
       if (c.moveToFirst()) {
         int idx = c.getColumnIndex(TableDefinitionsColumns.DB_TABLE_NAME);
-        return c.getString(idx);
+        return ODKDatabaseUtils.getIndexAsString(c, idx);
       }
     } finally {
       if (c != null && !c.isClosed()) {
@@ -209,9 +209,10 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
         int idxTableId = c.getColumnIndex(FormsColumns.TABLE_ID);
         int idxInstanceName = c.getColumnIndex(FormsColumns.INSTANCE_NAME);
 
-        return new IdInstanceNameStruct(c.getInt(idxId), c.getString(idxFormId),
-                      c.getString(idxTableId),
-                      c.isNull(idxInstanceName) ? null : c.getString(idxInstanceName));
+        return new IdInstanceNameStruct(c.getInt(idxId),
+            ODKDatabaseUtils.getIndexAsString(c, idxFormId),
+            ODKDatabaseUtils.getIndexAsString(c, idxTableId),
+            ODKDatabaseUtils.getIndexAsString(c, idxInstanceName));
       }
     } finally {
       if (c != null && !c.isClosed()) {
@@ -347,19 +348,14 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
         HashMap<String, ColumnContainer> ref = new HashMap<String, ColumnContainer>();
 
         do {
-          String elementKey = c.getString(idxEK);
-          String elementName = c.getString(idxEN);
-          String elementType = c.getString(idxET);
-          boolean isUnitOfRetention = (c.getInt(idxIP) != 0);
-          String childrenString = c.isNull(idxLIST) ? null : c.getString(idxLIST);
+          String elementKey = ODKDatabaseUtils.getIndexAsString(c, idxEK);
+          String elementName = ODKDatabaseUtils.getIndexAsString(c, idxEN);
+          String elementType = ODKDatabaseUtils.getIndexAsString(c, idxET);
+          Boolean isUnitOfRetention = ODKDatabaseUtils.getIndexAsType(c, Boolean.class, idxIP);
+          ArrayList<String> children = ODKDatabaseUtils.getIndexAsType(c, ArrayList.class, idxLIST);
           ColumnContainer ctn = new ColumnContainer();
           ctn.defn = new ColumnDefinition(elementKey, elementName, elementType, isUnitOfRetention);
-
-          if (childrenString != null) {
-            @SuppressWarnings("unchecked")
-            ArrayList<String> l = ODKFileUtils.mapper.readValue(childrenString, ArrayList.class);
-            ctn.children = l;
-          }
+          ctn.children = children;
 
           ref.put(elementKey, ctn);
         } while (c.moveToNext());

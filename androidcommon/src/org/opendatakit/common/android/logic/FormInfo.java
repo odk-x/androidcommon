@@ -25,6 +25,7 @@ import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.opendatakit.common.android.R;
 import org.opendatakit.common.android.provider.FormsColumns;
+import org.opendatakit.common.android.utilities.ODKDatabaseUtils;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 
 import android.content.Context;
@@ -172,28 +173,28 @@ public class FormInfo {
   public FormInfo(String appName, Cursor c, boolean parseFormDef) {
     this.appName = appName;
 
-    formPath = c.getString(c.getColumnIndex(FormsColumns.FORM_PATH));
-    appRelativeFormMediaPath = c.getString(c.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH));
-    appRelativeFormFilePath = c.getString(c.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_FILE_PATH));
+    formPath = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_PATH));
+    appRelativeFormMediaPath = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH));
+    appRelativeFormFilePath = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_FILE_PATH));
 
     File formFolder = ODKFileUtils.asAppFile(appName, appRelativeFormMediaPath);
     formDefFile = new File( formFolder, ODKFileUtils.FORMDEF_JSON_FILENAME);
 
-    lastModificationDate = c.getLong(c.getColumnIndex(FormsColumns.DATE));
-    formId = c.getString(c.getColumnIndex(FormsColumns.FORM_ID));
-    formVersion = c.getString(c.getColumnIndex(FormsColumns.FORM_VERSION));
-    tableId = c.getString(c.getColumnIndex(FormsColumns.TABLE_ID));
-    formTitle = c.getString(c.getColumnIndex(FormsColumns.DISPLAY_NAME));
-    description = c.getString(c.getColumnIndex(FormsColumns.DESCRIPTION));
-    displaySubtext = c.getString(c.getColumnIndex(FormsColumns.DISPLAY_SUBTEXT));
-    defaultLocale = c.getString(c.getColumnIndex(FormsColumns.DEFAULT_FORM_LOCALE));
-    instanceName = c.getString(c.getColumnIndex(FormsColumns.INSTANCE_NAME));
-    xmlSubmissionUrl = c.getString(c.getColumnIndex(FormsColumns.XML_SUBMISSION_URL));
-    xmlBase64RsaPublicKey = c.getString(c.getColumnIndex(FormsColumns.XML_BASE64_RSA_PUBLIC_KEY));
-    xmlDeviceIdPropertyName = c.getString(c
+    lastModificationDate = ODKDatabaseUtils.getIndexAsType(c, Long.class, c.getColumnIndex(FormsColumns.DATE));
+    formId = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_ID));
+    formVersion = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_VERSION));
+    tableId = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.TABLE_ID));
+    formTitle = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.DISPLAY_NAME));
+    description = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.DESCRIPTION));
+    displaySubtext = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.DISPLAY_SUBTEXT));
+    defaultLocale = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.DEFAULT_FORM_LOCALE));
+    instanceName = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.INSTANCE_NAME));
+    xmlSubmissionUrl = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.XML_SUBMISSION_URL));
+    xmlBase64RsaPublicKey = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.XML_BASE64_RSA_PUBLIC_KEY));
+    xmlDeviceIdPropertyName = ODKDatabaseUtils.getIndexAsString(c, c
         .getColumnIndex(FormsColumns.XML_DEVICE_ID_PROPERTY_NAME));
-    xmlUserIdPropertyName = c.getString(c.getColumnIndex(FormsColumns.XML_USER_ID_PROPERTY_NAME));
-    xmlRootElementName = c.getString(c.getColumnIndex(FormsColumns.XML_ROOT_ELEMENT_NAME));
+    xmlUserIdPropertyName = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.XML_USER_ID_PROPERTY_NAME));
+    xmlRootElementName = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.XML_ROOT_ELEMENT_NAME));
 
     if (parseFormDef && !formDefFile.exists()) {
       throw new IllegalArgumentException("File does not exist! " + formDefFile.getAbsolutePath());
