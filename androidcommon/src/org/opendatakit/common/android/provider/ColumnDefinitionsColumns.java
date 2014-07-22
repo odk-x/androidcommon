@@ -29,9 +29,6 @@ public class ColumnDefinitionsColumns implements BaseColumns {
   // list_child_element_keys can be null
   // json array of [element_key] entries
   public static final String LIST_CHILD_ELEMENT_KEYS = "_list_child_element_keys";
-  // _is_unit_of_retention cannot be null
-  // integer interpreted as a boolean value
-  public static final String IS_UNIT_OF_RETENTION = "_is_unit_of_retention";
 
   // This class cannot be instantiated
   private ColumnDefinitionsColumns() {
@@ -50,8 +47,7 @@ public class ColumnDefinitionsColumns implements BaseColumns {
 				+ ELEMENT_NAME + " TEXT NOT NULL, "
 				+ ELEMENT_TYPE + " TEXT NOT NULL, "
 				+ LIST_CHILD_ELEMENT_KEYS + " TEXT NULL, "
-				+ IS_UNIT_OF_RETENTION	+ " INTEGER NOT NULL, " +
-				"PRIMARY KEY ( " + TABLE_ID + ", " + ELEMENT_KEY + ") )";
+				+ "PRIMARY KEY ( " + TABLE_ID + ", " + ELEMENT_KEY + ") )";
 		//@formatter:on
   }
 }

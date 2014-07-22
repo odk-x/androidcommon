@@ -226,16 +226,14 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
     public final String elementKey;
     public final String elementName;
     public final String elementType;
-    public final boolean isUnitOfRetention;
 
     public final ArrayList<ColumnDefinition> children = new ArrayList<ColumnDefinition>();
     public ColumnDefinition parent = null;
 
-    ColumnDefinition(String elementKey, String elementName, String elementType, boolean isUnitOfRetention) {
+    ColumnDefinition(String elementKey, String elementName, String elementType) {
       this.elementKey = elementKey;
       this.elementName = elementName;
       this.elementType = elementType;
-      this.isUnitOfRetention = isUnitOfRetention;
     }
 
     private void setParent(ColumnDefinition parent) {
@@ -246,6 +244,17 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
       child.setParent(this);
       children.add(child);
     }
+
+    public boolean isUnitOfRetention() {
+      if ( "array".equals(elementType) ) {
+        return true;
+      }
+      if ( children.isEmpty() ) {
+        return true;
+      }
+      return false;
+    }
+
   };
 
   private static class ColumnContainer {
@@ -277,23 +286,23 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
     if (c.elementType.equals("string")) {
       jsonSchema.put("type", "string");
       jsonSchema.put("elementKey", c.elementKey);
-      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention);
+      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention());
     } else if (c.elementType.equals("number")) {
       jsonSchema.put("type", "number");
       jsonSchema.put("elementKey", c.elementKey);
-      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention);
+      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention());
     } else if (c.elementType.equals("integer")) {
       jsonSchema.put("type", "integer");
       jsonSchema.put("elementKey", c.elementKey);
-      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention);
+      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention());
     } else if (c.elementType.equals("boolean")) {
       jsonSchema.put("type", "boolean");
       jsonSchema.put("elementKey", c.elementKey);
-      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention);
+      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention());
     } else if (c.elementType.equals("array")) {
       jsonSchema.put("type", "array");
       jsonSchema.put("elementKey", c.elementKey);
-      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention);
+      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention());
       ColumnDefinition ch = c.children.get(0);
       jsonSchema.put("items", new TreeMap<String, Object>());
       @SuppressWarnings("unchecked")
@@ -305,7 +314,7 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
         jsonSchema.put("elementType", c.elementType);
       }
       jsonSchema.put("elementKey", c.elementKey);
-      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention);
+      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention());
       jsonSchema.put("properties", new TreeMap<String, Object>());
       @SuppressWarnings("unchecked")
       TreeMap<String, Object> propertiesSchema = (TreeMap<String, Object>) jsonSchema
@@ -343,7 +352,6 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
         int idxEK = c.getColumnIndex(ColumnDefinitionsColumns.ELEMENT_KEY);
         int idxEN = c.getColumnIndex(ColumnDefinitionsColumns.ELEMENT_NAME);
         int idxET = c.getColumnIndex(ColumnDefinitionsColumns.ELEMENT_TYPE);
-        int idxIP = c.getColumnIndex(ColumnDefinitionsColumns.IS_UNIT_OF_RETENTION);
         int idxLIST = c.getColumnIndex(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS);
         HashMap<String, ColumnContainer> ref = new HashMap<String, ColumnContainer>();
 
@@ -351,10 +359,9 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
           String elementKey = ODKDatabaseUtils.getIndexAsString(c, idxEK);
           String elementName = ODKDatabaseUtils.getIndexAsString(c, idxEN);
           String elementType = ODKDatabaseUtils.getIndexAsString(c, idxET);
-          Boolean isUnitOfRetention = ODKDatabaseUtils.getIndexAsType(c, Boolean.class, idxIP);
           ArrayList<String> children = ODKDatabaseUtils.getIndexAsType(c, ArrayList.class, idxLIST);
           ColumnContainer ctn = new ColumnContainer();
-          ctn.defn = new ColumnDefinition(elementKey, elementName, elementType, isUnitOfRetention);
+          ctn.defn = new ColumnDefinition(elementKey, elementName, elementType);
           ctn.children = children;
 
           ref.put(elementKey, ctn);

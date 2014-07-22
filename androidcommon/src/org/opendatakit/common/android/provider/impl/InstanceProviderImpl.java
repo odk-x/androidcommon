@@ -197,7 +197,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
        .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_CREATOR).append(",");
       // add the user-specified data fields in this dataTable
       for ( ColumnDefinition cd : defns.values() ) {
-        if ( cd.isUnitOfRetention ) {
+        if ( cd.isUnitOfRetention() ) {
           b.append(dbTableName).append(".")
            .append(cd.elementKey).append(",");
         }

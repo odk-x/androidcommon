@@ -11,6 +11,7 @@ import java.util.Map.Entry;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.opendatakit.aggregate.odktables.rest.SyncState;
 import org.opendatakit.aggregate.odktables.rest.TableConstants;
+import org.opendatakit.common.android.provider.ColumnDefinitionsColumns;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.utilities.ODKDatabaseUserDefinedTypes;
 import org.opendatakit.common.android.utilities.ODKDatabaseUtils;
@@ -47,7 +48,6 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
   private static final String elemKey = "_element_key";
   private static final String elemName = "_element_name";
   private static final String listChildElemKeys = "_list_child_element_keys";
-  private static final String isUnitRet = "_is_unit_of_retention";
 
 
   private static class DatabaseHelper extends SQLiteOpenHelper {
@@ -58,10 +58,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-      String createColCmd = "CREATE TABLE " + colDefTable + " (" +
-        "_table_id TEXT NOT NULL, _element_key TEXT NOT NULL, _element_name TEXT NOT NULL, " +
-        "_element_type TEXT NOT NULL, _list_child_element_keys TEXT NULL, _is_unit_of_retention " +
-        "INTEGER NOT NULL, PRIMARY KEY ( _table_id, _element_key) );";
+      String createColCmd = ColumnDefinitionsColumns.getTableCreateSql(colDefTable);
 
       try {
         db.execSQL(createColCmd);
@@ -470,12 +467,6 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       String valStr = cursor.getString(ind);
       String testVal = "[\"" + testColItems + "\"]";
       assertEquals(valStr, testVal);
-
-      ind = cursor.getColumnIndex(isUnitRet);
-      type = cursor.getType(ind);
-      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
-      int val = cursor.getInt(ind);
-      assertEquals(val, 1);
     }
 
     // Select everything out of the table
@@ -490,12 +481,6 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, itemsStr);
-
-      ind = cursor.getColumnIndex(isUnitRet);
-      type = cursor.getType(ind);
-      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
-      int val = cursor.getInt(ind);
-      assertEquals(val, 0);
     }
 
     // Drop the table now that the test is done
@@ -706,12 +691,6 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       String valStr = cursor.getString(ind);
       String testVal = "[\"" + testColUriFrag + "\",\"" + testColContType + "\"]";
       assertEquals(valStr, testVal);
-
-      ind = cursor.getColumnIndex(isUnitRet);
-      type = cursor.getType(ind);
-      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
-      int val = cursor.getInt(ind);
-      assertEquals(val, 1);
     }
 
     // Select everything out of the table for uriFragment
@@ -726,12 +705,6 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, uriFrag);
-
-      ind = cursor.getColumnIndex(isUnitRet);
-      type = cursor.getType(ind);
-      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
-      int val = cursor.getInt(ind);
-      assertEquals(val, 0);
     }
 
     // Select everything out of the table for contentType
@@ -746,12 +719,6 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, conType);
-
-      ind = cursor.getColumnIndex(isUnitRet);
-      type = cursor.getType(ind);
-      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
-      int val = cursor.getInt(ind);
-      assertEquals(val, 0);
     }
 
     // Drop the table now that the test is done
@@ -966,12 +933,6 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       String valStr = cursor.getString(ind);
       String testVal = "[\"" + testColItems + "\"]";
       assertEquals(valStr, testVal);
-
-      ind = cursor.getColumnIndex(isUnitRet);
-      type = cursor.getType(ind);
-      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
-      int val = cursor.getInt(ind);
-      assertEquals(val, 1);
     }
 
     // Select everything out of the table
@@ -986,12 +947,6 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, itemsStr);
-
-      ind = cursor.getColumnIndex(isUnitRet);
-      type = cursor.getType(ind);
-      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
-      int val = cursor.getInt(ind);
-      assertEquals(val, 0);
     }
 
     // Drop the table now that the test is done
@@ -1166,12 +1121,6 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       String valStr = cursor.getString(ind);
       String testVal = "[\"" + testColLat + "\",\"" + testColLng + "\",\"" + testColAlt + "\",\"" + testColAcc + "\"]";
       assertEquals(valStr, testVal);
-
-      ind = cursor.getColumnIndex(isUnitRet);
-      type = cursor.getType(ind);
-      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
-      int val = cursor.getInt(ind);
-      assertEquals(val, 0);
     }
 
     // Select everything out of the table for lat
@@ -1186,12 +1135,6 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, lat);
-
-      ind = cursor.getColumnIndex(isUnitRet);
-      type = cursor.getType(ind);
-      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
-      int val = cursor.getInt(ind);
-      assertEquals(val, 1);
     }
 
     // Select everything out of the table for long
@@ -1206,12 +1149,6 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, lng);
-
-      ind = cursor.getColumnIndex(isUnitRet);
-      type = cursor.getType(ind);
-      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
-      int val = cursor.getInt(ind);
-      assertEquals(val, 1);
     }
 
     // Select everything out of the table for alt
@@ -1226,12 +1163,6 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, alt);
-
-      ind = cursor.getColumnIndex(isUnitRet);
-      type = cursor.getType(ind);
-      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
-      int val = cursor.getInt(ind);
-      assertEquals(val, 1);
     }
 
     // Select everything out of the table for acc
@@ -1246,12 +1177,6 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, acc);
-
-      ind = cursor.getColumnIndex(isUnitRet);
-      type = cursor.getType(ind);
-      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
-      int val = cursor.getInt(ind);
-      assertEquals(val, 1);
     }
 
     // Drop the table now that the test is done
@@ -1296,12 +1221,6 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       String valStr = cursor.getString(ind);
       String testVal = "[\"" + testColUriFrag + "\",\"" + testColContType + "\"]";
       assertEquals(valStr, testVal);
-
-      ind = cursor.getColumnIndex(isUnitRet);
-      type = cursor.getType(ind);
-      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
-      int val = cursor.getInt(ind);
-      assertEquals(val, 1);
     }
 
     // Select everything out of the table for uriFragment
@@ -1316,12 +1235,6 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, uriFrag);
-
-      ind = cursor.getColumnIndex(isUnitRet);
-      type = cursor.getType(ind);
-      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
-      int val = cursor.getInt(ind);
-      assertEquals(val, 0);
     }
 
     // Select everything out of the table for contentType
@@ -1336,12 +1249,6 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
       String valStr = cursor.getString(ind);
       assertEquals(valStr, conType);
-
-      ind = cursor.getColumnIndex(isUnitRet);
-      type = cursor.getType(ind);
-      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
-      int val = cursor.getInt(ind);
-      assertEquals(val, 0);
     }
 
     // Drop the table now that the test is done

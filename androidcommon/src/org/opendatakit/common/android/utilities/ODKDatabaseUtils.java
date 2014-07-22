@@ -106,14 +106,17 @@ public class ODKDatabaseUtils {
   public static final LinkedHashMap<String, String> getUserDefinedColumnsAndTypes(
       SQLiteDatabase db, String tableName) {
     LinkedHashMap<String, String> userDefinedColumns = new LinkedHashMap<String, String>();
-    String selection = "_table_id=? AND _is_unit_of_retention=?";
-    String[] selectionArgs = { tableName, "1" };
-    String[] cols = { "_element_key", "_element_type" };
+    String selection = ColumnDefinitionsColumns.TABLE_ID + "=? AND (" +
+        ColumnDefinitionsColumns.ELEMENT_TYPE + "=? OR " +
+        ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS + " IS NULL OR " +
+        ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS + "=?)";
+    String[] selectionArgs = { tableName, "array", "[]" };
+    String[] cols = { ColumnDefinitionsColumns.ELEMENT_KEY, ColumnDefinitionsColumns.ELEMENT_TYPE };
     Cursor c = db.query(DataModelDatabaseHelper.COLUMN_DEFINITIONS_TABLE_NAME, cols, selection,
         selectionArgs, null, null, null);
 
-    int elemKeyIndex = c.getColumnIndexOrThrow("_element_key");
-    int elemTypeIndex = c.getColumnIndexOrThrow("_element_type");
+    int elemKeyIndex = c.getColumnIndexOrThrow(ColumnDefinitionsColumns.ELEMENT_KEY);
+    int elemTypeIndex = c.getColumnIndexOrThrow(ColumnDefinitionsColumns.ELEMENT_TYPE);
     c.moveToFirst();
     while (!c.isAfterLast()) {
       userDefinedColumns.put(getIndexAsString(c, elemKeyIndex), getIndexAsString(c, elemTypeIndex));
@@ -610,7 +613,6 @@ public class ODKDatabaseUtils {
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.MIMEURI);
       cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[\"" + colNameUriFrag
           + "\",\"" + colNameConType + "\"]");
-      cvColDefVal.put(ColumnDefinitionsColumns.IS_UNIT_OF_RETENTION, 1);
       cvColDefValArray.add(cvColDefVal);
 
       cvColDefVal = new ContentValues();
@@ -618,8 +620,7 @@ public class ODKDatabaseUtils {
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colNameUriFrag);
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, uriFrag);
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.STRING);
-      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "null");
-      cvColDefVal.put(ColumnDefinitionsColumns.IS_UNIT_OF_RETENTION, 0);
+      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[]");
       cvColDefValArray.add(cvColDefVal);
 
       cvColDefVal = new ContentValues();
@@ -627,8 +628,7 @@ public class ODKDatabaseUtils {
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colNameConType);
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, contentType);
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.STRING);
-      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "null");
-      cvColDefVal.put(ColumnDefinitionsColumns.IS_UNIT_OF_RETENTION, 0);
+      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[]");
       cvColDefValArray.add(cvColDefVal);
 
     } else if (colType.equals(ODKDatabaseUserDefinedTypes.ARRAY)) {
@@ -641,7 +641,6 @@ public class ODKDatabaseUtils {
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.ARRAY);
       cvColDefVal
           .put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[\"" + colNameItem + "\"]");
-      cvColDefVal.put(ColumnDefinitionsColumns.IS_UNIT_OF_RETENTION, 1);
       cvColDefValArray.add(cvColDefVal);
 
       cvColDefVal = new ContentValues();
@@ -649,8 +648,7 @@ public class ODKDatabaseUtils {
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colNameItem);
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, itemsStr);
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.STRING);
-      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "null");
-      cvColDefVal.put(ColumnDefinitionsColumns.IS_UNIT_OF_RETENTION, 0);
+      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[]");
       cvColDefValArray.add(cvColDefVal);
 
     } else if (colType.equals(ODKDatabaseUserDefinedTypes.DATE)
@@ -663,7 +661,6 @@ public class ODKDatabaseUtils {
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, colName);
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, colType);
       cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[]");
-      cvColDefVal.put(ColumnDefinitionsColumns.IS_UNIT_OF_RETENTION, 1);
       cvColDefValArray.add(cvColDefVal);
 
     } else if (colType.equals(ODKDatabaseUserDefinedTypes.GEOPOINT)) {
@@ -683,7 +680,6 @@ public class ODKDatabaseUtils {
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.GEOPOINT);
       cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[\"" + colNameLat
           + "\",\"" + colNameLong + "\",\"" + colNameAlt + "\",\"" + colNameAcc + "\"]");
-      cvColDefVal.put(ColumnDefinitionsColumns.IS_UNIT_OF_RETENTION, 0);
       cvColDefValArray.add(cvColDefVal);
 
       cvColDefVal = new ContentValues();
@@ -691,8 +687,7 @@ public class ODKDatabaseUtils {
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colNameLat);
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, latStr);
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.NUMBER);
-      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "null");
-      cvColDefVal.put(ColumnDefinitionsColumns.IS_UNIT_OF_RETENTION, 1);
+      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[]");
       cvColDefValArray.add(cvColDefVal);
 
       cvColDefVal = new ContentValues();
@@ -700,8 +695,7 @@ public class ODKDatabaseUtils {
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colNameLong);
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, longStr);
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.NUMBER);
-      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "null");
-      cvColDefVal.put(ColumnDefinitionsColumns.IS_UNIT_OF_RETENTION, 1);
+      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[]");
       cvColDefValArray.add(cvColDefVal);
 
       cvColDefVal = new ContentValues();
@@ -709,8 +703,7 @@ public class ODKDatabaseUtils {
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colNameAlt);
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, altStr);
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.NUMBER);
-      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "null");
-      cvColDefVal.put(ColumnDefinitionsColumns.IS_UNIT_OF_RETENTION, 1);
+      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[]");
       cvColDefValArray.add(cvColDefVal);
 
       cvColDefVal = new ContentValues();
@@ -718,8 +711,7 @@ public class ODKDatabaseUtils {
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colNameAcc);
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, accStr);
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.NUMBER);
-      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "null");
-      cvColDefVal.put(ColumnDefinitionsColumns.IS_UNIT_OF_RETENTION, 1);
+      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[]");
       cvColDefValArray.add(cvColDefVal);
     } else {
       cvColDefVal = new ContentValues();
@@ -727,8 +719,7 @@ public class ODKDatabaseUtils {
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colName);
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, colName);
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, colType);
-      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "null");
-      cvColDefVal.put(ColumnDefinitionsColumns.IS_UNIT_OF_RETENTION, 1);
+      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[]");
       cvColDefValArray.add(cvColDefVal);
     }
 
