@@ -53,16 +53,6 @@ public final class FormsColumns implements BaseColumns {
   public static final String DEFAULT_FORM_LOCALE = "defaultFormLocale";
   /** column name for the 'instance_name' (display name) of a submission */
   public static final String INSTANCE_NAME = "instanceName";
-  /** ODK1 support - can be null */
-  public static final String XML_SUBMISSION_URL = "xmlSubmissionUrl";
-  /** ODK1 support - can be null */
-  public static final String XML_BASE64_RSA_PUBLIC_KEY = "xmlBase64RsaPublicKey";
-  /** ODK1 support - can be null */
-  public static final String XML_ROOT_ELEMENT_NAME = "xmlRootElementName";
-  /** ODK1 support - can be null */
-  public static final String XML_DEVICE_ID_PROPERTY_NAME = "xmlDeviceIdPropertyName";
-  /** ODK1 support - can be null */
-  public static final String XML_USER_ID_PROPERTY_NAME = "xmlUserIdPropertyName";
 
   // these are generated for you (but you can insert something else if you
   // want)
@@ -75,8 +65,7 @@ public final class FormsColumns implements BaseColumns {
   public static final String[] formsDataColumnNames = { DISPLAY_NAME, DISPLAY_SUBTEXT, DESCRIPTION,
       TABLE_ID, FORM_ID, FORM_VERSION, APP_RELATIVE_FORM_FILE_PATH, APP_RELATIVE_FORM_MEDIA_PATH, FORM_PATH, MD5_HASH,
       JSON_MD5_HASH, DATE,
-      DEFAULT_FORM_LOCALE, INSTANCE_NAME, XML_SUBMISSION_URL, XML_BASE64_RSA_PUBLIC_KEY,
-      XML_DEVICE_ID_PROPERTY_NAME, XML_USER_ID_PROPERTY_NAME, XML_ROOT_ELEMENT_NAME };
+      DEFAULT_FORM_LOCALE, INSTANCE_NAME };
 
   /**
    * Get the create sql for the forms table (ODK Survey only).
@@ -99,13 +88,7 @@ public final class FormsColumns implements BaseColumns {
 	            + MD5_HASH + " text not null, "
 	            + JSON_MD5_HASH + " text not null, "
 	            + DATE + " integer not null, " // milliseconds
-	            + DEFAULT_FORM_LOCALE + " text, "
-	            + INSTANCE_NAME + " text, "
-	            + XML_SUBMISSION_URL + " text, "
-	            + XML_BASE64_RSA_PUBLIC_KEY + " text, "
-	            + XML_ROOT_ELEMENT_NAME + " text, "
-	            + XML_DEVICE_ID_PROPERTY_NAME + " text, "
-	            + XML_USER_ID_PROPERTY_NAME + " text )";
+	            + DEFAULT_FORM_LOCALE + " text )";
        //@formatter:on
   }
 

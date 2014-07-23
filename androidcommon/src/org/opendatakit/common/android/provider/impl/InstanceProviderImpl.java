@@ -28,6 +28,7 @@ import java.util.Map;
 import org.apache.commons.io.FileUtils;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
+import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.aggregate.odktables.rest.TableConstants;
 import org.opendatakit.common.android.R;
 import org.opendatakit.common.android.database.DataModelDatabaseHelper;
@@ -35,7 +36,9 @@ import org.opendatakit.common.android.database.DataModelDatabaseHelper.ColumnDef
 import org.opendatakit.common.android.database.DataModelDatabaseHelper.IdInstanceNameStruct;
 import org.opendatakit.common.android.database.DataModelDatabaseHelperFactory;
 import org.opendatakit.common.android.provider.DataTableColumns;
+import org.opendatakit.common.android.provider.FormsColumns;
 import org.opendatakit.common.android.provider.InstanceColumns;
+import org.opendatakit.common.android.provider.KeyValueStoreColumns;
 import org.opendatakit.common.android.utilities.ODKDatabaseUtils;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 
@@ -89,7 +92,8 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     String appName = segments.get(0);
     ODKFileUtils.verifyExternalStorageAvailability();
     ODKFileUtils.assertDirectoryStructure(appName);
-    String uriFormId = segments.get(1);
+    String tableId = segments.get(1);
+    String instanceName = null;
     // _ID in UPLOADS_TABLE_NAME
     String instanceId = (segments.size() == 3 ? segments.get(2) : null);
 
@@ -107,25 +111,36 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       db = dbh.getWritableDatabase();
       db.beginTransaction();
 
-      IdInstanceNameStruct ids;
       try {
-        ids = DataModelDatabaseHelper.getIds(db, uriFormId);
-      } catch ( Exception e ) {
-        throw new SQLException("Unable to retrieve formId " + uri);
-      }
+        c = db.query(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME,
+            new String[] {KeyValueStoreColumns.VALUE},
+            KeyValueStoreColumns.TABLE_ID + "=? AND " +
+            KeyValueStoreColumns.PARTITION + "=? AND " +
+            KeyValueStoreColumns.ASPECT + "=? AND " +
+            KeyValueStoreColumns.KEY + "=?",
+            new String[] {tableId,
+            KeyValueStoreConstants.PARTITION_TABLE,
+            KeyValueStoreConstants.ASPECT_DEFAULT,
+            KeyValueStoreConstants.XML_INSTANCE_NAME
+            }, null, null, null);
 
-      if (ids == null) {
-        throw new SQLException("Unknown URI (no matching formId) " + uri);
+        if ( c.getCount() == 1 ) {
+          c.moveToFirst();
+          int idxInstanceName = c.getColumnIndex(KeyValueStoreColumns.VALUE);
+          instanceName = c.getString(idxInstanceName);
+        }
+      } finally {
+        c.close();
       }
       String dbTableName;
       try {
-        dbTableName = DataModelDatabaseHelper.getDbTableName(db, ids.tableId);
+        dbTableName = DataModelDatabaseHelper.getDbTableName(db,tableId);
       } catch ( Exception e ) {
         e.printStackTrace();
-        throw new SQLException("Unknown URI (exception retrieving data table for formId) " + uri);
+        throw new SQLException("Unknown URI (exception retrieving data table for tableId) " + uri);
       }
       if (dbTableName == null) {
-        throw new SQLException("Unknown URI (missing data table for formId) " + uri);
+        throw new SQLException("Unknown URI (missing data table for tableId) " + uri);
       }
 
       dbTableName = "\"" + dbTableName + "\"";
@@ -136,41 +151,36 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       //@formatter:off
       b.append("INSERT INTO ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append("(")
           .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
-          .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
-          .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(") ").append("SELECT ")
+          .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(") ").append("SELECT ")
           .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
-          .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
-          .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(" FROM (")
+          .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(" FROM (")
             .append("SELECT DISTINCT ").append(DATA_TABLE_ID_COLUMN).append(" as ")
             .append(InstanceColumns.DATA_INSTANCE_ID).append(",").append("? as ")
-            .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
-            .append(DataTableColumns.FORM_ID).append(" as ")
-            .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(" FROM ")
+            .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(" FROM ")
             .append(dbTableName).append(" EXCEPT SELECT DISTINCT ")
             .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
-            .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(",")
-            .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(" FROM ")
+            .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(" FROM ")
             .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(")");
       //@formatter:on
 
       // TODO: should we collapse across FORM_ID or leave it this way?
-      String[] args = { ids.tableId };
+      String[] args = { tableId };
       db.execSQL(b.toString(), args);
 
       // Can't get away with dataTable.* because of collision with _ID column
       // get map of (elementKey -> ColumnDefinition)
       Map<String, ColumnDefinition> defns;
       try {
-        defns = DataModelDatabaseHelper.getColumnDefinitions(db, ids.tableId);
+        defns = DataModelDatabaseHelper.getColumnDefinitions(db, tableId);
       } catch (JsonParseException e) {
         e.printStackTrace();
-        throw new SQLException("Unable to retrieve column definitions for tableId " + ids.tableId);
+        throw new SQLException("Unable to retrieve column definitions for tableId " + tableId);
       } catch (JsonMappingException e) {
         e.printStackTrace();
-        throw new SQLException("Unable to retrieve column definitions for tableId " + ids.tableId);
+        throw new SQLException("Unable to retrieve column definitions for tableId " + tableId);
       } catch (IOException e) {
         e.printStackTrace();
-        throw new SQLException("Unable to retrieve column definitions for tableId " + ids.tableId);
+        throw new SQLException("Unable to retrieve column definitions for tableId " + tableId);
       }
 
       // We can now join through and access the data table rows
@@ -181,9 +191,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       b.append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
           .append(InstanceColumns._ID).append(",")
        .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
-          .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
-       .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
-          .append(InstanceColumns.XML_PUBLISH_FORM_ID).append(",");
+          .append(InstanceColumns.DATA_INSTANCE_ID).append(",");
       // add the dataTable metadata except for _ID (which conflicts with InstanceColumns._ID)
       b.append(dbTableName).append(".").append(DataTableColumns.ROW_ETAG).append(",")
        .append(dbTableName).append(".").append(DataTableColumns.SYNC_STATE).append(",")
@@ -221,10 +229,10 @@ public abstract class InstanceProviderImpl extends ContentProvider {
           .append(" > ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" THEN null")
           .append(" ELSE ").append(InstanceColumns.DISPLAY_SUBTEXT).append(" END as ")
           .append(InstanceColumns.DISPLAY_SUBTEXT).append(",");
-      if ( ids.instanceName == null ) {
+      if ( instanceName == null ) {
         b.append( "datetime(").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append("/1000000, 'unixepoch', 'localtime')");
       } else {
-        b.append(ids.instanceName);
+        b.append(instanceName);
       }
       b.append(" as ").append(InstanceColumns.DISPLAY_NAME);
       b.append(" FROM ");
@@ -237,19 +245,17 @@ public abstract class InstanceProviderImpl extends ContentProvider {
           .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
           .append(InstanceColumns.DATA_INSTANCE_ID).append(" AND ").append("? =")
           .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
-          .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(" AND ").append("? =")
-          .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
-          .append(InstanceColumns.XML_PUBLISH_FORM_ID);
+          .append(InstanceColumns.DATA_TABLE_TABLE_ID);
       b.append(" WHERE ").append(DATA_TABLE_SAVEPOINT_TYPE_COLUMN).append("=?");
       // @formatter:on
 
       if (instanceId != null) {
         b.append(" AND ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
             .append(InstanceColumns._ID).append("=?");
-        String tempArgs[] = { ids.tableId, ids.formId, InstanceColumns.STATUS_COMPLETE, instanceId };
+        String tempArgs[] = { tableId, InstanceColumns.STATUS_COMPLETE, instanceId };
         filterArgs = tempArgs;
       } else {
-        String tempArgs[] = { ids.tableId, ids.formId, InstanceColumns.STATUS_COMPLETE };
+        String tempArgs[] = { tableId, InstanceColumns.STATUS_COMPLETE };
         filterArgs = tempArgs;
       }
 
@@ -340,7 +346,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     String appName = segments.get(0);
     ODKFileUtils.verifyExternalStorageAvailability();
     ODKFileUtils.assertDirectoryStructure(appName);
-    String uriFormId = segments.get(1);
+    String tableId = segments.get(1);
     // _ID in UPLOADS_TABLE_NAME
     String instanceId = (segments.size() == 3 ? segments.get(2) : null);
 
@@ -355,25 +361,15 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       db = dbh.getWritableDatabase();
       db.beginTransaction();
 
-      IdInstanceNameStruct ids;
-      try {
-        ids = DataModelDatabaseHelper.getIds(db, uriFormId);
-      } catch ( Exception e ) {
-        throw new SQLException("Unable to retrieve formId " + uri);
-      }
-
-      if (ids == null) {
-        throw new SQLException("Unknown URI (no matching formId) " + uri);
-      }
       String dbTableName;
       try {
-        dbTableName = DataModelDatabaseHelper.getDbTableName(db, ids.tableId);
+        dbTableName = DataModelDatabaseHelper.getDbTableName(db, tableId);
       } catch ( Exception e ) {
         e.printStackTrace();
-        throw new SQLException("Unknown URI (exception retrieving data table for formId) " + uri);
+        throw new SQLException("Unknown URI (exception retrieving data table for tableId) " + uri);
       }
       if (dbTableName == null) {
-        throw new SQLException("Unknown URI (missing data table for formId) " + uri);
+        throw new SQLException("Unknown URI (missing data table for tableId) " + uri);
       }
 
       dbTableName = "\"" + dbTableName + "\"";
@@ -400,7 +396,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
           String iId = ODKDatabaseUtils.getIndexAsString(del, del.getColumnIndex(InstanceColumns._ID));
           String iIdDataTable = ODKDatabaseUtils.getIndexAsString(del, del.getColumnIndex(InstanceColumns.DATA_INSTANCE_ID));
           idStructs.add(new IdStruct(iId, iIdDataTable));
-          String path = ODKFileUtils.getInstanceFolder(appName, ids.tableId, iIdDataTable);
+          String path = ODKFileUtils.getInstanceFolder(appName, tableId, iIdDataTable);
           File f = new File(path);
           if (f.exists()) {
             if (f.isDirectory()) {
@@ -446,7 +442,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     ODKFileUtils.verifyExternalStorageAvailability();
     ODKFileUtils.assertDirectoryStructure(appName);
 
-    String uriFormId = segments.get(1);
+    String tableId = segments.get(1);
     // _ID in UPLOADS_TABLE_NAME
     String instanceId = segments.get(2);
 
@@ -460,25 +456,15 @@ public abstract class InstanceProviderImpl extends ContentProvider {
 
       db = dbh.getWritableDatabase();
 
-      IdInstanceNameStruct ids;
-      try {
-        ids = DataModelDatabaseHelper.getIds(db, uriFormId);
-      } catch ( Exception e ) {
-        throw new SQLException("Unable to retrieve formId " + uri);
-      }
-
-      if (ids == null) {
-        throw new SQLException("Unknown URI (no matching formId) " + uri);
-      }
       String dbTableName;
       try {
-        dbTableName = DataModelDatabaseHelper.getDbTableName(db, ids.tableId);
+        dbTableName = DataModelDatabaseHelper.getDbTableName(db, tableId);
       } catch ( Exception e ) {
         e.printStackTrace();
-        throw new SQLException("Unknown URI (exception retrieving data table for formId) " + uri);
+        throw new SQLException("Unknown URI (exception retrieving data table for tableId) " + uri);
       }
       if (dbTableName == null) {
-        throw new SQLException("Unknown URI (missing data table for formId) " + uri);
+        throw new SQLException("Unknown URI (missing data table for tableId) " + uri);
       }
 
       dbTableName = "\"" + dbTableName + "\"";

@@ -63,11 +63,6 @@ public class FormInfo {
   public final String displaySubtext;
   public final String defaultLocale; // default locale
   public final String instanceName;  // column containing instance name for display
-  public final String xmlSubmissionUrl;
-  public final String xmlBase64RsaPublicKey;
-  public final String xmlDeviceIdPropertyName;
-  public final String xmlUserIdPropertyName;
-  public final String xmlRootElementName;
 
   // formDef.json file...
   public final File formDefFile;
@@ -75,16 +70,6 @@ public class FormInfo {
   public final HashMap<String, Object> formDef;
 
   static final String FORMDEF_VALUE = "value";
-
-  static final String FORMDEF_XML_ROOT_ELEMENT_NAME = "xml_root_element_name";
-
-  static final String FORMDEF_XML_DEVICE_ID_PROPERTY_NAME = "xml_device_id_property_name";
-
-  static final String FORMDEF_XML_ACCESS_ID_PROPERTY_NAME = "xml_access_id_property_name";
-
-  static final String FORMDEF_BASE64_RSA_PUBLIC_KEY = "xml_base64_rsa_public_key";
-
-  static final String FORMDEF_XML_SUBMISSION_URL = "xml_submission_url";
 
   static final String FORMDEF_DEFAULT_LOCALE = "_default_locale";
 
@@ -144,16 +129,6 @@ public class FormInfo {
         ret[i] = defaultLocale;
       } else if (FormsColumns.INSTANCE_NAME.equals(s)) {
         ret[i] = instanceName;
-      } else if (FormsColumns.XML_SUBMISSION_URL.equals(s)) {
-        ret[i] = xmlSubmissionUrl;
-      } else if (FormsColumns.XML_BASE64_RSA_PUBLIC_KEY.equals(s)) {
-        ret[i] = xmlBase64RsaPublicKey;
-      } else if (FormsColumns.XML_ROOT_ELEMENT_NAME.equals(s)) {
-        ret[i] = xmlRootElementName;
-      } else if (FormsColumns.XML_DEVICE_ID_PROPERTY_NAME.equals(s)) {
-        ret[i] = xmlDeviceIdPropertyName;
-      } else if (FormsColumns.XML_USER_ID_PROPERTY_NAME.equals(s)) {
-        ret[i] = xmlUserIdPropertyName;
       }
     }
     return ret;
@@ -189,12 +164,6 @@ public class FormInfo {
     displaySubtext = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.DISPLAY_SUBTEXT));
     defaultLocale = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.DEFAULT_FORM_LOCALE));
     instanceName = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.INSTANCE_NAME));
-    xmlSubmissionUrl = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.XML_SUBMISSION_URL));
-    xmlBase64RsaPublicKey = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.XML_BASE64_RSA_PUBLIC_KEY));
-    xmlDeviceIdPropertyName = ODKDatabaseUtils.getIndexAsString(c, c
-        .getColumnIndex(FormsColumns.XML_DEVICE_ID_PROPERTY_NAME));
-    xmlUserIdPropertyName = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.XML_USER_ID_PROPERTY_NAME));
-    xmlRootElementName = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.XML_ROOT_ELEMENT_NAME));
 
     if (parseFormDef && !formDefFile.exists()) {
       throw new IllegalArgumentException("File does not exist! " + formDefFile.getAbsolutePath());
@@ -393,77 +362,6 @@ public class FormInfo {
       }
     } else {
       tableId = formId;
-    }
-
-    setting = (Map<String, Object>) settings.get(FORMDEF_XML_SUBMISSION_URL);
-    if (setting != null) {
-      Object o = setting.get(FORMDEF_VALUE);
-      if (o == null) {
-        xmlSubmissionUrl = null;
-      } else if (o instanceof String) {
-        xmlSubmissionUrl = (String) o;
-      } else {
-        throw new IllegalArgumentException("Invalid value for " + FORMDEF_XML_SUBMISSION_URL);
-      }
-    } else {
-      xmlSubmissionUrl = null;
-    }
-
-    setting = (Map<String, Object>) settings.get(FORMDEF_BASE64_RSA_PUBLIC_KEY);
-    if (setting != null) {
-      Object o = setting.get(FORMDEF_VALUE);
-      if (o == null) {
-        xmlBase64RsaPublicKey = null;
-      } else if (o instanceof String) {
-        xmlBase64RsaPublicKey = (String) o;
-      } else {
-        throw new IllegalArgumentException("Invalid value for " + FORMDEF_BASE64_RSA_PUBLIC_KEY);
-      }
-    } else {
-      xmlBase64RsaPublicKey = null;
-    }
-
-    setting = (Map<String, Object>) settings.get(FORMDEF_XML_ROOT_ELEMENT_NAME);
-    if (setting != null) {
-      Object o = setting.get(FORMDEF_VALUE);
-      if (o == null) {
-        xmlRootElementName = "data";
-      } else if (o instanceof String) {
-        xmlRootElementName = (String) o;
-      } else {
-        throw new IllegalArgumentException("Invalid value for " + FORMDEF_XML_ROOT_ELEMENT_NAME);
-      }
-    } else {
-      xmlRootElementName = "data";
-    }
-
-    setting = (Map<String, Object>) settings.get(FORMDEF_XML_DEVICE_ID_PROPERTY_NAME);
-    if (setting != null) {
-      Object o = setting.get(FORMDEF_VALUE);
-      if (o == null) {
-        xmlDeviceIdPropertyName = null;
-      } else if (o instanceof String) {
-        xmlDeviceIdPropertyName = (String) o;
-      } else {
-        throw new IllegalArgumentException("Invalid value for "
-            + FORMDEF_XML_DEVICE_ID_PROPERTY_NAME);
-      }
-    } else {
-      xmlDeviceIdPropertyName = null;
-    }
-
-    setting = (Map<String, Object>) settings.get(FORMDEF_XML_ACCESS_ID_PROPERTY_NAME);
-    if (setting != null) {
-      Object o = setting.get(FORMDEF_VALUE);
-      if (o == null) {
-        xmlUserIdPropertyName = null;
-      } else if (o instanceof String) {
-        xmlUserIdPropertyName = (String) o;
-      } else {
-        throw new IllegalArgumentException("Invalid value for " + FORMDEF_XML_ACCESS_ID_PROPERTY_NAME);
-      }
-    } else {
-      xmlUserIdPropertyName = null;
     }
 
     lastModificationDate = ODKFileUtils.getMostRecentlyModifiedDate(formDefFile.getParentFile());
