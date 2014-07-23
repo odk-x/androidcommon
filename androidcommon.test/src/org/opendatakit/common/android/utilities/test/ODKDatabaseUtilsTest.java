@@ -445,7 +445,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, col);
 
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
-    assertEquals(map.size(), 1);
+    assertEquals(1, map.size());
     assertTrue(map.containsKey(testCol));
 
     for (Entry<String, String> entry : map.entrySet()) {
