@@ -669,14 +669,14 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, col);
 
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
-    assertEquals(map.size(), 1);
-    assertTrue(map.containsKey(testCol));
+    assertEquals(2, map.size());
+    assertTrue(map.containsKey(testColUriFrag));
+    assertTrue(map.containsKey(testColContType));
 
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
-      assertTrue(key.equals(testCol));
-      assertTrue(value.equals(testColType));
+      assertTrue(value.equals("string"));
     }
 
     // Select everything out of the table for element key
@@ -911,7 +911,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     ODKDatabaseUtils.createNewColumnIntoExistingDBTable(db, tableName, testCol, testColType);
 
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
-    assertEquals(map.size(), 1);
+    assertEquals(1, map.size());
     assertTrue(map.containsKey(testCol));
 
     for (Entry<String, String> entry : map.entrySet()) {
@@ -1199,14 +1199,14 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     ODKDatabaseUtils.createNewColumnIntoExistingDBTable(db, tableName, testCol, testColType);
 
     LinkedHashMap <String, String> map = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
-    assertEquals(map.size(), 1);
-    assertTrue(map.containsKey(testCol));
+    assertEquals(2, map.size());
+    assertTrue(map.containsKey(testColUriFrag));
+    assertTrue(map.containsKey(testColContType));
 
     for (Entry<String, String> entry : map.entrySet()) {
       String key = entry.getKey();
       String value = entry.getValue();
-      assertTrue(key.equals(testCol));
-      assertTrue(value.equals(testColType));
+      assertTrue(value.equals("string"));
     }
 
     // Select everything out of the table for element key
