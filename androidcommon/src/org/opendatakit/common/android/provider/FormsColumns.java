@@ -88,7 +88,8 @@ public final class FormsColumns implements BaseColumns {
 	            + MD5_HASH + " text not null, "
 	            + JSON_MD5_HASH + " text not null, "
 	            + DATE + " integer not null, " // milliseconds
-	            + DEFAULT_FORM_LOCALE + " text )";
+	            + DEFAULT_FORM_LOCALE + " text null, "
+	            + INSTANCE_NAME + " text null )";
        //@formatter:on
   }
 
