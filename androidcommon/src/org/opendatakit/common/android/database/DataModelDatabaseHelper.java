@@ -21,8 +21,6 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.commons.lang3.StringUtils;
-import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.map.JsonMappingException;
 import org.opendatakit.common.android.provider.ColumnDefinitionsColumns;
 import org.opendatakit.common.android.provider.FormsColumns;
 import org.opendatakit.common.android.provider.InstanceColumns;
@@ -32,6 +30,9 @@ import org.opendatakit.common.android.utilities.ODKDatabaseUtils;
 
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 
 /**
  * This class helps open, create, and upgrade the database file.
@@ -286,23 +287,18 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
     if (c.elementType.equals("string")) {
       jsonSchema.put("type", "string");
       jsonSchema.put("elementKey", c.elementKey);
-      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention());
     } else if (c.elementType.equals("number")) {
       jsonSchema.put("type", "number");
       jsonSchema.put("elementKey", c.elementKey);
-      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention());
     } else if (c.elementType.equals("integer")) {
       jsonSchema.put("type", "integer");
       jsonSchema.put("elementKey", c.elementKey);
-      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention());
     } else if (c.elementType.equals("boolean")) {
       jsonSchema.put("type", "boolean");
       jsonSchema.put("elementKey", c.elementKey);
-      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention());
     } else if (c.elementType.equals("array")) {
       jsonSchema.put("type", "array");
       jsonSchema.put("elementKey", c.elementKey);
-      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention());
       ColumnDefinition ch = c.children.get(0);
       jsonSchema.put("items", new TreeMap<String, Object>());
       @SuppressWarnings("unchecked")
@@ -314,7 +310,6 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
         jsonSchema.put("elementType", c.elementType);
       }
       jsonSchema.put("elementKey", c.elementKey);
-      jsonSchema.put("isUnitOfRetention", c.isUnitOfRetention());
       jsonSchema.put("properties", new TreeMap<String, Object>());
       @SuppressWarnings("unchecked")
       TreeMap<String, Object> propertiesSchema = (TreeMap<String, Object>) jsonSchema

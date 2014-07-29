@@ -21,8 +21,6 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
-import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.map.JsonMappingException;
 import org.opendatakit.common.android.R;
 import org.opendatakit.common.android.provider.FormsColumns;
 import org.opendatakit.common.android.utilities.ODKDatabaseUtils;
@@ -30,6 +28,9 @@ import org.opendatakit.common.android.utilities.ODKFileUtils;
 
 import android.content.Context;
 import android.database.Cursor;
+
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 
 /**
  * Class to hold information about a form. This holds the data fields that are

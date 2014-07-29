@@ -5,8 +5,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
-import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.map.JsonMappingException;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 
 public class ODKDataUtils {
 

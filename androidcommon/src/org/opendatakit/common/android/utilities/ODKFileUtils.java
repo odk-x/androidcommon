@@ -39,13 +39,14 @@ import java.util.TreeSet;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.CharEncoding;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.kxml2.kdom.Node;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Environment;
 import android.util.Log;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Static methods used for common file operations.
