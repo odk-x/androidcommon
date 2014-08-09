@@ -785,10 +785,33 @@ public class ODKDatabaseUtils {
       throw new IllegalArgumentException(t + ": No values to add into table " + tableName);
     }
 
-    writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues);
+    writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues, false);
 
   }
 
+  /*
+   * Write data into a user defined database table
+   */
+  public static final void updateDataInExistingDBTableWithId(SQLiteDatabase db, String tableName,
+      ContentValues cvValues, String uuid) {
+    Map<String, String> userDefCols = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
+
+    if (userDefCols.isEmpty()) {
+      throw new IllegalArgumentException(t + ": No user defined columns exist in " + tableName
+          + " - cannot insert data");
+    }
+
+    if (cvValues.size() <= 0) {
+      throw new IllegalArgumentException(t + ": No values to add into table " + tableName);
+    }
+
+    ContentValues cvDataTableVal = new ContentValues();
+    cvDataTableVal.put(DataTableColumns.ID, uuid);
+    cvDataTableVal.putAll(cvValues);
+
+    writeDataAndMetadataIntoExistingDBTable(db, tableName, cvDataTableVal, true);
+  }
+  
   /*
    * Write data into a user defined database table
    */
@@ -809,16 +832,19 @@ public class ODKDatabaseUtils {
     cvDataTableVal.put(DataTableColumns.ID, uuid);
     cvDataTableVal.putAll(cvValues);
 
-    writeDataAndMetadataIntoExistingDBTable(db, tableName, cvDataTableVal);
-
+    writeDataAndMetadataIntoExistingDBTable(db, tableName, cvDataTableVal, false);
   }
 
   /*
    * Write data into a user defined database table
    */
   public static final void writeDataAndMetadataIntoExistingDBTable(SQLiteDatabase db,
-      String tableName, ContentValues cvValues) {
+      String tableName, ContentValues cvValues, boolean shouldUpdate) {
     String nullString = null;
+    String id = null;
+    String whereClause = null;
+    String [] whereArgs = new String[1];
+    boolean update = false;
 
     if (cvValues.size() <= 0) {
       throw new IllegalArgumentException(t + ": No values to add into table " + tableName);
@@ -830,6 +856,31 @@ public class ODKDatabaseUtils {
 
     ContentValues cvDataTableVal = new ContentValues();
     cvDataTableVal.putAll(cvValues);
+    
+    // Bug fix for not updating a db row if an existing row id is used
+    if (cvDataTableVal.containsKey(DataTableColumns.ID)) {
+      // Select everything out of the table with given id
+      id = cvDataTableVal.getAsString(DataTableColumns.ID);
+      whereClause = DataTableColumns.ID + " = ?"; 
+      whereArgs[0] = "" + id;
+      String sel = "SELECT * FROM " + tableName + " WHERE "+ whereClause;
+      String[] selArgs = whereArgs;
+      Cursor cursor = rawQuery(db, sel, selArgs);
+      
+      // There must be only one row in the db for the update to work
+      if (shouldUpdate) {
+        if (cursor.getCount() == 1) {
+          update = true;
+        } else if (cursor.getCount() > 1) {
+          throw new IllegalArgumentException(t + ": row id " + id + " has more than 1 row in table " + tableName);
+        }
+      } else {
+        if (cursor.getCount() > 0) {
+          throw new IllegalArgumentException(t + ": id " + id + " is not unique in table " + tableName);
+        }
+      }
+
+    }
 
     if (!cvDataTableVal.containsKey(DataTableColumns.ID)) {
       cvDataTableVal.put(DataTableColumns.ID, rowId);
@@ -874,8 +925,13 @@ public class ODKDatabaseUtils {
     if (!cvDataTableVal.containsKey(DataTableColumns.SAVEPOINT_CREATOR)) {
       cvDataTableVal.put(DataTableColumns.SAVEPOINT_CREATOR, nullString);
     }
+    
+    if (update) {
+      db.update(tableName, cvDataTableVal, whereClause, whereArgs);
+    } else {
+      db.replaceOrThrow(tableName, null, cvDataTableVal);
+    }
 
-    db.replaceOrThrow(tableName, null, cvDataTableVal);
   }
 
   /**
