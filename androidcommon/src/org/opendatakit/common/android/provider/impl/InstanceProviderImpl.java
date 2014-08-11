@@ -96,13 +96,19 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     // _ID in UPLOADS_TABLE_NAME
     String instanceId = (segments.size() == 3 ? segments.get(2) : null);
 
-    boolean success = false;
+    DataModelDatabaseHelper dbh = null;
     SQLiteDatabase db = null;
     String fullQuery;
     String filterArgs[];
     Cursor c = null;
+    
+    String dbTableName;
+    Map<String, ColumnDefinition> defns;
+
+    StringBuilder b = new StringBuilder();
+    
     try {
-      DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(getContext(), appName);
+      dbh = DataModelDatabaseHelperFactory.getDbHelper(getContext(), appName);
       if ( dbh == null ) {
         throw new SQLException("Unable to access database for " + uri);
       }
@@ -131,7 +137,6 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       } finally {
         c.close();
       }
-      String dbTableName;
       try {
         dbTableName = DataModelDatabaseHelper.getDbTableName(db,tableId);
       } catch ( Exception e ) {
@@ -146,7 +151,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
 
       // ARGH! we must ensure that we have records in our UPLOADS_TABLE_NAME
       // for every distinct instance in the data table.
-      StringBuilder b = new StringBuilder();
+      b.setLength(0);
       //@formatter:off
       b.append("INSERT INTO ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append("(")
           .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
@@ -165,10 +170,9 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       // TODO: should we collapse across FORM_ID or leave it this way?
       String[] args = { tableId };
       db.execSQL(b.toString(), args);
-
+      
       // Can't get away with dataTable.* because of collision with _ID column
       // get map of (elementKey -> ColumnDefinition)
-      Map<String, ColumnDefinition> defns;
       try {
         defns = DataModelDatabaseHelper.getColumnDefinitions(db, tableId);
       } catch (JsonParseException e) {
@@ -182,111 +186,115 @@ public abstract class InstanceProviderImpl extends ContentProvider {
         throw new SQLException("Unable to retrieve column definitions for tableId " + tableId);
       }
 
-      // We can now join through and access the data table rows
-
-      b.setLength(0);
-      // @formatter:off
-      b.append("SELECT ");
-      b.append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
-          .append(InstanceColumns._ID).append(",")
-       .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
-          .append(InstanceColumns.DATA_INSTANCE_ID).append(",");
-      // add the dataTable metadata except for _ID (which conflicts with InstanceColumns._ID)
-      b.append(dbTableName).append(".").append(DataTableColumns.ROW_ETAG).append(",")
-       .append(dbTableName).append(".").append(DataTableColumns.SYNC_STATE).append(",")
-       .append(dbTableName).append(".").append(DataTableColumns.CONFLICT_TYPE).append(",")
-       .append(dbTableName).append(".").append(DataTableColumns.FILTER_TYPE).append(",")
-       .append(dbTableName).append(".").append(DataTableColumns.FILTER_VALUE).append(",")
-       .append(dbTableName).append(".").append(DataTableColumns.FORM_ID).append(",")
-       .append(dbTableName).append(".").append(DataTableColumns.LOCALE).append(",")
-       .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_TYPE).append(",")
-       .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_TIMESTAMP).append(",")
-       .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_CREATOR).append(",");
-      // add the user-specified data fields in this dataTable
-      for ( ColumnDefinition cd : defns.values() ) {
-        if ( cd.isUnitOfRetention() ) {
-          b.append(dbTableName).append(".")
-           .append(cd.elementKey).append(",");
-        }
-      }
-      // b.append(dbTableName).append(".").append(InstanceColumns._ID).append(",");
-      b.append("CASE WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
-          .append(" WHEN ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP)
-          .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
-          .append(" > ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" THEN null")
-          .append(" ELSE ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" END as ")
-          .append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(",");
-      b.append("CASE WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
-          .append(" WHEN ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP)
-          .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
-          .append(" > ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" THEN null")
-          .append(" ELSE ").append(InstanceColumns.XML_PUBLISH_STATUS).append(" END as ")
-          .append(InstanceColumns.XML_PUBLISH_STATUS).append(",");
-      b.append("CASE WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
-          .append(" WHEN ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP)
-          .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
-          .append(" > ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" THEN null")
-          .append(" ELSE ").append(InstanceColumns.DISPLAY_SUBTEXT).append(" END as ")
-          .append(InstanceColumns.DISPLAY_SUBTEXT).append(",");
-      if ( instanceName == null ) {
-        b.append( "datetime(").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append("/1000000, 'unixepoch', 'localtime')");
-      } else {
-        b.append(instanceName);
-      }
-      b.append(" as ").append(InstanceColumns.DISPLAY_NAME);
-      b.append(" FROM ");
-      b.append("( SELECT * FROM ").append(dbTableName).append(" GROUP BY ")
-          .append(DATA_TABLE_ID_COLUMN).append(" HAVING ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
-          .append(" = MAX(").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(")").append(") as ")
-          .append(dbTableName);
-      b.append(" JOIN ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(" ON ")
-          .append(dbTableName).append(".").append(DATA_TABLE_ID_COLUMN).append("=")
-          .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
-          .append(InstanceColumns.DATA_INSTANCE_ID).append(" AND ").append("? =")
-          .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
-          .append(InstanceColumns.DATA_TABLE_TABLE_ID);
-      b.append(" WHERE ").append(DATA_TABLE_SAVEPOINT_TYPE_COLUMN).append("=?");
-      // @formatter:on
-
-      if (instanceId != null) {
-        b.append(" AND ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
-            .append(InstanceColumns._ID).append("=?");
-        String tempArgs[] = { tableId, InstanceColumns.STATUS_COMPLETE, instanceId };
-        filterArgs = tempArgs;
-      } else {
-        String tempArgs[] = { tableId, InstanceColumns.STATUS_COMPLETE };
-        filterArgs = tempArgs;
-      }
-
-      if (selection != null) {
-        b.append(" AND (").append(selection).append(")");
-      }
-
-      if (selectionArgs != null) {
-        String[] tempArgs = new String[filterArgs.length + selectionArgs.length];
-        for (int i = 0; i < filterArgs.length; ++i) {
-          tempArgs[i] = filterArgs[i];
-        }
-        for (int i = 0; i < selectionArgs.length; ++i) {
-          tempArgs[filterArgs.length + i] = selectionArgs[i];
-        }
-        filterArgs = tempArgs;
-      }
-
-      if (sortOrder != null) {
-        b.append(" ORDER BY ").append(sortOrder);
-      }
-
-      fullQuery = b.toString();
-      success = true;
+      db.setTransactionSuccessful();
     } finally {
-      if ( !success ) {
-        db.endTransaction();
-        db.close();
-        return null;
-      }
+      db.endTransaction();
+      db.close();
     }
 
+    ////////////////////////////////////////////////////////////////
+    // OK we have the info we need -- now build the query we want...
+    
+    // We can now join through and access the data table rows
+
+    b.setLength(0);
+    // @formatter:off
+    b.append("SELECT ");
+    b.append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+        .append(InstanceColumns._ID).append(",")
+     .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+        .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
+     .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+        .append(InstanceColumns.SUBMISSION_INSTANCE_ID).append(",");
+    // add the dataTable metadata except for _ID (which conflicts with InstanceColumns._ID)
+    b.append(dbTableName).append(".").append(DataTableColumns.ROW_ETAG).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SYNC_STATE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.CONFLICT_TYPE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.FILTER_TYPE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.FILTER_VALUE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.FORM_ID).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.LOCALE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_TYPE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_TIMESTAMP).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_CREATOR).append(",");
+    // add the user-specified data fields in this dataTable
+    for ( ColumnDefinition cd : defns.values() ) {
+      if ( cd.isUnitOfRetention() ) {
+        b.append(dbTableName).append(".")
+         .append(cd.elementKey).append(",");
+      }
+    }
+    // b.append(dbTableName).append(".").append(InstanceColumns._ID).append(",");
+    b.append("CASE WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
+        .append(" WHEN ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP)
+        .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
+        .append(" > ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" THEN null")
+        .append(" ELSE ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" END as ")
+        .append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(",");
+    b.append("CASE WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
+        .append(" WHEN ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP)
+        .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
+        .append(" > ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" THEN null")
+        .append(" ELSE ").append(InstanceColumns.XML_PUBLISH_STATUS).append(" END as ")
+        .append(InstanceColumns.XML_PUBLISH_STATUS).append(",");
+    b.append("CASE WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
+        .append(" WHEN ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP)
+        .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
+        .append(" > ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" THEN null")
+        .append(" ELSE ").append(InstanceColumns.DISPLAY_SUBTEXT).append(" END as ")
+        .append(InstanceColumns.DISPLAY_SUBTEXT).append(",");
+    if ( instanceName == null ) {
+      b.append( "datetime(").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append("/1000000, 'unixepoch', 'localtime')");
+    } else {
+      b.append(instanceName);
+    }
+    b.append(" as ").append(InstanceColumns.DISPLAY_NAME);
+    b.append(" FROM ");
+    b.append("( SELECT * FROM ").append(dbTableName).append(" GROUP BY ")
+        .append(DATA_TABLE_ID_COLUMN).append(" HAVING ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
+        .append(" = MAX(").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(")").append(") as ")
+        .append(dbTableName);
+    b.append(" JOIN ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(" ON ")
+        .append(dbTableName).append(".").append(DATA_TABLE_ID_COLUMN).append("=")
+        .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+        .append(InstanceColumns.DATA_INSTANCE_ID).append(" AND ").append("? =")
+        .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+        .append(InstanceColumns.DATA_TABLE_TABLE_ID);
+    b.append(" WHERE ").append(DATA_TABLE_SAVEPOINT_TYPE_COLUMN).append("=?");
+    // @formatter:on
+
+    if (instanceId != null) {
+      b.append(" AND ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+          .append(InstanceColumns._ID).append("=?");
+      String tempArgs[] = { tableId, InstanceColumns.STATUS_COMPLETE, instanceId };
+      filterArgs = tempArgs;
+    } else {
+      String tempArgs[] = { tableId, InstanceColumns.STATUS_COMPLETE };
+      filterArgs = tempArgs;
+    }
+
+    if (selection != null) {
+      b.append(" AND (").append(selection).append(")");
+    }
+
+    if (selectionArgs != null) {
+      String[] tempArgs = new String[filterArgs.length + selectionArgs.length];
+      for (int i = 0; i < filterArgs.length; ++i) {
+        tempArgs[i] = filterArgs[i];
+      }
+      for (int i = 0; i < selectionArgs.length; ++i) {
+        tempArgs[filterArgs.length + i] = selectionArgs[i];
+      }
+      filterArgs = tempArgs;
+    }
+
+    if (sortOrder != null) {
+      b.append(" ORDER BY ").append(sortOrder);
+    }
+
+    fullQuery = b.toString();
+
+    db = dbh.getReadableDatabase();
     c = db.rawQuery(fullQuery, filterArgs);
     // Tell the cursor what uri to watch, so it knows when its source data
     // changes
@@ -454,7 +462,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       }
 
       db = dbh.getWritableDatabase();
-
+      
       String dbTableName;
       try {
         dbTableName = DataModelDatabaseHelper.getDbTableName(db, tableId);
@@ -500,6 +508,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
         }
       }
 
+      db.beginTransaction();
       String[] args = new String[1];
       for (IdStruct idStruct : idStructs) {
         args[0] = idStruct.idUploadsTable;
