@@ -497,17 +497,22 @@ public class ODKDatabaseUtils {
 
       if (type.equals(ODKDatabaseUserDefinedTypes.GEOPOINT)) {
         createTableCmdWithCols.append(", ").append(name).append("_latitude ").append(dbType)
-            .append(" NULL");
+          .append(" NULL");
         createTableCmdWithCols.append(", ").append(name).append("_longitude ").append(dbType)
-            .append(" NULL");
+          .append(" NULL");
         createTableCmdWithCols.append(", ").append(name).append("_altitude ").append(dbType)
-            .append(" NULL");
+          .append(" NULL");
         createTableCmdWithCols.append(", ").append(name).append("_accuracy ").append(dbType)
-            .append(" NULL");
+          .append(" NULL");
+      } else if (type.equals(ODKDatabaseUserDefinedTypes.MIMEURI)) {
+        createTableCmdWithCols.append(", ").append(name).append("_uriFragment ").append(dbType)
+          .append(" NULL");
+        createTableCmdWithCols.append(", ").append(name).append("_contentType ").append(dbType)
+          .append(" NULL");
       } else {
         if (dbType != null) {
           createTableCmdWithCols.append(", ").append(name).append(" ").append(dbType)
-              .append(" NULL");
+            .append(" NULL");
         } else {
           Log.i(t, "Didn't add " + name + " unrecognized type " + type + " to the database");
         }
@@ -604,15 +609,122 @@ public class ODKDatabaseUtils {
     cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
     cvColVal.put(KeyValueStoreColumns.VALUE, "");
     cvColValKVS.add(cvColVal);
+    
+    String colNameUriFrag = colName + "_" + uriFrag;
+    String colNameConType = colName + "_" + contentType;
 
-    cvColVal = new ContentValues();
-    cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-    cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
-    cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
-    cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_JOINS);
-    cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
-    cvColVal.put(KeyValueStoreColumns.VALUE, "");
-    cvColValKVS.add(cvColVal);
+    if (colType.equals(ODKDatabaseUserDefinedTypes.MIMEURI)) {
+      // joins clause KV pair is different for mimeUri
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_JOINS);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "");
+      
+      // Have to add KVS info for colName_uriFragment
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameUriFrag);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_VISIBLE);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "boolean");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "false");
+      cvColValKVS.add(cvColVal);
+
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameUriFrag);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_NAME);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
+      String colUriFragDisplayName = "\"" + colNameUriFrag + "\"";
+      cvColVal.put(KeyValueStoreColumns.VALUE, colUriFragDisplayName);
+      cvColValKVS.add(cvColVal);
+
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameUriFrag);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "[]");
+      cvColValKVS.add(cvColVal);
+
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameUriFrag);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_FORMAT);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "");
+      
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameUriFrag);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_JOINS);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "[]");
+      cvColValKVS.add(cvColVal);
+      
+      // Have to add KV pairs for colName_contentType 
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameConType);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_VISIBLE);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "boolean");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "false");
+      cvColValKVS.add(cvColVal);
+
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameConType);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_NAME);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
+      String colConTypeDisplayName = "\"" + colNameConType + "\"";
+      cvColVal.put(KeyValueStoreColumns.VALUE, colConTypeDisplayName);
+      cvColValKVS.add(cvColVal);
+
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameConType);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "[]");
+      cvColValKVS.add(cvColVal);
+
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameConType);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_FORMAT);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "");
+      cvColValKVS.add(cvColVal);
+      
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameConType);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_JOINS);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "[]");
+      cvColValKVS.add(cvColVal);
+    } else {
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_JOINS);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "");
+      cvColValKVS.add(cvColVal);
+    }
 
     // Now add all this data into the database
     for (int i = 0; i < cvColValKVS.size(); i++) {
@@ -625,10 +737,6 @@ public class ODKDatabaseUtils {
     ContentValues cvColDefVal = null;
 
     if (colType.equals(ODKDatabaseUserDefinedTypes.MIMEURI)) {
-
-      String colNameUriFrag = colName + "_" + uriFrag;
-      String colNameConType = colName + "_" + contentType;
-
       cvColDefVal = new ContentValues();
       cvColDefVal.put(ColumnDefinitionsColumns.TABLE_ID, tableName);
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colName);

@@ -1980,44 +1980,45 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
   public void testWriteDataIntoExisitingDbTableWithMimeUri_ExpectPass() {
     String tableName = testTable;
     String testCol = "testColumn";
+    String testColUriFragment = "testColumn_uriFragment";
+    String testColContentType = "testColumn_contentType";
     String testColType = ODKDatabaseUserDefinedTypes.MIMEURI;
     String uuid = UUID.randomUUID().toString();
-    ObjectMapper objectMapper = new ObjectMapper();
-    Map<String, String> mapObject = new HashMap<String, String>();
-    mapObject.put("uriFragment", "tables/example/instances/" + uuid + "/" + testCol + "-" + uuid + ".jpg");
-    mapObject.put("contentType", "image/jpg");
-    String picJsonStr = null;
-    try {
-      picJsonStr = objectMapper.writeValueAsString(mapObject);
-    } catch (Exception e) {
-      fail("testWriteDataIntoExisitingDbTableWithMimeUri_ExpectPass: exception while trying to convert mimeUri to string");
-      e.printStackTrace();
-    }
+    
+    String testUriFragment = "tables/example/instances/" + uuid + "/" + testCol + "-" + uuid + ".jpg";
+    String testContentType = "image/jpg";
 
-    String testVal = null;
     LinkedHashMap<String, String> columns = new LinkedHashMap<String,String>();
     columns.put(testCol, testColType);
 
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
 
     ContentValues cvValues = new ContentValues();
-    cvValues.put(testCol, picJsonStr);
+    cvValues.put(testColUriFragment, testUriFragment);
+    cvValues.put(testColContentType, testContentType);
     ODKDatabaseUtils.writeDataIntoExistingDBTable(db, tableName, cvValues);
 
     // Select everything out of the table
-    String sel = "SELECT * FROM " + tableName + " WHERE "+ testCol + " = ?";
-    String[] selArgs = {"" + testVal};
+    String sel = "SELECT * FROM " + tableName + " WHERE "+ testColUriFragment + " = ?";
+    String[] selArgs = {"" + testUriFragment};
     Cursor cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs);
 
-    String val = null;
+    String valUriFragment = null;
+    String valContentType = null;
     while (cursor.moveToNext()) {
-      int ind = cursor.getColumnIndex(testCol);
+      int ind = cursor.getColumnIndex(testColUriFragment);
       int type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
-      val = cursor.getString(ind);
+      valUriFragment = cursor.getString(ind);
+      
+      ind = cursor.getColumnIndex(testColContentType);
+      type = cursor.getType(ind);
+      assertEquals(type, Cursor.FIELD_TYPE_STRING);
+      valContentType = cursor.getString(ind);
     }
 
-    assertEquals(val, testVal);
+    assertEquals(valUriFragment, testUriFragment);
+    assertEquals(valContentType, testContentType);
 
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
