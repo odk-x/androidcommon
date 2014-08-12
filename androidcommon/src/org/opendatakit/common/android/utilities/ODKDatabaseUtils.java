@@ -497,17 +497,22 @@ public class ODKDatabaseUtils {
 
       if (type.equals(ODKDatabaseUserDefinedTypes.GEOPOINT)) {
         createTableCmdWithCols.append(", ").append(name).append("_latitude ").append(dbType)
-            .append(" NULL");
+          .append(" NULL");
         createTableCmdWithCols.append(", ").append(name).append("_longitude ").append(dbType)
-            .append(" NULL");
+          .append(" NULL");
         createTableCmdWithCols.append(", ").append(name).append("_altitude ").append(dbType)
-            .append(" NULL");
+          .append(" NULL");
         createTableCmdWithCols.append(", ").append(name).append("_accuracy ").append(dbType)
-            .append(" NULL");
+          .append(" NULL");
+      } else if (type.equals(ODKDatabaseUserDefinedTypes.MIMEURI)) {
+        createTableCmdWithCols.append(", ").append(name).append("_uriFragment ").append(dbType)
+          .append(" NULL");
+        createTableCmdWithCols.append(", ").append(name).append("_contentType ").append(dbType)
+          .append(" NULL");
       } else {
         if (dbType != null) {
           createTableCmdWithCols.append(", ").append(name).append(" ").append(dbType)
-              .append(" NULL");
+            .append(" NULL");
         } else {
           Log.i(t, "Didn't add " + name + " unrecognized type " + type + " to the database");
         }
@@ -604,15 +609,122 @@ public class ODKDatabaseUtils {
     cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
     cvColVal.put(KeyValueStoreColumns.VALUE, "");
     cvColValKVS.add(cvColVal);
+    
+    String colNameUriFrag = colName + "_" + uriFrag;
+    String colNameConType = colName + "_" + contentType;
 
-    cvColVal = new ContentValues();
-    cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-    cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
-    cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
-    cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_JOINS);
-    cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
-    cvColVal.put(KeyValueStoreColumns.VALUE, "");
-    cvColValKVS.add(cvColVal);
+    if (colType.equals(ODKDatabaseUserDefinedTypes.MIMEURI)) {
+      // joins clause KV pair is different for mimeUri
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_JOINS);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "");
+      
+      // Have to add KVS info for colName_uriFragment
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameUriFrag);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_VISIBLE);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "boolean");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "false");
+      cvColValKVS.add(cvColVal);
+
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameUriFrag);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_NAME);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
+      String colUriFragDisplayName = "\"" + colNameUriFrag + "\"";
+      cvColVal.put(KeyValueStoreColumns.VALUE, colUriFragDisplayName);
+      cvColValKVS.add(cvColVal);
+
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameUriFrag);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "[]");
+      cvColValKVS.add(cvColVal);
+
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameUriFrag);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_FORMAT);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "");
+      
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameUriFrag);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_JOINS);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "[]");
+      cvColValKVS.add(cvColVal);
+      
+      // Have to add KV pairs for colName_contentType 
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameConType);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_VISIBLE);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "boolean");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "false");
+      cvColValKVS.add(cvColVal);
+
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameConType);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_NAME);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
+      String colConTypeDisplayName = "\"" + colNameConType + "\"";
+      cvColVal.put(KeyValueStoreColumns.VALUE, colConTypeDisplayName);
+      cvColValKVS.add(cvColVal);
+
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameConType);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "[]");
+      cvColValKVS.add(cvColVal);
+
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameConType);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_FORMAT);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "");
+      cvColValKVS.add(cvColVal);
+      
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameConType);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_JOINS);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "[]");
+      cvColValKVS.add(cvColVal);
+    } else {
+      cvColVal = new ContentValues();
+      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+      cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
+      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_JOINS);
+      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
+      cvColVal.put(KeyValueStoreColumns.VALUE, "");
+      cvColValKVS.add(cvColVal);
+    }
 
     // Now add all this data into the database
     for (int i = 0; i < cvColValKVS.size(); i++) {
@@ -625,10 +737,6 @@ public class ODKDatabaseUtils {
     ContentValues cvColDefVal = null;
 
     if (colType.equals(ODKDatabaseUserDefinedTypes.MIMEURI)) {
-
-      String colNameUriFrag = colName + "_" + uriFrag;
-      String colNameConType = colName + "_" + contentType;
-
       cvColDefVal = new ContentValues();
       cvColDefVal.put(ColumnDefinitionsColumns.TABLE_ID, tableName);
       cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colName);
@@ -785,10 +893,33 @@ public class ODKDatabaseUtils {
       throw new IllegalArgumentException(t + ": No values to add into table " + tableName);
     }
 
-    writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues);
+    writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues, false);
 
   }
 
+  /*
+   * Write data into a user defined database table
+   */
+  public static final void updateDataInExistingDBTableWithId(SQLiteDatabase db, String tableName,
+      ContentValues cvValues, String uuid) {
+    Map<String, String> userDefCols = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
+
+    if (userDefCols.isEmpty()) {
+      throw new IllegalArgumentException(t + ": No user defined columns exist in " + tableName
+          + " - cannot insert data");
+    }
+
+    if (cvValues.size() <= 0) {
+      throw new IllegalArgumentException(t + ": No values to add into table " + tableName);
+    }
+
+    ContentValues cvDataTableVal = new ContentValues();
+    cvDataTableVal.put(DataTableColumns.ID, uuid);
+    cvDataTableVal.putAll(cvValues);
+
+    writeDataAndMetadataIntoExistingDBTable(db, tableName, cvDataTableVal, true);
+  }
+  
   /*
    * Write data into a user defined database table
    */
@@ -809,16 +940,19 @@ public class ODKDatabaseUtils {
     cvDataTableVal.put(DataTableColumns.ID, uuid);
     cvDataTableVal.putAll(cvValues);
 
-    writeDataAndMetadataIntoExistingDBTable(db, tableName, cvDataTableVal);
-
+    writeDataAndMetadataIntoExistingDBTable(db, tableName, cvDataTableVal, false);
   }
 
   /*
    * Write data into a user defined database table
    */
   public static final void writeDataAndMetadataIntoExistingDBTable(SQLiteDatabase db,
-      String tableName, ContentValues cvValues) {
+      String tableName, ContentValues cvValues, boolean shouldUpdate) {
     String nullString = null;
+    String id = null;
+    String whereClause = null;
+    String [] whereArgs = new String[1];
+    boolean update = false;
 
     if (cvValues.size() <= 0) {
       throw new IllegalArgumentException(t + ": No values to add into table " + tableName);
@@ -830,6 +964,31 @@ public class ODKDatabaseUtils {
 
     ContentValues cvDataTableVal = new ContentValues();
     cvDataTableVal.putAll(cvValues);
+    
+    // Bug fix for not updating a db row if an existing row id is used
+    if (cvDataTableVal.containsKey(DataTableColumns.ID)) {
+      // Select everything out of the table with given id
+      id = cvDataTableVal.getAsString(DataTableColumns.ID);
+      whereClause = DataTableColumns.ID + " = ?"; 
+      whereArgs[0] = "" + id;
+      String sel = "SELECT * FROM " + tableName + " WHERE "+ whereClause;
+      String[] selArgs = whereArgs;
+      Cursor cursor = rawQuery(db, sel, selArgs);
+      
+      // There must be only one row in the db for the update to work
+      if (shouldUpdate) {
+        if (cursor.getCount() == 1) {
+          update = true;
+        } else if (cursor.getCount() > 1) {
+          throw new IllegalArgumentException(t + ": row id " + id + " has more than 1 row in table " + tableName);
+        }
+      } else {
+        if (cursor.getCount() > 0) {
+          throw new IllegalArgumentException(t + ": id " + id + " is not unique in table " + tableName);
+        }
+      }
+
+    }
 
     if (!cvDataTableVal.containsKey(DataTableColumns.ID)) {
       cvDataTableVal.put(DataTableColumns.ID, rowId);
@@ -874,8 +1033,13 @@ public class ODKDatabaseUtils {
     if (!cvDataTableVal.containsKey(DataTableColumns.SAVEPOINT_CREATOR)) {
       cvDataTableVal.put(DataTableColumns.SAVEPOINT_CREATOR, nullString);
     }
+    
+    if (update) {
+      db.update(tableName, cvDataTableVal, whereClause, whereArgs);
+    } else {
+      db.replaceOrThrow(tableName, null, cvDataTableVal);
+    }
 
-    db.replaceOrThrow(tableName, null, cvDataTableVal);
   }
 
   /**

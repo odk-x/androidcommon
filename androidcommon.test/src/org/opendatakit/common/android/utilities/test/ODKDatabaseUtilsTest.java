@@ -1321,7 +1321,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
   /*
    * Test writing the data into the existing db table with valid values and a certain id
    */
-  public void testWriteDataIntoExisitingDbTableWithId_ExpectPass() {
+  public void testWriteDataIntoExisitingDbTableWithIdWhenIdDoesNotExist_ExpectPass() {
     String tableName = testTable;
     String testCol = "testColumn";
     String testColType = ODKDatabaseUserDefinedTypes.INTEGER;
@@ -1332,7 +1332,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
 
     ContentValues cvValues = new ContentValues();
-    cvValues.put(testCol, 5);
+    cvValues.put(testCol, testVal);
 
     String uuid = UUID.randomUUID().toString();
     ODKDatabaseUtils.writeDataIntoExistingDBTableWithId(db, tableName, cvValues, uuid);
@@ -1341,6 +1341,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     String sel = "SELECT * FROM " + tableName + " WHERE "+ testCol + " = ?";
     String[] selArgs = {"" + testVal};
     Cursor cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs);
+    assertEquals(cursor.getCount(), 1);
 
     int val = 0;
     while (cursor.moveToNext()) {
@@ -1352,6 +1353,212 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
 
     assertEquals(val, testVal);
 
+    // Drop the table now that the test is done
+    db.execSQL("DROP TABLE " + tableName);
+  }
+  
+  /*
+   * Test writing the data into the existing db table with valid values and an existing id
+   */
+  public void testWriteDataIntoExisitingDbTableWithIdWhenIdAlreadyExists_ExpectPass() {
+    String tableName = testTable;
+    String testCol = "testColumn";
+    String testColType = ODKDatabaseUserDefinedTypes.INTEGER;
+    int testVal = 5;
+    boolean thrown = false;
+    LinkedHashMap<String, String> columns = new LinkedHashMap<String,String>();
+    columns.put(testCol, testColType);
+
+    ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
+
+    ContentValues cvValues = new ContentValues();
+    cvValues.put(testCol, testVal);
+
+    String uuid = UUID.randomUUID().toString();
+    ODKDatabaseUtils.writeDataIntoExistingDBTableWithId(db, tableName, cvValues, uuid);
+
+    // Select everything out of the table
+    String sel = "SELECT * FROM " + tableName + " WHERE "+ testCol + " = ?";
+    String[] selArgs = {"" + testVal};
+    Cursor cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs);
+    assertEquals(cursor.getCount(), 1);
+    
+    int val = 0;
+    while (cursor.moveToNext()) {
+      int ind = cursor.getColumnIndex(testCol);
+      int type = cursor.getType(ind);
+      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
+      val = cursor.getInt(ind);
+    }
+
+    assertEquals(val, testVal);
+    
+    // Try updating that row in the database
+    int testVal2 = 25;
+    ContentValues cvValues2 = new ContentValues();
+    cvValues2.put(testCol, testVal2);
+
+    try {
+    ODKDatabaseUtils.writeDataIntoExistingDBTableWithId(db, tableName, cvValues2, uuid);
+    } catch (IllegalArgumentException e) {
+      thrown = true;
+      e.printStackTrace();
+    }
+    
+    assertEquals(thrown, true);
+
+    // Select everything out of the table
+    String sel2 = "SELECT * FROM " + tableName;
+    String[] selArgs2 = {};
+    Cursor cursor2 = ODKDatabaseUtils.rawQuery(db, sel2, selArgs2);
+    assertEquals(cursor2.getCount(), 1);
+
+    int val2 = 0;
+    while (cursor2.moveToNext()) {
+      int ind = cursor2.getColumnIndex(testCol);
+      int type = cursor2.getType(ind);
+      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
+      val2 = cursor2.getInt(ind);
+    }
+
+    assertEquals(val2, testVal);
+
+    // Drop the table now that the test is done
+    db.execSQL("DROP TABLE " + tableName);
+  }
+  
+  /*
+   * Test updating the data in an existing db table with valid values when the id 
+   * does not exist
+   */
+  public void testUpdateDataInExistingDBTableWithIdWhenIdDoesNotExist_ExpectPass() {
+    
+    String tableName = testTable;
+    String testCol = "testColumn";
+    String testColType = ODKDatabaseUserDefinedTypes.INTEGER;
+    int testVal = 5;
+    LinkedHashMap<String, String> columns = new LinkedHashMap<String,String>();
+    columns.put(testCol, testColType);
+
+    ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
+
+    ContentValues cvValues = new ContentValues();
+    cvValues.put(testCol, testVal);
+
+    String uuid = UUID.randomUUID().toString();
+    ODKDatabaseUtils.updateDataInExistingDBTableWithId(db, tableName, cvValues, uuid);
+
+    // Select everything out of the table
+    String sel = "SELECT * FROM " + tableName + " WHERE "+ testCol + " = ?";
+    String[] selArgs = {"" + testVal};
+    Cursor cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs);
+    assertEquals(cursor.getCount(), 1);
+
+    int val = 0;
+    while (cursor.moveToNext()) {
+      int ind = cursor.getColumnIndex(testCol);
+      int type = cursor.getType(ind);
+      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
+      val = cursor.getInt(ind);
+    }
+
+    assertEquals(val, testVal);
+
+    // Drop the table now that the test is done
+    db.execSQL("DROP TABLE " + tableName);
+  }
+  
+  /*
+   * Test updating the data in the existing db table with valid values 
+   * when the id already exists
+   */
+  public void testUpdateDataInExistingDBTableWithIdWhenIdAlreadyExists_ExpectPass() {
+    String tableName = testTable;
+    String testCol = "testColumn";
+    String testColType = ODKDatabaseUserDefinedTypes.INTEGER;
+    int testVal = 5;
+    boolean thrown = false;
+    LinkedHashMap<String, String> columns = new LinkedHashMap<String,String>();
+    columns.put(testCol, testColType);
+
+    ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
+
+    ContentValues cvValues = new ContentValues();
+    cvValues.put(testCol, testVal);
+
+    String uuid = UUID.randomUUID().toString();
+    ODKDatabaseUtils.updateDataInExistingDBTableWithId(db, tableName, cvValues, uuid);
+
+    // Select everything out of the table
+    String sel = "SELECT * FROM " + tableName + " WHERE "+ testCol + " = ?";
+    String[] selArgs = {"" + testVal};
+    Cursor cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs);
+    assertEquals(cursor.getCount(), 1);
+    
+    int val = 0;
+    while (cursor.moveToNext()) {
+      int ind = cursor.getColumnIndex(testCol);
+      int type = cursor.getType(ind);
+      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
+      val = cursor.getInt(ind);
+    }
+
+    assertEquals(val, testVal);
+    
+    // Try updating that row in the database
+    int testVal2 = 25;
+    ContentValues cvValues2 = new ContentValues();
+    cvValues2.put(testCol, testVal2);
+
+    ODKDatabaseUtils.updateDataInExistingDBTableWithId(db, tableName, cvValues2, uuid);
+
+    // Select everything out of the table
+    String sel2 = "SELECT * FROM " + tableName;
+    String[] selArgs2 = {};
+    Cursor cursor2 = ODKDatabaseUtils.rawQuery(db, sel2, selArgs2);
+    assertEquals(cursor2.getCount(), 1);
+
+    int val2 = 0;
+    while (cursor2.moveToNext()) {
+      int ind = cursor2.getColumnIndex(testCol);
+      int type = cursor2.getType(ind);
+      assertEquals(type, Cursor.FIELD_TYPE_INTEGER);
+      val2 = cursor2.getInt(ind);
+    }
+
+    assertEquals(val2, testVal2);
+
+    // Drop the table now that the test is done
+    db.execSQL("DROP TABLE " + tableName);
+  }
+  
+  /*
+   * Test writing the data into the existing db table with valid values and an existing id
+   */
+  public void testWriteDataIntoExisitingDbTableWithIdWhenIdIsNull_ExpectFail() {
+    String tableName = testTable;
+    String testCol = "testColumn";
+    String testColType = ODKDatabaseUserDefinedTypes.INTEGER;
+    int testVal = 5;
+    LinkedHashMap<String, String> columns = new LinkedHashMap<String,String>();
+    columns.put(testCol, testColType);
+    boolean thrown = false;
+
+    ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
+
+    ContentValues cvValues = new ContentValues();
+    cvValues.put(testCol, testVal);
+
+    String uuid = null;
+    try {
+      ODKDatabaseUtils.writeDataIntoExistingDBTableWithId(db, tableName, cvValues, uuid);
+    } catch (Exception e) {
+      thrown = true;
+      e.printStackTrace();
+    }
+    
+    assertTrue(thrown);
+    
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
   }
@@ -1382,7 +1589,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     cvValues.put(DataTableColumns.SAVEPOINT_CREATOR, nullString);
 
 
-    ODKDatabaseUtils.writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues);
+    ODKDatabaseUtils.writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues, false);
 
     // Select everything out of the table
     String sel = "SELECT * FROM " + tableName + " WHERE "+ DataTableColumns.ID + " = ?";
@@ -1429,7 +1636,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     cvValues.put(DataTableColumns.SAVEPOINT_CREATOR, nullString);
 
     try {
-      ODKDatabaseUtils.writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues);
+      ODKDatabaseUtils.writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues, false);
     } catch (Exception e) {
       thrown = true;
       e.printStackTrace();
@@ -1468,7 +1675,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     cvValues.put(DataTableColumns.SAVEPOINT_CREATOR, nullString);
 
     try {
-      ODKDatabaseUtils.writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues);
+      ODKDatabaseUtils.writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues, false);
     } catch (Exception e) {
       thrown = true;
       e.printStackTrace();
@@ -1506,7 +1713,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     cvValues.put(DataTableColumns.SAVEPOINT_CREATOR, nullString);
 
     try {
-      ODKDatabaseUtils.writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues);
+      ODKDatabaseUtils.writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues, false);
     } catch (Exception e) {
       thrown = true;
       e.printStackTrace();
@@ -1773,44 +1980,45 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
   public void testWriteDataIntoExisitingDbTableWithMimeUri_ExpectPass() {
     String tableName = testTable;
     String testCol = "testColumn";
+    String testColUriFragment = "testColumn_uriFragment";
+    String testColContentType = "testColumn_contentType";
     String testColType = ODKDatabaseUserDefinedTypes.MIMEURI;
     String uuid = UUID.randomUUID().toString();
-    ObjectMapper objectMapper = new ObjectMapper();
-    Map<String, String> mapObject = new HashMap<String, String>();
-    mapObject.put("uriFragment", "tables/example/instances/" + uuid + "/" + testCol + "-" + uuid + ".jpg");
-    mapObject.put("contentType", "image/jpg");
-    String picJsonStr = null;
-    try {
-      picJsonStr = objectMapper.writeValueAsString(mapObject);
-    } catch (Exception e) {
-      fail("testWriteDataIntoExisitingDbTableWithMimeUri_ExpectPass: exception while trying to convert mimeUri to string");
-      e.printStackTrace();
-    }
+    
+    String testUriFragment = "tables/example/instances/" + uuid + "/" + testCol + "-" + uuid + ".jpg";
+    String testContentType = "image/jpg";
 
-    String testVal = null;
     LinkedHashMap<String, String> columns = new LinkedHashMap<String,String>();
     columns.put(testCol, testColType);
 
     ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableName, columns);
 
     ContentValues cvValues = new ContentValues();
-    cvValues.put(testCol, picJsonStr);
+    cvValues.put(testColUriFragment, testUriFragment);
+    cvValues.put(testColContentType, testContentType);
     ODKDatabaseUtils.writeDataIntoExistingDBTable(db, tableName, cvValues);
 
     // Select everything out of the table
-    String sel = "SELECT * FROM " + tableName + " WHERE "+ testCol + " = ?";
-    String[] selArgs = {"" + testVal};
+    String sel = "SELECT * FROM " + tableName + " WHERE "+ testColUriFragment + " = ?";
+    String[] selArgs = {"" + testUriFragment};
     Cursor cursor = ODKDatabaseUtils.rawQuery(db, sel, selArgs);
 
-    String val = null;
+    String valUriFragment = null;
+    String valContentType = null;
     while (cursor.moveToNext()) {
-      int ind = cursor.getColumnIndex(testCol);
+      int ind = cursor.getColumnIndex(testColUriFragment);
       int type = cursor.getType(ind);
       assertEquals(type, Cursor.FIELD_TYPE_STRING);
-      val = cursor.getString(ind);
+      valUriFragment = cursor.getString(ind);
+      
+      ind = cursor.getColumnIndex(testColContentType);
+      type = cursor.getType(ind);
+      assertEquals(type, Cursor.FIELD_TYPE_STRING);
+      valContentType = cursor.getString(ind);
     }
 
-    assertEquals(val, testVal);
+    assertEquals(valUriFragment, testUriFragment);
+    assertEquals(valContentType, testContentType);
 
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
