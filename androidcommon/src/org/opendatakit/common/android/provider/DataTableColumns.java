@@ -14,7 +14,10 @@
 
 package org.opendatakit.common.android.provider;
 
+import java.util.Locale;
+
 import org.opendatakit.aggregate.odktables.rest.TableConstants;
+import org.opendatakit.aggregate.odktables.rest.entity.Scope;
 
 import android.provider.BaseColumns;
 
@@ -56,9 +59,11 @@ public class DataTableColumns implements BaseColumns {
   // These are the default values that will be set to the database in case
   // there is nothing included. This has been a problem when downloading a
   // table from the server.
-  public static final String DEFAULT_LOCALE= "";
-  public static final String DEFAULT_SAVEPOINT_CREATOR = "";
+  public static final String DEFAULT_LOCALE= Locale.ENGLISH.getLanguage();
+  public static final String DEFAULT_SAVEPOINT_CREATOR = "anonymous";
   public static final String DEFAULT_ROW_ETAG = null;
+  public static final String DEFAULT_FILTER_TYPE = Scope.EMPTY_SCOPE.getType().name();
+  public static final String DEFAULT_FILTER_VALUE = Scope.EMPTY_SCOPE.getValue();
 
   // This class cannot be instantiated
   private DataTableColumns() {

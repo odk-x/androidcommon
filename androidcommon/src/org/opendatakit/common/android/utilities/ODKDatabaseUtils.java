@@ -998,7 +998,8 @@ public class ODKDatabaseUtils {
       cvDataTableVal.put(DataTableColumns.ROW_ETAG, nullString);
     }
 
-    if (!cvDataTableVal.containsKey(DataTableColumns.SYNC_STATE)) {
+    if (!cvDataTableVal.containsKey(DataTableColumns.SYNC_STATE) ||
+        (cvDataTableVal.get(DataTableColumns.SYNC_STATE) == null)) {
       cvDataTableVal.put(DataTableColumns.SYNC_STATE, SyncState.inserting.name());
     }
 
@@ -1006,23 +1007,27 @@ public class ODKDatabaseUtils {
       cvDataTableVal.put(DataTableColumns.CONFLICT_TYPE, nullString);
     }
 
-    if (!cvDataTableVal.containsKey(DataTableColumns.FILTER_TYPE)) {
-      cvDataTableVal.put(DataTableColumns.FILTER_TYPE, Scope.EMPTY_SCOPE.getType().name());
+    if (!cvDataTableVal.containsKey(DataTableColumns.FILTER_TYPE) ||
+        (cvDataTableVal.get(DataTableColumns.FILTER_TYPE) == null)) {
+      cvDataTableVal.put(DataTableColumns.FILTER_TYPE, DataTableColumns.DEFAULT_FILTER_TYPE);
     }
 
-    if (!cvDataTableVal.containsKey(DataTableColumns.FILTER_VALUE)) {
-      cvDataTableVal.put(DataTableColumns.FILTER_VALUE, Scope.EMPTY_SCOPE.getValue());
+    if (!cvDataTableVal.containsKey(DataTableColumns.FILTER_VALUE) ||
+        (cvDataTableVal.get(DataTableColumns.FILTER_VALUE) == null)) {
+      cvDataTableVal.put(DataTableColumns.FILTER_VALUE, DataTableColumns.DEFAULT_FILTER_VALUE);
     }
 
     if (!cvDataTableVal.containsKey(DataTableColumns.FORM_ID)) {
       cvDataTableVal.put(DataTableColumns.FORM_ID, nullString);
     }
 
-    if (!cvDataTableVal.containsKey(DataTableColumns.LOCALE)) {
-      cvDataTableVal.put(DataTableColumns.LOCALE, Locale.ENGLISH.getLanguage());
+    if (!cvDataTableVal.containsKey(DataTableColumns.LOCALE) ||
+        (cvDataTableVal.get(DataTableColumns.LOCALE) == null)) {
+      cvDataTableVal.put(DataTableColumns.LOCALE, DataTableColumns.DEFAULT_LOCALE);
     }
 
-    if (!cvDataTableVal.containsKey(DataTableColumns.SAVEPOINT_TYPE)) {
+    if (!cvDataTableVal.containsKey(DataTableColumns.SAVEPOINT_TYPE) ||
+        (cvDataTableVal.get(DataTableColumns.SAVEPOINT_TYPE) == null)) {
       cvDataTableVal.put(DataTableColumns.SAVEPOINT_TYPE, SavepointTypeManipulator.complete());
     }
 
@@ -1030,8 +1035,9 @@ public class ODKDatabaseUtils {
       cvDataTableVal.put(DataTableColumns.SAVEPOINT_TIMESTAMP, timeStamp);
     }
 
-    if (!cvDataTableVal.containsKey(DataTableColumns.SAVEPOINT_CREATOR)) {
-      cvDataTableVal.put(DataTableColumns.SAVEPOINT_CREATOR, nullString);
+    if (!cvDataTableVal.containsKey(DataTableColumns.SAVEPOINT_CREATOR) ||
+        (cvDataTableVal.get(DataTableColumns.SAVEPOINT_CREATOR) == null)) {
+      cvDataTableVal.put(DataTableColumns.SAVEPOINT_CREATOR, DataTableColumns.DEFAULT_SAVEPOINT_CREATOR );
     }
     
     if (update) {
