@@ -1645,9 +1645,11 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
   }
 
   /*
-   * Test writing metadata into the existing db table when sync state is null
+   * Test writing metadata into the existing db table when sync state is null.
+   * The sync state and other fields that should not be null will be silently 
+   * replaced with non-null values.
    */
-  public void testWriteDataAndMetadataIntoExistingDBTableWhenSyncStateIsNull_ExpectFail() {
+  public void testWriteDataAndMetadataIntoExistingDBTableWhenSyncStateIsNull_ExpectSuccess() {
     String tableName = testTable;
     String nullString = null;
     boolean thrown = false;
@@ -1677,7 +1679,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
       e.printStackTrace();
     }
 
-    assertTrue(thrown);
+    assertFalse(thrown);
 
     // Drop the table now that the test is done
     db.execSQL("DROP TABLE " + tableName);
