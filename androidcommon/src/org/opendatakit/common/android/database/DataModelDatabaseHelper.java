@@ -227,6 +227,7 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
     public final String elementKey;
     public final String elementName;
     public final String elementType;
+    private boolean isUnitOfRetention = true; // assumed until revised...
 
     public final ArrayList<ColumnDefinition> children = new ArrayList<ColumnDefinition>();
     public ColumnDefinition parent = null;
@@ -247,13 +248,11 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
     }
 
     public boolean isUnitOfRetention() {
-      if ( "array".equals(elementType) ) {
-        return true;
-      }
-      if ( children.isEmpty() ) {
-        return true;
-      }
-      return false;
+      return isUnitOfRetention;
+    }
+    
+    void setNotUnitOfRetention() {
+      isUnitOfRetention = false;
     }
 
   };
@@ -380,6 +379,8 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
         for (ColumnContainer ctn : ref.values()) {
           defn.put(ctn.defn.elementKey, ctn.defn);
         }
+        // and resolve whether a column is a unit of retention
+        markUnitOfRetention(defn);
         return defn;
       }
     } finally {
@@ -388,5 +389,50 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
       }
     }
     return null;
+  }
+  /**
+   *  This must match the code in the javascript layer
+   *  See databaseUtils.markUnitOfRetention
+   *  
+   * @param defn
+   */
+  private static void markUnitOfRetention(Map<String, ColumnDefinition> defn) {
+    // for all arrays, mark all descendants of the array as not-retained
+    // because they are all folded up into the json representation of the array
+    for ( String startKey : defn.keySet() ) {
+      ColumnDefinition colDefn = defn.get(startKey);
+      if ( !colDefn.isUnitOfRetention() ) {
+        // this has already been processed
+        continue;
+      }
+      if ( "array".equals(colDefn.elementType) ) {
+        ArrayList<ColumnDefinition> descendantsOfArray = colDefn.children;
+        ArrayList<ColumnDefinition> scratchArray = new ArrayList<ColumnDefinition>();
+        while ( !descendantsOfArray.isEmpty() ) {
+            for ( ColumnDefinition subDefn : descendantsOfArray ) {
+              if ( !subDefn.isUnitOfRetention() ) {
+                  // this has already been processed
+                  continue;
+              }
+              subDefn.setNotUnitOfRetention();
+              scratchArray.addAll(subDefn.children);
+            }
+            descendantsOfArray = scratchArray;
+        }
+      }
+    }
+    // and mark any non-arrays with multiple fields as not retained
+    for ( String startKey : defn.keySet() ) {
+      ColumnDefinition colDefn = defn.get(startKey);
+      if ( !colDefn.isUnitOfRetention() ) {
+          // this has already been processed
+          continue;
+      }
+      if ( ! "array".equals(colDefn.elementType) ) {
+        if ( !colDefn.children.isEmpty() ) {
+          colDefn.setNotUnitOfRetention();
+        }
+      }
+    }
   }
 }
