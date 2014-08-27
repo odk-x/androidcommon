@@ -1574,7 +1574,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     ContentValues cvValues = new ContentValues();
     cvValues.put(DataTableColumns.ID, uuid);
     cvValues.put(DataTableColumns.ROW_ETAG, nullString);
-    cvValues.put(DataTableColumns.SYNC_STATE, SyncState.inserting.name());
+    cvValues.put(DataTableColumns.SYNC_STATE, SyncState.new_row.name());
     cvValues.put(DataTableColumns.CONFLICT_TYPE, nullString);
     cvValues.put(DataTableColumns.FILTER_TYPE, nullString);
     cvValues.put(DataTableColumns.FILTER_VALUE, nullString);
@@ -1599,7 +1599,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
 
       ind = cursor.getColumnIndex(DataTableColumns.SYNC_STATE);
       String ss = cursor.getString(ind);
-      assertEquals(ss, SyncState.inserting.name());
+      assertEquals(ss, SyncState.new_row.name());
     }
 
     // Drop the table now that the test is done
@@ -1621,7 +1621,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     ContentValues cvValues = new ContentValues();
     cvValues.put(DataTableColumns.ID, nullString);
     cvValues.put(DataTableColumns.ROW_ETAG, nullString);
-    cvValues.put(DataTableColumns.SYNC_STATE, SyncState.inserting.name());
+    cvValues.put(DataTableColumns.SYNC_STATE, SyncState.new_row.name());
     cvValues.put(DataTableColumns.CONFLICT_TYPE, nullString);
     cvValues.put(DataTableColumns.FILTER_TYPE, nullString);
     cvValues.put(DataTableColumns.FILTER_VALUE, nullString);
@@ -1700,7 +1700,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase{
     ContentValues cvValues = new ContentValues();
     cvValues.put(DataTableColumns.ID, uuid);
     cvValues.put(DataTableColumns.ROW_ETAG, nullString);
-    cvValues.put(DataTableColumns.SYNC_STATE, SyncState.inserting.name());
+    cvValues.put(DataTableColumns.SYNC_STATE, SyncState.new_row.name());
     cvValues.put(DataTableColumns.CONFLICT_TYPE, nullString);
     cvValues.put(DataTableColumns.FILTER_TYPE, nullString);
     cvValues.put(DataTableColumns.FILTER_VALUE, nullString);

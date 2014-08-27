@@ -998,7 +998,7 @@ public class ODKDatabaseUtils {
 
     if (!cvDataTableVal.containsKey(DataTableColumns.SYNC_STATE) ||
         (cvDataTableVal.get(DataTableColumns.SYNC_STATE) == null)) {
-      cvDataTableVal.put(DataTableColumns.SYNC_STATE, SyncState.inserting.name());
+      cvDataTableVal.put(DataTableColumns.SYNC_STATE, SyncState.new_row.name());
     }
 
     if (!cvDataTableVal.containsKey(DataTableColumns.CONFLICT_TYPE)) {
