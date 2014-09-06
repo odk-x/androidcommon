@@ -2,20 +2,25 @@ package org.opendatakit.common.android.utilities;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Map.Entry;
+import java.util.List;
+import java.util.TreeMap;
 import java.util.UUID;
 
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.aggregate.odktables.rest.SavepointTypeManipulator;
 import org.opendatakit.aggregate.odktables.rest.SyncState;
 import org.opendatakit.aggregate.odktables.rest.TableConstants;
+import org.opendatakit.aggregate.odktables.rest.entity.Column;
+import org.opendatakit.common.android.data.ColorRule;
+import org.opendatakit.common.android.data.ColumnDefinition;
+import org.opendatakit.common.android.data.ElementDataType;
+import org.opendatakit.common.android.data.ElementType;
 import org.opendatakit.common.android.database.DataModelDatabaseHelper;
 import org.opendatakit.common.android.provider.ColumnDefinitionsColumns;
 import org.opendatakit.common.android.provider.DataTableColumns;
+import org.opendatakit.common.android.provider.InstanceColumns;
 import org.opendatakit.common.android.provider.KeyValueStoreColumns;
 import org.opendatakit.common.android.provider.TableDefinitionsColumns;
 
@@ -26,6 +31,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 
 public class ODKDatabaseUtils {
@@ -37,6 +43,60 @@ public class ODKDatabaseUtils {
 
   private static final String uriFrag = "uriFragment";
   private static final String contentType = "contentType";
+
+  /*
+   * These are the columns that are present in any row in the database.
+   * Each row should have these in addition to the user-defined columns.
+   * If you add a column here you have to be sure to also add it in the
+   * create table statement, which can't be programmatically created easily.
+   */
+  private static final List<String> ADMIN_COLUMNS;
+
+  /**
+   * These are the columns that should be exported
+   */
+  private static final List<String> EXPORT_COLUMNS;
+
+  static {
+    ArrayList<String> adminColumns = new ArrayList<String>();
+    adminColumns.add(DataTableColumns.ID);
+    adminColumns.add(DataTableColumns.ROW_ETAG);
+    adminColumns.add(DataTableColumns.SYNC_STATE); // not exportable
+    adminColumns.add(DataTableColumns.CONFLICT_TYPE); // not exportable
+    adminColumns.add(DataTableColumns.FILTER_TYPE);
+    adminColumns.add(DataTableColumns.FILTER_VALUE);
+    adminColumns.add(DataTableColumns.FORM_ID);
+    adminColumns.add(DataTableColumns.LOCALE);
+    adminColumns.add(DataTableColumns.SAVEPOINT_TYPE);
+    adminColumns.add(DataTableColumns.SAVEPOINT_TIMESTAMP);
+    adminColumns.add(DataTableColumns.SAVEPOINT_CREATOR);
+    ADMIN_COLUMNS = Collections.unmodifiableList(adminColumns);
+
+    ArrayList<String> exportColumns = new ArrayList<String>();
+    exportColumns.add(DataTableColumns.ID);
+    exportColumns.add(DataTableColumns.ROW_ETAG);
+    exportColumns.add(DataTableColumns.FILTER_TYPE);
+    exportColumns.add(DataTableColumns.FILTER_VALUE);
+    exportColumns.add(DataTableColumns.FORM_ID);
+    exportColumns.add(DataTableColumns.LOCALE);
+    exportColumns.add(DataTableColumns.SAVEPOINT_TYPE);
+    exportColumns.add(DataTableColumns.SAVEPOINT_TIMESTAMP);
+    exportColumns.add(DataTableColumns.SAVEPOINT_CREATOR);
+    EXPORT_COLUMNS = Collections.unmodifiableList(exportColumns);
+  }
+
+  /**
+   * Return an unmodifiable list of the admin columns that must be present
+   * in every database table.
+   * @return
+   */
+  public static final List<String> getAdminColumns() {
+    return ADMIN_COLUMNS;
+  }
+
+  public static final List<String> getExportColumns() {
+    return EXPORT_COLUMNS;
+  }
 
   private ODKDatabaseUtils() {
   }
@@ -71,81 +131,126 @@ public class ODKDatabaseUtils {
   }
 
   /*
-   * Get the database type for the user defined type
+   * Query the current database for all user defined columns
+   * 
+   * Returns both the grouping columns and the actual persisted
+   * columns.
    */
-  private static final String getDBTypeForUserDefinedType(String userDefinedType) {
-    String dbType = null;
-
-    if (userDefinedType.equals(ODKDatabaseUserDefinedTypes.STRING)
-        || userDefinedType.equals(ODKDatabaseUserDefinedTypes.MIMEURI)
-        || userDefinedType.equals(ODKDatabaseUserDefinedTypes.DATE)
-        || userDefinedType.equals(ODKDatabaseUserDefinedTypes.DATETIME)
-        || userDefinedType.equals(ODKDatabaseUserDefinedTypes.TIME)
-        || userDefinedType.equals(ODKDatabaseUserDefinedTypes.ARRAY)) {
-      dbType = "TEXT";
-    } else if (userDefinedType.equals(ODKDatabaseUserDefinedTypes.BOOLEAN)) {
-      dbType = "INTEGER"; // 0 or 1
-    } else if (userDefinedType.equals(ODKDatabaseUserDefinedTypes.INTEGER)) {
-      dbType = "INTEGER";
-    } else if (userDefinedType.equals(ODKDatabaseUserDefinedTypes.NUMBER)) {
-      dbType = "REAL";
-    } else if (userDefinedType.equals(ODKDatabaseUserDefinedTypes.GEOPOINT)) {
-      dbType = "REAL";
-    } else {
-      Log.i(t, "getDBTypeForUserDefinedType: Couldn't convert " + userDefinedType
-          + " to a database type");
-    }
-
-    return dbType;
-  }
-
-  /*
-   * Query the current database for user defined columns
-   */
-  public static final LinkedHashMap<String, String> getUserDefinedColumnsAndTypes(
+  public static final List<Column> getUserDefinedColumns(
       SQLiteDatabase db, String tableName) {
-    LinkedHashMap<String, String> userDefinedColumns = new LinkedHashMap<String, String>();
-    String selection = ColumnDefinitionsColumns.TABLE_ID + "=? AND (" +
-        ColumnDefinitionsColumns.ELEMENT_TYPE + "=? OR " +
-        ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS + " IS NULL OR " +
-        ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS + "=?)";
-    String[] selectionArgs = { tableName, "array", "[]" };
+    List<Column> userDefinedColumns = new ArrayList<Column>();
+    String selection = ColumnDefinitionsColumns.TABLE_ID + "=?";
+    String[] selectionArgs = { tableName };
     String[] cols = { ColumnDefinitionsColumns.ELEMENT_KEY,
-        ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS,
-        ColumnDefinitionsColumns.ELEMENT_TYPE };
+        ColumnDefinitionsColumns.ELEMENT_NAME,
+        ColumnDefinitionsColumns.ELEMENT_TYPE,
+        ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS };
     Cursor c = null;
     try {
       c = db.query(DataModelDatabaseHelper.COLUMN_DEFINITIONS_TABLE_NAME, cols, selection,
         selectionArgs, null, null, null);
 
       int elemKeyIndex = c.getColumnIndexOrThrow(ColumnDefinitionsColumns.ELEMENT_KEY);
-      int listChildrenIndex = c.getColumnIndexOrThrow(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS);
+      int elemNameIndex = c.getColumnIndexOrThrow(ColumnDefinitionsColumns.ELEMENT_NAME);
       int elemTypeIndex = c.getColumnIndexOrThrow(ColumnDefinitionsColumns.ELEMENT_TYPE);
-      ArrayList<String> arrayItems = new ArrayList<String>();
+      int listChildrenIndex = c.getColumnIndexOrThrow(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS);
       c.moveToFirst();
       while (!c.isAfterLast()) {
         String elementKey = getIndexAsString(c, elemKeyIndex);
+        String elementName = getIndexAsString(c, elemNameIndex);
         String elementType = getIndexAsString(c, elemTypeIndex);
-        if ( elementType.equals("array") ) {
-          ArrayList<String> listChildren = ODKDatabaseUtils.getIndexAsType(c, ArrayList.class, listChildrenIndex);
-          if ( listChildren == null || listChildren.size() != 1) {
-            throw new IllegalStateException("empty or more than one element specified for array item: " + elementKey);
-          }
-          arrayItems.addAll(listChildren);
-        }
-        userDefinedColumns.put(elementKey, getIndexAsString(c, elemTypeIndex));
+        String listOfChildren = getIndexAsString(c, listChildrenIndex);
+        userDefinedColumns.add(new Column(elementKey, elementName, elementType, listOfChildren));
         c.moveToNext();
-      }
-
-      // TODO: this does not work correctly for arrays of objects...
-      // remove the item type declarations for array values.
-      for ( String arrayItemElement : arrayItems ) {
-        userDefinedColumns.remove(arrayItemElement);
       }
     } finally {
       c.close();
     }
     return userDefinedColumns;
+  }
+
+  /**
+   * Verifies that the tableId exists in the database.
+   *
+   * @param db
+   * @param tableId
+   * @return true if table is listed in table definitions.
+   */
+  public static boolean hasTableId(SQLiteDatabase db, String tableId) {
+    Cursor c = null;
+    try {
+      c = db.query(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, null,
+          TableDefinitionsColumns.TABLE_ID + "=?", new String[] { tableId }, null, null, null);
+
+      if (c.moveToFirst()) {
+        // we know about the table...
+        // tableId is the database table name...
+        return true;
+      }
+    } finally {
+      if (c != null && !c.isClosed()) {
+        c.close();
+      }
+    }
+    return false;
+  }
+
+  public static List<String> getAllTableIds(SQLiteDatabase db) {
+    List<String> tableIds = new ArrayList<String>();
+    Cursor c = null;
+    try {
+      c = db.query(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, 
+          new String[] { TableDefinitionsColumns.TABLE_ID },
+          null, null, null, null, TableDefinitionsColumns.TABLE_ID + " ASC");
+
+      if (c.moveToFirst()) {
+        int idxId = c.getColumnIndex(TableDefinitionsColumns.TABLE_ID);
+        do {
+          String tableId = c.getString(idxId);
+          if ( tableId == null || tableId.length() == 0) {
+            c.close();
+            throw new IllegalStateException("getAllTableIds: Unexpected tableId found!");
+          }
+          tableIds.add(tableId);
+        } while ( c.moveToNext() );
+      }
+    } finally {
+      if (c != null && !c.isClosed()) {
+        c.close();
+      }
+    }
+    return tableIds;
+  }
+  
+  public static void deleteTableAndData(SQLiteDatabase db, String tableId) {
+    try {
+      String whereClause = TableDefinitionsColumns.TABLE_ID + " = ?";
+      String[] whereArgs = { tableId };
+
+      db.beginTransaction();
+
+      // Drop the table used for the formId
+      db.execSQL("DROP TABLE IF EXISTS \"" + tableId + "\";");
+
+      // Delete the table definition for the tableId
+      int count = db.delete(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, whereClause, whereArgs);
+
+      // Delete the column definitions for this tableId
+      db.delete(DataModelDatabaseHelper.COLUMN_DEFINITIONS_TABLE_NAME, whereClause, whereArgs);
+
+      // Delete the uploads for the tableId
+      String uploadWhereClause = InstanceColumns.DATA_TABLE_TABLE_ID + " = ?";
+      db.delete(DataModelDatabaseHelper.UPLOADS_TABLE_NAME, uploadWhereClause, whereArgs);
+
+      // Delete the values from the 4 key value stores
+      db.delete(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, whereClause, whereArgs);
+      db.delete(DataModelDatabaseHelper.KEY_VALULE_STORE_SYNC_TABLE_NAME, whereClause, whereArgs);
+
+      db.setTransactionSuccessful();
+
+    } finally {
+      db.endTransaction();
+    }
   }
 
   /*
@@ -168,56 +273,30 @@ public class ODKDatabaseUtils {
 
     String createTableCmd = "CREATE TABLE IF NOT EXISTS " + tableName + " (";
 
-    String[] cols = getDefaultUserDefinedTableColumns();
+    List<String> cols = getAdminColumns();
 
     String endSeq = ", ";
-    for (int i = 0; i < cols.length; i++) {
-      if (i == cols.length - 1) {
+    for (int i = 0 ; i < cols.size(); ++i) {
+      if (i == cols.size() - 1) {
         endSeq = "";
       }
-      if (cols[i].equals(DataTableColumns.ID) || cols[i].equals(DataTableColumns.SYNC_STATE)
-          || cols[i].equals(DataTableColumns.SAVEPOINT_TIMESTAMP)) {
-        createTableCmd = createTableCmd + cols[i] + " TEXT NOT NULL" + endSeq;
-      } else if (cols[i].equals(DataTableColumns.ROW_ETAG)
-          || cols[i].equals(DataTableColumns.FILTER_TYPE)
-          || cols[i].equals(DataTableColumns.FILTER_VALUE)
-          || cols[i].equals(DataTableColumns.FORM_ID) || cols[i].equals(DataTableColumns.LOCALE)
-          || cols[i].equals(DataTableColumns.SAVEPOINT_TYPE)
-          || cols[i].equals(DataTableColumns.SAVEPOINT_CREATOR)) {
-        createTableCmd = createTableCmd + cols[i] + " TEXT NULL" + endSeq;
-      } else if (cols[i].equals(DataTableColumns.CONFLICT_TYPE)) {
-        createTableCmd = createTableCmd + cols[i] + " INTEGER NULL" + endSeq;
+      String colName = cols.get(i);
+      if (colName.equals(DataTableColumns.ID) || colName.equals(DataTableColumns.SYNC_STATE)
+          || colName.equals(DataTableColumns.SAVEPOINT_TIMESTAMP)) {
+        createTableCmd = createTableCmd + colName + " TEXT NOT NULL" + endSeq;
+      } else if (colName.equals(DataTableColumns.ROW_ETAG)
+          || colName.equals(DataTableColumns.FILTER_TYPE)
+          || colName.equals(DataTableColumns.FILTER_VALUE)
+          || colName.equals(DataTableColumns.FORM_ID) || colName.equals(DataTableColumns.LOCALE)
+          || colName.equals(DataTableColumns.SAVEPOINT_TYPE)
+          || colName.equals(DataTableColumns.SAVEPOINT_CREATOR)) {
+        createTableCmd = createTableCmd + colName + " TEXT NULL" + endSeq;
+      } else if (colName.equals(DataTableColumns.CONFLICT_TYPE)) {
+        createTableCmd = createTableCmd + colName + " INTEGER NULL" + endSeq;
       }
     }
 
     return createTableCmd;
-  }
-
-  public static final String[] getDefaultUserDefinedTableColumns() {
-    String[] cols = { DataTableColumns.ID, DataTableColumns.ROW_ETAG, DataTableColumns.SYNC_STATE,
-        DataTableColumns.CONFLICT_TYPE, DataTableColumns.FILTER_TYPE,
-        DataTableColumns.FILTER_VALUE, DataTableColumns.FORM_ID, DataTableColumns.LOCALE,
-        DataTableColumns.SAVEPOINT_TYPE, DataTableColumns.SAVEPOINT_TIMESTAMP,
-        DataTableColumns.SAVEPOINT_CREATOR };
-    return cols;
-  }
-
-  /*
-   * Create a user defined database table with a transaction
-   */
-  public static final void createOrOpenDBTable(SQLiteDatabase db, String tableName) {
-    boolean success = false;
-    try {
-      db.beginTransaction();
-      createDBTable(db, tableName);
-      db.setTransactionSuccessful();
-      success = true;
-    } finally {
-      db.endTransaction();
-      if (success == false) {
-        Log.e(t, "createOrOpenDBTable: Error while adding table " + tableName);
-      }
-    }
   }
 
   /*
@@ -232,10 +311,9 @@ public class ODKDatabaseUtils {
     // Add the table id into table definitions
     ContentValues cvTableDef = new ContentValues();
     cvTableDef.put(TableDefinitionsColumns.TABLE_ID, tableId);
-    cvTableDef.put(TableDefinitionsColumns.DB_TABLE_NAME, tableId);
     cvTableDef.put(TableDefinitionsColumns.SYNC_TAG, "");
     cvTableDef.put(TableDefinitionsColumns.LAST_SYNC_TIME, -1);
-    cvTableDef.put(TableDefinitionsColumns.SYNC_STATE, "inserting");
+    cvTableDef.put(TableDefinitionsColumns.SYNC_STATE, SyncState.new_row.name());
     cvTableDef.put(TableDefinitionsColumns.TRANSACTIONING, 0);
 
     db.replaceOrThrow(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, null, cvTableDef);
@@ -314,11 +392,18 @@ public class ODKDatabaseUtils {
     cvTableVal.put(KeyValueStoreColumns.ASPECT, KeyValueStoreConstants.ASPECT_DEFAULT);
     cvTableVal.put(KeyValueStoreColumns.KEY, "StatusColumn.ruleList");
     cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
-    cvTableVal
-        .put(
-            KeyValueStoreColumns.VALUE,
-            "[{\"mValue\":\"rest\",\"mElementKey\":\"_sync_state\",\"mOperator\":\"EQUAL\",\"mId\":\"syncStateRest\",\"mForeground\":-16777216,\"mBackground\":-1},{\"mValue\":\"inserting\",\"mElementKey\":\"_sync_state\",\"mOperator\":\"EQUAL\",\"mId\":\"defaultRule_syncStateInserting\",\"mForeground\":-16777216,\"mBackground\":-16711936},{\"mValue\":\"updating\",\"mElementKey\":\"_sync_state\",\"mOperator\":\"EQUAL\",\"mId\":\"defaultRule_syncStateUpdating\",\"mForeground\":-16777216,\"mBackground\":-935891},{\"mValue\":\"conflicting\",\"mElementKey\":\"_sync_state\",\"mOperator\":\"EQUAL\",\"mId\":\"defaultRule_syncStateConflicting\",\"mForeground\":-16777216,\"mBackground\":-65536},{\"mValue\":\"deleting\",\"mElementKey\":\"_sync_state\",\"mOperator\":\"EQUAL\",\"mId\":\"defaultRule_syncStateDeleting\",\"mForeground\":-16777216,\"mBackground\":-12303292}]");
-    cvTableValKVS.add(cvTableVal);
+    try {
+      List<ColorRule> rules = ColorRuleUtil.getDefaultSyncStateColorRules();
+      List<TreeMap<String,Object>> jsonableList = new ArrayList<TreeMap<String,Object>>();
+      for ( ColorRule rule : rules ) {
+        jsonableList.add(rule.getJsonRepresentation());
+      }
+      String value = ODKFileUtils.mapper.writeValueAsString(jsonableList);
+      cvTableVal.put(KeyValueStoreColumns.VALUE, value);
+      cvTableValKVS.add(cvTableVal);
+    } catch (JsonProcessingException e) {
+      e.printStackTrace();
+    }
 
     // Now add Tables values into KVS
     for (int i = 0; i < cvTableValKVS.size(); i++) {
@@ -326,128 +411,17 @@ public class ODKDatabaseUtils {
           cvTableValKVS.get(i));
     }
   }
-
-  /*
-   * Create a new column in a database table with a transaction
-   */
-  public static final void createNewColumnIntoExistingDBTable(SQLiteDatabase db, String tableName,
-      String colName, String colType) {
-    boolean success = false;
-    try {
-      db.beginTransaction();
-      createNewColumn(db, tableName, colName, colType);
-      db.setTransactionSuccessful();
-      success = true;
-    } finally {
-      db.endTransaction();
-      if (success == false) {
-        Log.e(t, "createNewColumnIntoExistingDBTable: Error while creating column " + colName
-            + " in table " + tableName);
-      }
-    }
-  }
-
-  /*
-   * Create a new column in the database
-   */
-  private static final void createNewColumn(SQLiteDatabase db, String tableName, String colName,
-      String colType) {
-    // create metadata for new column
-    createNewColumnMetadata(db, tableName, colName, colType);
-
-    // Need to address column order
-    ContentValues cvTableVal = new ContentValues();
-    cvTableVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-    cvTableVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_TABLE);
-    cvTableVal.put(KeyValueStoreColumns.ASPECT, KeyValueStoreConstants.ASPECT_DEFAULT);
-    cvTableVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.TABLE_COL_ORDER);
-    cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
-
-    Map<String, String> userDefinedCols = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db,
-        tableName);
-    StringBuilder tableDefCol = new StringBuilder();
-
-    if (userDefinedCols.isEmpty()) {
-      throw new IllegalArgumentException(t + ": No user defined columns exist in " + tableName);
-    }
-
-    Iterator<Entry<String, String>> itr = userDefinedCols.entrySet().iterator();
-    tableDefCol.append("\"").append(itr.next().getKey().toString()).append("\"");
-    while (itr.hasNext()) {
-      tableDefCol.append(", \"").append(itr.next().getKey().toString()).append("\"");
-    }
-
-    String colOrderVal = "[" + tableDefCol.toString() + "]";
-    cvTableVal.put(KeyValueStoreColumns.VALUE, colOrderVal);
-
-    // Now add Tables values into KVS
-    db.replaceOrThrow(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null, cvTableVal);
-
-    // Have to create a new table with added column
-    reformTable(db, tableName, colName, colType);
-  }
-
-  /**
-   * Construct a temporary database table to save the current table, then
-   * creates a new table and copies the data back in.
-   *
-   */
-  private static final void reformTable(SQLiteDatabase db, String tableName, String colName,
-      String colType) {
-
-    String[] colNames = ODKDatabaseUtils.getAllColumnNames(db, tableName);
-
-    if (colNames.length <= 0) {
-      throw new IllegalArgumentException(t + ": " + tableName + " does not contain any columns");
-    }
-
-    StringBuilder tableDefCol = new StringBuilder();
-    tableDefCol.append(colNames[0]);
-
-    for (int i = 1; i < colNames.length; i++) {
-      tableDefCol.append(", ").append(colNames[i]);
-    }
-
-    String csv = tableDefCol.toString();
-
-    db.execSQL("CREATE TEMPORARY TABLE backup_(" + csv + ")");
-    db.execSQL("INSERT INTO backup_(" + csv + ") SELECT " + csv + " FROM " + tableName);
-    db.execSQL("DROP TABLE " + tableName);
-
-    // Create Table Code
-    Map<String, String> userDefinedCols = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db,
-        tableName);
-    StringBuilder userDefColStrBld = new StringBuilder();
-
-    for (Map.Entry<String, String> entry : userDefinedCols.entrySet()) {
-      String key = entry.getKey();
-      String type = entry.getValue();
-      userDefColStrBld.append(", ").append(key).append(" ")
-          .append(getDBTypeForUserDefinedType(type)).append(" NULL");
-    }
-
-    String toExecute = getUserDefinedTableCreationStatement(tableName);
-
-    if (userDefinedCols != null) {
-      toExecute = toExecute + userDefColStrBld.toString();
-    }
-    toExecute = toExecute + ")";
-
-    db.execSQL(toExecute);
-
-    db.execSQL("INSERT INTO " + tableName + "(" + csv + ") SELECT " + csv + " FROM backup_");
-    db.execSQL("DROP TABLE backup_");
-  }
-
+  
   /*
    * Create a user defined database table with a transaction
    */
   public static final void createOrOpenDBTableWithColumns(SQLiteDatabase db, String tableName,
-      LinkedHashMap<String, String> columns) {
+      List<Column> columns) {
     boolean success = false;
     try {
+      List<ColumnDefinition> orderedDefs = ColumnDefinition.buildColumnDefinitions(columns);
       db.beginTransaction();
-      createDBTableWithColumns(db, tableName, columns);
+      createDBTableWithColumns(db, tableName, orderedDefs);
       db.setTransactionSuccessful();
       success = true;
     } finally {
@@ -457,8 +431,8 @@ public class ODKDatabaseUtils {
         // Get the names of the columns
         StringBuilder colNames = new StringBuilder();
         if (columns != null) {
-          for (Entry<String, String> entry : columns.entrySet()) {
-            colNames.append(" ").append(entry.getKey()).append(",");
+          for (Column column : columns) {
+            colNames.append(" ").append(column.getElementKey()).append(",");
           }
           if (colNames != null && colNames.length() > 0) {
             colNames.deleteCharAt(colNames.length() - 1);
@@ -478,7 +452,7 @@ public class ODKDatabaseUtils {
    * values
    */
   private static final void createDBTableWithColumns(SQLiteDatabase db, String tableName,
-      LinkedHashMap<String, String> columns) {
+      List<ColumnDefinition> orderedDefs) {
     if (tableName == null || tableName.length() <= 0) {
       throw new IllegalArgumentException(t + ": application name and table name must be specified");
     }
@@ -488,33 +462,35 @@ public class ODKDatabaseUtils {
     StringBuilder createTableCmdWithCols = new StringBuilder();
     createTableCmdWithCols.append(createTableCmd);
 
-    for (Map.Entry<String, String> column : columns.entrySet()) {
-      String type = column.getValue();
-      String name = column.getKey();
-      String dbType = getDBTypeForUserDefinedType(type);
-
-      if (type.equals(ODKDatabaseUserDefinedTypes.GEOPOINT)) {
-        createTableCmdWithCols.append(", ").append(name).append("_latitude ").append(dbType)
-          .append(" NULL");
-        createTableCmdWithCols.append(", ").append(name).append("_longitude ").append(dbType)
-          .append(" NULL");
-        createTableCmdWithCols.append(", ").append(name).append("_altitude ").append(dbType)
-          .append(" NULL");
-        createTableCmdWithCols.append(", ").append(name).append("_accuracy ").append(dbType)
-          .append(" NULL");
-      } else if (type.equals(ODKDatabaseUserDefinedTypes.MIMEURI)) {
-        createTableCmdWithCols.append(", ").append(name).append("_uriFragment ").append(dbType)
-          .append(" NULL");
-        createTableCmdWithCols.append(", ").append(name).append("_contentType ").append(dbType)
-          .append(" NULL");
-      } else {
-        if (dbType != null) {
-          createTableCmdWithCols.append(", ").append(name).append(" ").append(dbType)
-            .append(" NULL");
-        } else {
-          Log.i(t, "Didn't add " + name + " unrecognized type " + type + " to the database");
-        }
+    for (ColumnDefinition column : orderedDefs) {
+      if ( !column.isUnitOfRetention() ) {
+        continue;
       }
+      ElementType elementType = ElementType.parseElementType(column.getElementType(), 
+          !column.getChildren().isEmpty());
+
+      ElementDataType dataType = elementType.getDataType();
+      String dbType;
+      if ( dataType == ElementDataType.array ) {
+        dbType = "TEXT";
+      } else if ( dataType == ElementDataType.bool ) {
+        dbType = "INTEGER";
+      } else if ( dataType == ElementDataType.configpath ) {
+        dbType = "TEXT";
+      } else if ( dataType == ElementDataType.integer ) {
+        dbType = "INTEGER";
+      } else if ( dataType == ElementDataType.number ) {
+        dbType = "REAL";
+      } else if ( dataType == ElementDataType.object ) {
+        dbType = "TEXT";
+      } else if ( dataType == ElementDataType.rowpath ) {
+        dbType = "TEXT";
+      } else if ( dataType == ElementDataType.string ) {
+        dbType = "TEXT";
+      } else {
+        throw new IllegalStateException("unexpected ElementDataType: " + dataType.name());
+      }
+      createTableCmdWithCols.append(", ").append(column.getElementKey()).append(" ").append(dbType).append(" NULL");
     }
 
     createTableCmdWithCols.append(");");
@@ -525,10 +501,8 @@ public class ODKDatabaseUtils {
     createDBTableMetadata(db, tableName);
 
     // Now need to call the function to write out all the column values
-    for (Map.Entry<String, String> column : columns.entrySet()) {
-      String type = column.getValue();
-      String name = column.getKey();
-      createNewColumnMetadata(db, tableName, name, type);
+    for (ColumnDefinition column : orderedDefs) {
+      createNewColumnMetadata(db, tableName, column);
     }
 
     // Need to address column order
@@ -538,23 +512,21 @@ public class ODKDatabaseUtils {
     cvTableVal.put(KeyValueStoreColumns.ASPECT, KeyValueStoreConstants.ASPECT_DEFAULT);
     cvTableVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.TABLE_COL_ORDER);
     cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
-
-    LinkedHashMap<String, String> userDefinedCols = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(
-        db, tableName);
+    
     StringBuilder tableDefCol = new StringBuilder();
 
-    if (userDefinedCols.isEmpty()) {
-      throw new IllegalArgumentException(t + ": No user defined columns exist in " + tableName);
+    boolean needsComma = false;
+    for ( ColumnDefinition def : orderedDefs ) {
+      if ( !def.isUnitOfRetention() ) {
+        continue;
+      }
+      if ( needsComma ) {
+        tableDefCol.append(",");
+      }
+      needsComma = true;
+      tableDefCol.append("\"").append(def.getElementKey()).append("\"");
     }
-
-    // Now need to call the function to write out all the column values
-    for (Map.Entry<String, String> column : userDefinedCols.entrySet()) {
-      tableDefCol.append("\"").append(column.getKey().toString()).append("\"").append(",");
-    }
-
-    // Get rid of the last character which is an extra comma
-    tableDefCol.deleteCharAt(tableDefCol.length() - 1);
-
+    
     Log.i(t, "Column order for table " + tableName + " is " + tableDefCol.toString());
     String colOrderVal = "[" + tableDefCol.toString() + "]";
     cvTableVal.put(KeyValueStoreColumns.VALUE, colOrderVal);
@@ -568,34 +540,18 @@ public class ODKDatabaseUtils {
    * column definitions
    */
   private static final void createNewColumnMetadata(SQLiteDatabase db, String tableName,
-      String colName, String colType) {
+      ColumnDefinition column) {
+    String colName = column.getElementKey();
     ArrayList<ContentValues> cvColValKVS = new ArrayList<ContentValues>();
 
-    ContentValues cvColVal = new ContentValues();
-    cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-    cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
-    cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
-    cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_VISIBLE);
-    cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "boolean");
-    cvColVal.put(KeyValueStoreColumns.VALUE, "true");
-    cvColValKVS.add(cvColVal);
-
-    cvColVal = new ContentValues();
-    cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-    cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
-    cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
-    cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_NAME);
-    cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
-    String colDisplayName = "\"" + colName + "\"";
-    cvColVal.put(KeyValueStoreColumns.VALUE, colDisplayName);
-    cvColValKVS.add(cvColVal);
-
+    ContentValues cvColVal;
+    
     cvColVal = new ContentValues();
     cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
     cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
     cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
     cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST);
-    cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
+    cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, ElementDataType.array.name());
     cvColVal.put(KeyValueStoreColumns.VALUE, "[]");
     cvColValKVS.add(cvColVal);
 
@@ -604,125 +560,38 @@ public class ODKDatabaseUtils {
     cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
     cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
     cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_FORMAT);
-    cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
+    cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, ElementDataType.string.name());
     cvColVal.put(KeyValueStoreColumns.VALUE, "");
     cvColValKVS.add(cvColVal);
+
+    cvColVal = new ContentValues();
+    cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+    cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+    cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
+    cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_NAME);
+    cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, ElementDataType.object.name());
+    String colDisplayName = "\"" + colName + "\"";
+    cvColVal.put(KeyValueStoreColumns.VALUE, colDisplayName);
+    cvColValKVS.add(cvColVal);
+
+    // TODO: change bool to be integer valued in the KVS?
+    cvColVal = new ContentValues();
+    cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+    cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+    cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
+    cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_VISIBLE);
+    cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, ElementDataType.bool.name());
+    cvColVal.put(KeyValueStoreColumns.VALUE, column.isUnitOfRetention() ? "true" : "false");
+    cvColValKVS.add(cvColVal);
     
-    String colNameUriFrag = colName + "_" + uriFrag;
-    String colNameConType = colName + "_" + contentType;
-
-    if (colType.equals(ODKDatabaseUserDefinedTypes.MIMEURI)) {
-      // joins clause KV pair is different for mimeUri
-      cvColVal = new ContentValues();
-      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
-      cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
-      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_JOINS);
-      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
-      cvColVal.put(KeyValueStoreColumns.VALUE, "");
-      
-      // Have to add KVS info for colName_uriFragment
-      cvColVal = new ContentValues();
-      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
-      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameUriFrag);
-      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_VISIBLE);
-      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "boolean");
-      cvColVal.put(KeyValueStoreColumns.VALUE, "false");
-      cvColValKVS.add(cvColVal);
-
-      cvColVal = new ContentValues();
-      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
-      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameUriFrag);
-      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_NAME);
-      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
-      String colUriFragDisplayName = "\"" + colNameUriFrag + "\"";
-      cvColVal.put(KeyValueStoreColumns.VALUE, colUriFragDisplayName);
-      cvColValKVS.add(cvColVal);
-
-      cvColVal = new ContentValues();
-      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
-      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameUriFrag);
-      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST);
-      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
-      cvColVal.put(KeyValueStoreColumns.VALUE, "[]");
-      cvColValKVS.add(cvColVal);
-
-      cvColVal = new ContentValues();
-      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
-      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameUriFrag);
-      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_FORMAT);
-      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
-      cvColVal.put(KeyValueStoreColumns.VALUE, "");
-      
-      cvColVal = new ContentValues();
-      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
-      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameUriFrag);
-      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_JOINS);
-      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
-      cvColVal.put(KeyValueStoreColumns.VALUE, "[]");
-      cvColValKVS.add(cvColVal);
-      
-      // Have to add KV pairs for colName_contentType 
-      cvColVal = new ContentValues();
-      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
-      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameConType);
-      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_VISIBLE);
-      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "boolean");
-      cvColVal.put(KeyValueStoreColumns.VALUE, "false");
-      cvColValKVS.add(cvColVal);
-
-      cvColVal = new ContentValues();
-      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
-      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameConType);
-      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_NAME);
-      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
-      String colConTypeDisplayName = "\"" + colNameConType + "\"";
-      cvColVal.put(KeyValueStoreColumns.VALUE, colConTypeDisplayName);
-      cvColValKVS.add(cvColVal);
-
-      cvColVal = new ContentValues();
-      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
-      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameConType);
-      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST);
-      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
-      cvColVal.put(KeyValueStoreColumns.VALUE, "[]");
-      cvColValKVS.add(cvColVal);
-
-      cvColVal = new ContentValues();
-      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
-      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameConType);
-      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_FORMAT);
-      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
-      cvColVal.put(KeyValueStoreColumns.VALUE, "");
-      cvColValKVS.add(cvColVal);
-      
-      cvColVal = new ContentValues();
-      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
-      cvColVal.put(KeyValueStoreColumns.ASPECT, colNameConType);
-      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_JOINS);
-      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
-      cvColVal.put(KeyValueStoreColumns.VALUE, "[]");
-      cvColValKVS.add(cvColVal);
-    } else {
-      cvColVal = new ContentValues();
-      cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
-      cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
-      cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
-      cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_JOINS);
-      cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, "string");
-      cvColVal.put(KeyValueStoreColumns.VALUE, "");
-      cvColValKVS.add(cvColVal);
-    }
+    cvColVal = new ContentValues();
+    cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+    cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
+    cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
+    cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_JOINS);
+    cvColVal.put(KeyValueStoreColumns.VALUE_TYPE, ElementDataType.object.name());
+    cvColVal.put(KeyValueStoreColumns.VALUE, "");
+    cvColValKVS.add(cvColVal);
 
     // Now add all this data into the database
     for (int i = 0; i < cvColValKVS.size(); i++) {
@@ -731,148 +600,18 @@ public class ODKDatabaseUtils {
     }
 
     // Create column definition
-    ArrayList<ContentValues> cvColDefValArray = new ArrayList<ContentValues>();
     ContentValues cvColDefVal = null;
 
-    if (colType.equals(ODKDatabaseUserDefinedTypes.MIMEURI)) {
-      cvColDefVal = new ContentValues();
-      cvColDefVal.put(ColumnDefinitionsColumns.TABLE_ID, tableName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, colName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.MIMEURI);
-      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[\"" + colNameUriFrag
-          + "\",\"" + colNameConType + "\"]");
-      cvColDefValArray.add(cvColDefVal);
+    cvColDefVal = new ContentValues();
+    cvColDefVal.put(ColumnDefinitionsColumns.TABLE_ID, tableName);
+    cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colName);
+    cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, column.getElementName());
+    cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, column.getElementType());
+    cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, column.getListChildElementKeys());
 
-      cvColDefVal = new ContentValues();
-      cvColDefVal.put(ColumnDefinitionsColumns.TABLE_ID, tableName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colNameUriFrag);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, uriFrag);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.STRING);
-      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[]");
-      cvColDefValArray.add(cvColDefVal);
-
-      cvColDefVal = new ContentValues();
-      cvColDefVal.put(ColumnDefinitionsColumns.TABLE_ID, tableName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colNameConType);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, contentType);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.STRING);
-      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[]");
-      cvColDefValArray.add(cvColDefVal);
-
-    } else if (colType.equals(ODKDatabaseUserDefinedTypes.ARRAY)) {
-      String itemsStr = "items";
-      String colNameItem = colName + "_" + itemsStr;
-      cvColDefVal = new ContentValues();
-      cvColDefVal.put(ColumnDefinitionsColumns.TABLE_ID, tableName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, colName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.ARRAY);
-      cvColDefVal
-          .put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[\"" + colNameItem + "\"]");
-      cvColDefValArray.add(cvColDefVal);
-
-      cvColDefVal = new ContentValues();
-      cvColDefVal.put(ColumnDefinitionsColumns.TABLE_ID, tableName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colNameItem);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, itemsStr);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.STRING);
-      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[]");
-      cvColDefValArray.add(cvColDefVal);
-
-    } else if (colType.equals(ODKDatabaseUserDefinedTypes.DATE)
-        || colType.equals(ODKDatabaseUserDefinedTypes.DATETIME)
-        || colType.equals(ODKDatabaseUserDefinedTypes.TIME)) {
-
-      cvColDefVal = new ContentValues();
-      cvColDefVal.put(ColumnDefinitionsColumns.TABLE_ID, tableName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, colName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, colType);
-      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[]");
-      cvColDefValArray.add(cvColDefVal);
-
-    } else if (colType.equals(ODKDatabaseUserDefinedTypes.GEOPOINT)) {
-      String latStr = "latitude";
-      String longStr = "longitude";
-      String altStr = "altitude";
-      String accStr = "accuracy";
-      String colNameLat = colName + "_" + latStr;
-      String colNameLong = colName + "_" + longStr;
-      String colNameAlt = colName + "_" + altStr;
-      String colNameAcc = colName + "_" + accStr;
-
-      cvColDefVal = new ContentValues();
-      cvColDefVal.put(ColumnDefinitionsColumns.TABLE_ID, tableName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, colName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.GEOPOINT);
-      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[\"" + colNameLat
-          + "\",\"" + colNameLong + "\",\"" + colNameAlt + "\",\"" + colNameAcc + "\"]");
-      cvColDefValArray.add(cvColDefVal);
-
-      cvColDefVal = new ContentValues();
-      cvColDefVal.put(ColumnDefinitionsColumns.TABLE_ID, tableName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colNameLat);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, latStr);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.NUMBER);
-      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[]");
-      cvColDefValArray.add(cvColDefVal);
-
-      cvColDefVal = new ContentValues();
-      cvColDefVal.put(ColumnDefinitionsColumns.TABLE_ID, tableName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colNameLong);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, longStr);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.NUMBER);
-      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[]");
-      cvColDefValArray.add(cvColDefVal);
-
-      cvColDefVal = new ContentValues();
-      cvColDefVal.put(ColumnDefinitionsColumns.TABLE_ID, tableName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colNameAlt);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, altStr);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.NUMBER);
-      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[]");
-      cvColDefValArray.add(cvColDefVal);
-
-      cvColDefVal = new ContentValues();
-      cvColDefVal.put(ColumnDefinitionsColumns.TABLE_ID, tableName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colNameAcc);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, accStr);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, ODKDatabaseUserDefinedTypes.NUMBER);
-      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[]");
-      cvColDefValArray.add(cvColDefVal);
-    } else {
-      cvColDefVal = new ContentValues();
-      cvColDefVal.put(ColumnDefinitionsColumns.TABLE_ID, tableName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, colName);
-      cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, colType);
-      cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, "[]");
-      cvColDefValArray.add(cvColDefVal);
-    }
-
-    // Now add all this data into the database
-    for (int i = 0; i < cvColDefValArray.size(); i++) {
-      db.replaceOrThrow(DataModelDatabaseHelper.COLUMN_DEFINITIONS_TABLE_NAME, null,
-          cvColDefValArray.get(i));
-    }
-  }
-
-  /*
-   * Create a user defined database table
-   */
-  private static final void createDBTable(SQLiteDatabase db, String tableName) {
-    if (tableName == null || tableName.length() <= 0) {
-      throw new IllegalArgumentException(t + ": application name and table name must be specified");
-    }
-
-    String createTableCmd = getUserDefinedTableCreationStatement(tableName) + ");";
-
-    db.execSQL(createTableCmd);
-
-    // Create table metatadata
-    createDBTableMetadata(db, tableName);
+    // Now add this data into the database
+    db.replaceOrThrow(DataModelDatabaseHelper.COLUMN_DEFINITIONS_TABLE_NAME, null,
+          cvColDefVal);
   }
 
   /*
@@ -880,13 +619,7 @@ public class ODKDatabaseUtils {
    */
   public static final void writeDataIntoExistingDBTable(SQLiteDatabase db, String tableName,
       ContentValues cvValues) {
-    Map<String, String> userDefCols = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
-
-    if (userDefCols.isEmpty()) {
-      throw new IllegalArgumentException(t + ": No user defined columns exist in " + tableName
-          + " - cannot insert data");
-    }
-
+    
     if (cvValues.size() <= 0) {
       throw new IllegalArgumentException(t + ": No values to add into table " + tableName);
     }
@@ -900,12 +633,6 @@ public class ODKDatabaseUtils {
    */
   public static final void updateDataInExistingDBTableWithId(SQLiteDatabase db, String tableName,
       ContentValues cvValues, String uuid) {
-    Map<String, String> userDefCols = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
-
-    if (userDefCols.isEmpty()) {
-      throw new IllegalArgumentException(t + ": No user defined columns exist in " + tableName
-          + " - cannot insert data");
-    }
 
     if (cvValues.size() <= 0) {
       throw new IllegalArgumentException(t + ": No values to add into table " + tableName);
@@ -923,12 +650,6 @@ public class ODKDatabaseUtils {
    */
   public static final void writeDataIntoExistingDBTableWithId(SQLiteDatabase db, String tableName,
       ContentValues cvValues, String uuid) {
-    Map<String, String> userDefCols = ODKDatabaseUtils.getUserDefinedColumnsAndTypes(db, tableName);
-
-    if (userDefCols.isEmpty()) {
-      throw new IllegalArgumentException(t + ": No user defined columns exist in " + tableName
-          + " - cannot insert data");
-    }
 
     if (cvValues.size() <= 0) {
       throw new IllegalArgumentException(t + ": No values to add into table " + tableName);
@@ -943,6 +664,8 @@ public class ODKDatabaseUtils {
 
   /*
    * Write data into a user defined database table
+   * 
+   * TODO: This is broken w.r.t. updates of partial fields
    */
   public static final void writeDataAndMetadataIntoExistingDBTable(SQLiteDatabase db,
       String tableName, ContentValues cvValues, boolean shouldUpdate) {
@@ -987,6 +710,11 @@ public class ODKDatabaseUtils {
       }
 
     }
+
+    // TODO: This is broken w.r.t. updates of partial fields
+    // TODO: This is broken w.r.t. updates of partial fields
+    // TODO: This is broken w.r.t. updates of partial fields
+    // TODO: This is broken w.r.t. updates of partial fields
 
     if (!cvDataTableVal.containsKey(DataTableColumns.ID)) {
       cvDataTableVal.put(DataTableColumns.ID, rowId);

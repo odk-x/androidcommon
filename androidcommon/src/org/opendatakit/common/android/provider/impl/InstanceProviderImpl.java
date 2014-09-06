@@ -23,14 +23,14 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.aggregate.odktables.rest.TableConstants;
+import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.common.android.R;
+import org.opendatakit.common.android.data.ColumnDefinition;
 import org.opendatakit.common.android.database.DataModelDatabaseHelper;
-import org.opendatakit.common.android.database.DataModelDatabaseHelper.ColumnDefinition;
 import org.opendatakit.common.android.database.DataModelDatabaseHelperFactory;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.InstanceColumns;
@@ -44,9 +44,6 @@ import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
-
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 
 /**
  * TODO: convert to true app-scoped instance provider
@@ -103,7 +100,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     Cursor c = null;
     
     String dbTableName;
-    Map<String, ColumnDefinition> defns;
+    List<ColumnDefinition> orderedDefns;
 
     StringBuilder b = new StringBuilder();
     
@@ -115,6 +112,19 @@ public abstract class InstanceProviderImpl extends ContentProvider {
 
       db = dbh.getWritableDatabase();
       db.beginTransaction();
+
+      boolean success = false;
+      try {
+        success = ODKDatabaseUtils.hasTableId(db, tableId);
+      } catch ( Exception e ) {
+        e.printStackTrace();
+        throw new SQLException("Unknown URI (exception testing for tableId) " + uri);
+      }
+      if (!success) {
+        throw new SQLException("Unknown URI (missing data table for tableId) " + uri);
+      }
+
+      dbTableName = "\"" + tableId + "\"";
 
       try {
         c = db.query(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME,
@@ -137,17 +147,6 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       } finally {
         c.close();
       }
-      try {
-        dbTableName = DataModelDatabaseHelper.getDbTableName(db,tableId);
-      } catch ( Exception e ) {
-        e.printStackTrace();
-        throw new SQLException("Unknown URI (exception retrieving data table for tableId) " + uri);
-      }
-      if (dbTableName == null) {
-        throw new SQLException("Unknown URI (missing data table for tableId) " + uri);
-      }
-
-      dbTableName = "\"" + dbTableName + "\"";
 
       // ARGH! we must ensure that we have records in our UPLOADS_TABLE_NAME
       // for every distinct instance in the data table.
@@ -174,14 +173,9 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       // Can't get away with dataTable.* because of collision with _ID column
       // get map of (elementKey -> ColumnDefinition)
       try {
-        defns = DataModelDatabaseHelper.getColumnDefinitions(db, tableId);
-      } catch (JsonParseException e) {
-        e.printStackTrace();
-        throw new SQLException("Unable to retrieve column definitions for tableId " + tableId);
-      } catch (JsonMappingException e) {
-        e.printStackTrace();
-        throw new SQLException("Unable to retrieve column definitions for tableId " + tableId);
-      } catch (IOException e) {
+        List<Column> columns = ODKDatabaseUtils.getUserDefinedColumns(db, tableId);
+        orderedDefns = ColumnDefinition.buildColumnDefinitions(columns);
+      } catch (IllegalArgumentException e) {
         e.printStackTrace();
         throw new SQLException("Unable to retrieve column definitions for tableId " + tableId);
       }
@@ -218,10 +212,10 @@ public abstract class InstanceProviderImpl extends ContentProvider {
      .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_TIMESTAMP).append(",")
      .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_CREATOR).append(",");
     // add the user-specified data fields in this dataTable
-    for ( ColumnDefinition cd : defns.values() ) {
+    for ( ColumnDefinition cd : orderedDefns ) {
       if ( cd.isUnitOfRetention() ) {
         b.append(dbTableName).append(".")
-         .append(cd.elementKey).append(",");
+         .append(cd.getElementKey()).append(",");
       }
     }
     // b.append(dbTableName).append(".").append(InstanceColumns._ID).append(",");
@@ -368,18 +362,18 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       db = dbh.getWritableDatabase();
       db.beginTransaction();
 
-      String dbTableName;
+      boolean success = false;
       try {
-        dbTableName = DataModelDatabaseHelper.getDbTableName(db, tableId);
+        success = ODKDatabaseUtils.hasTableId(db, tableId);
       } catch ( Exception e ) {
         e.printStackTrace();
-        throw new SQLException("Unknown URI (exception retrieving data table for tableId) " + uri);
+        throw new SQLException("Unknown URI (exception testing for tableId) " + uri);
       }
-      if (dbTableName == null) {
+      if (!success) {
         throw new SQLException("Unknown URI (missing data table for tableId) " + uri);
       }
 
-      dbTableName = "\"" + dbTableName + "\"";
+      String dbTableName = "\"" + tableId + "\"";
 
       if (segments.size() == 2) {
         where = "(" + where + ") AND (" + InstanceColumns.DATA_INSTANCE_ID + "=? )";
@@ -462,19 +456,19 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       }
 
       db = dbh.getWritableDatabase();
-      
-      String dbTableName;
+
+      boolean success = false;
       try {
-        dbTableName = DataModelDatabaseHelper.getDbTableName(db, tableId);
+        success = ODKDatabaseUtils.hasTableId(db, tableId);
       } catch ( Exception e ) {
         e.printStackTrace();
-        throw new SQLException("Unknown URI (exception retrieving data table for tableId) " + uri);
+        throw new SQLException("Unknown URI (exception testing for tableId) " + uri);
       }
-      if (dbTableName == null) {
+      if (!success) {
         throw new SQLException("Unknown URI (missing data table for tableId) " + uri);
       }
 
-      dbTableName = "\"" + dbTableName + "\"";
+      String dbTableName = "\"" + tableId + "\"";
 
       // run the query to get all the ids...
       List<IdStruct> idStructs = new ArrayList<IdStruct>();

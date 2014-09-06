@@ -22,7 +22,6 @@ public class TableDefinitionsColumns implements BaseColumns {
   public static final String CONTENT_ITEM_TYPE = "vnd.android.cursor.item/vnd.opendatakit.table";
 
   public static final String TABLE_ID = "_table_id";
-  public static final String DB_TABLE_NAME = "_db_table_name";
   public static final String SYNC_TAG = "_sync_tag";
   public static final String LAST_SYNC_TIME = "_last_sync_time";
   public static final String SYNC_STATE = "_sync_state";
@@ -36,7 +35,6 @@ public class TableDefinitionsColumns implements BaseColumns {
     //@formatter:off
     String create = "CREATE TABLE IF NOT EXISTS " + tableName + "("
 				+ TABLE_ID + " TEXT NOT NULL PRIMARY KEY, "
-				+ DB_TABLE_NAME + " TEXT NOT NULL UNIQUE, "
 				+ SYNC_TAG + " TEXT NULL,"
 				// TODO last sync time should probably become an int?
 				+ LAST_SYNC_TIME + " TEXT NOT NULL, "
