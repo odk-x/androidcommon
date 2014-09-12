@@ -1,13 +1,17 @@
 package org.opendatakit.common.android.utilities;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 
+import org.apache.commons.io.FileUtils;
+import org.opendatakit.aggregate.odktables.rest.ConflictType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.aggregate.odktables.rest.SavepointTypeManipulator;
 import org.opendatakit.aggregate.odktables.rest.SyncState;
@@ -17,6 +21,9 @@ import org.opendatakit.common.android.data.ColorRule;
 import org.opendatakit.common.android.data.ColumnDefinition;
 import org.opendatakit.common.android.data.ElementDataType;
 import org.opendatakit.common.android.data.ElementType;
+import org.opendatakit.common.android.data.KeyValueStoreEntry;
+import org.opendatakit.common.android.data.TableDefinitionEntry;
+import org.opendatakit.common.android.data.UserTable;
 import org.opendatakit.common.android.database.DataModelDatabaseHelper;
 import org.opendatakit.common.android.provider.ColumnDefinitionsColumns;
 import org.opendatakit.common.android.provider.DataTableColumns;
@@ -70,6 +77,7 @@ public class ODKDatabaseUtils {
     adminColumns.add(DataTableColumns.SAVEPOINT_TYPE);
     adminColumns.add(DataTableColumns.SAVEPOINT_TIMESTAMP);
     adminColumns.add(DataTableColumns.SAVEPOINT_CREATOR);
+    Collections.sort(adminColumns);
     ADMIN_COLUMNS = Collections.unmodifiableList(adminColumns);
 
     ArrayList<String> exportColumns = new ArrayList<String>();
@@ -82,6 +90,7 @@ public class ODKDatabaseUtils {
     exportColumns.add(DataTableColumns.SAVEPOINT_TYPE);
     exportColumns.add(DataTableColumns.SAVEPOINT_TIMESTAMP);
     exportColumns.add(DataTableColumns.SAVEPOINT_CREATOR);
+    Collections.sort(exportColumns);
     EXPORT_COLUMNS = Collections.unmodifiableList(exportColumns);
   }
 
@@ -120,11 +129,80 @@ public class ODKDatabaseUtils {
     return c;
   }
 
+  /**
+   * Get a {@link UserTable} for this table based on the given where clause.
+   * All columns from the table are returned.
+   * <p>
+   * It performs SELECT * FROM table whereClause.
+   * <p>
+   * @param whereClause the whereClause for the selection, beginning with
+   * "WHERE". Must include "?" instead of actual values, which are instead
+   * passed in the selectionArgs.
+   * @param selectionArgs the selection arguments for the where clause.
+   * @return
+   */
+  public static UserTable rawSqlQuery(SQLiteDatabase db, String appName, String tableId, 
+      List<String> persistedColumns, String whereClause, String[] selectionArgs,
+      String[] groupBy, String having, String orderByElementKey, String orderByDirection) {
+    Cursor c = null;
+    try {
+      StringBuilder s = new StringBuilder();
+      s.append("SELECT * FROM \"").append(tableId).append("\" ");
+      if ( whereClause != null && whereClause.length() != 0 ) {
+        s.append(" WHERE ").append(whereClause);
+      }
+      if ( groupBy != null && groupBy.length != 0 ) {
+        s.append(" GROUP BY ");
+        boolean first = true;
+        for ( String elementKey : groupBy ) {
+          if (!first) {
+            s.append(", ");
+          }
+          first = false;
+          s.append(elementKey);
+        }
+        if ( having != null && having.length() != 0 ) {
+          s.append(" HAVING ").append(having);
+        }
+      }
+      if ( orderByElementKey != null && orderByElementKey.length() != 0 ) {
+        s.append(" ORDER BY ").append(orderByElementKey);
+        if ( orderByDirection != null && orderByDirection.length() != 0 ) {
+          s.append(" ").append(orderByDirection);
+        } else {
+          s.append(" ASC");
+        }
+      }
+      String sqlQuery = s.toString();
+      c = db.rawQuery(sqlQuery, selectionArgs);
+      UserTable table = new UserTable(c, appName, tableId, 
+                persistedColumns, whereClause, selectionArgs,
+                groupBy, having, orderByElementKey, orderByDirection);
+      return table;
+    } finally {
+      if ( c != null && !c.isClosed() ) {
+        c.close();
+      }
+      if ( db != null ) {
+        db.close();
+      }
+    }
+  }
+  
+  public static final UserTable getDataInExistingDBTableWithId(SQLiteDatabase db, 
+      String appName, String tableId, List<String> persistedColumns, String rowId ) {
+    
+    UserTable table = rawSqlQuery(db, appName, tableId, 
+        persistedColumns, DataTableColumns.ID + "=?", new String[]{ rowId },
+        null, null, DataTableColumns.SAVEPOINT_TIMESTAMP, "DESC");
+    
+    return table;
+  }
   /*
    * Query the current database for all columns
    */
-  public static final String[] getAllColumnNames(SQLiteDatabase db, String tableName) {
-    Cursor cursor = db.rawQuery("SELECT * FROM " + tableName + " LIMIT 1", null);
+  public static final String[] getAllColumnNames(SQLiteDatabase db, String tableId) {
+    Cursor cursor = db.rawQuery("SELECT * FROM " + tableId + " LIMIT 1", null);
     String[] colNames = cursor.getColumnNames();
 
     return colNames;
@@ -136,11 +214,11 @@ public class ODKDatabaseUtils {
    * Returns both the grouping columns and the actual persisted
    * columns.
    */
-  public static final List<Column> getUserDefinedColumns(
-      SQLiteDatabase db, String tableName) {
-    List<Column> userDefinedColumns = new ArrayList<Column>();
+  public static final ArrayList<Column> getUserDefinedColumns(
+      SQLiteDatabase db, String tableId) {
+    ArrayList<Column> userDefinedColumns = new ArrayList<Column>();
     String selection = ColumnDefinitionsColumns.TABLE_ID + "=?";
-    String[] selectionArgs = { tableName };
+    String[] selectionArgs = { tableId };
     String[] cols = { ColumnDefinitionsColumns.ELEMENT_KEY,
         ColumnDefinitionsColumns.ELEMENT_NAME,
         ColumnDefinitionsColumns.ELEMENT_TYPE,
@@ -148,7 +226,7 @@ public class ODKDatabaseUtils {
     Cursor c = null;
     try {
       c = db.query(DataModelDatabaseHelper.COLUMN_DEFINITIONS_TABLE_NAME, cols, selection,
-        selectionArgs, null, null, null);
+        selectionArgs, null, null, ColumnDefinitionsColumns.ELEMENT_KEY + " ASC");
 
       int elemKeyIndex = c.getColumnIndexOrThrow(ColumnDefinitionsColumns.ELEMENT_KEY);
       int elemNameIndex = c.getColumnIndexOrThrow(ColumnDefinitionsColumns.ELEMENT_NAME);
@@ -256,10 +334,10 @@ public class ODKDatabaseUtils {
   /*
    * Get user defined table creation SQL statement
    */
-  private static final String getUserDefinedTableCreationStatement(String tableName) {
+  private static final String getUserDefinedTableCreationStatement(String tableId) {
     /*
      * Resulting string should be the following String createTableCmd =
-     * "CREATE TABLE IF NOT EXISTS " + tableName + " (" + DataTableColumns.ID +
+     * "CREATE TABLE IF NOT EXISTS " + tableId + " (" + DataTableColumns.ID +
      * " TEXT NOT NULL, " + DataTableColumns.ROW_ETAG + " TEXT NULL, " +
      * DataTableColumns.SYNC_STATE + " TEXT NOT NULL, " +
      * DataTableColumns.CONFLICT_TYPE + " INTEGER NULL," +
@@ -271,7 +349,7 @@ public class ODKDatabaseUtils {
      * DataTableColumns.SAVEPOINT_CREATOR + " TEXT NULL";
      */
 
-    String createTableCmd = "CREATE TABLE IF NOT EXISTS " + tableName + " (";
+    String createTableCmd = "CREATE TABLE IF NOT EXISTS " + tableId + " (";
 
     List<String> cols = getAdminColumns();
 
@@ -299,6 +377,128 @@ public class ODKDatabaseUtils {
     return createTableCmd;
   }
 
+  public static final void updateDBTableETags(SQLiteDatabase db, String tableId, 
+        String schemaETag, String lastDataETag ) {
+    if (tableId == null || tableId.length() <= 0) {
+      throw new IllegalArgumentException(t + ": application name and table name must be specified");
+    }
+    
+    ContentValues cvTableDef = new ContentValues();
+    cvTableDef.put(TableDefinitionsColumns.SCHEMA_ETAG, schemaETag);
+    cvTableDef.put(TableDefinitionsColumns.LAST_DATA_ETAG, lastDataETag);
+    
+    db.update(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, cvTableDef, TableDefinitionsColumns.TABLE_ID + "=?", new String[]{ tableId});
+  }
+
+  public static final void updateDBTableLastSyncTime(SQLiteDatabase db, String tableId ) {
+    if (tableId == null || tableId.length() <= 0) {
+      throw new IllegalArgumentException(t + ": application name and table name must be specified");
+    }
+    
+    ContentValues cvTableDef = new ContentValues();
+    cvTableDef.put(TableDefinitionsColumns.LAST_SYNC_TIME, 
+        TableConstants.nanoSecondsFromMillis(System.currentTimeMillis()));
+    
+    db.update(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, cvTableDef, TableDefinitionsColumns.TABLE_ID + "=?", new String[]{ tableId});
+  }
+
+  public static final TableDefinitionEntry getTableDefinitionEntry(SQLiteDatabase db, String tableId) {
+
+    TableDefinitionEntry e = null;
+    Cursor c = null;
+    try {
+      StringBuilder b = new StringBuilder();
+      ArrayList<String> selArgs = new ArrayList<String>();
+      b.append(KeyValueStoreColumns.TABLE_ID).append("=?");
+      selArgs.add(tableId);
+
+      c = db.query(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, null, 
+          b.toString(), selArgs.toArray(new String[selArgs.size()]), null, null, null);
+      if ( c.moveToFirst() ) {
+        int idxSchemaETag = c.getColumnIndex(TableDefinitionsColumns.SCHEMA_ETAG);
+        int idxLastDataETag = c.getColumnIndex(TableDefinitionsColumns.LAST_DATA_ETAG);
+        int idxLastSyncTime = c.getColumnIndex(TableDefinitionsColumns.LAST_SYNC_TIME);
+
+        if ( c.getCount() != 1 ) {
+          throw new IllegalStateException("Two or more TableDefinitionEntry records found for tableId " + tableId);
+        }
+        
+        e = new TableDefinitionEntry(tableId);
+        e.setSchemaETag(c.getString(idxSchemaETag));
+        e.setLastDataETag(c.getString(idxLastDataETag));
+        e.setLastSyncTime(c.getString(idxLastSyncTime));
+      }
+    } finally {
+      c.close();
+    }
+    return e;
+  }
+  
+  public static final void updateDBTableMetadata(SQLiteDatabase db, String tableId, List<KeyValueStoreEntry> metadata, boolean clear) {
+    if ( clear ) {
+      db.delete( DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, 
+                 KeyValueStoreColumns.TABLE_ID + "=?", new String[]{ tableId });
+    }
+    for ( KeyValueStoreEntry e : metadata ) {
+      ContentValues values = new ContentValues();
+      values.put(KeyValueStoreColumns.TABLE_ID, e.tableId);
+      values.put(KeyValueStoreColumns.PARTITION, e.partition);
+      values.put(KeyValueStoreColumns.ASPECT, e.aspect);
+      values.put(KeyValueStoreColumns.VALUE_TYPE, e.type);
+      values.put(KeyValueStoreColumns.VALUE, e.value);
+      db.insert(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null, values);
+    }
+  }
+  
+  public static final List<KeyValueStoreEntry> 
+    getDBTableMetadata(SQLiteDatabase db, String tableId, String partition, String aspect, String key) {
+
+    List<KeyValueStoreEntry> entries = new ArrayList<KeyValueStoreEntry>();
+    
+    Cursor c = null;
+    try {
+      StringBuilder b = new StringBuilder();
+      ArrayList<String> selArgs = new ArrayList<String>();
+      b.append(KeyValueStoreColumns.TABLE_ID).append("=?");
+      selArgs.add(tableId);
+      if ( partition != null ) {
+        b.append(" AND ").append(KeyValueStoreColumns.PARTITION).append("=?");
+        selArgs.add(partition);
+      }
+      if ( aspect != null ) {
+        b.append(" AND ").append(KeyValueStoreColumns.ASPECT).append("=?");
+        selArgs.add(aspect);
+      }
+      if ( key != null ) {
+        b.append(" AND ").append(KeyValueStoreColumns.KEY).append("=?");
+        selArgs.add(key);
+      }
+      
+      c = db.query(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null, 
+          b.toString(), selArgs.toArray(new String[selArgs.size()]), null, null, null);
+      if ( c.moveToFirst() ) {
+        int idxPartition = c.getColumnIndex(KeyValueStoreColumns.PARTITION);
+        int idxAspect = c.getColumnIndex(KeyValueStoreColumns.ASPECT);
+        int idxKey = c.getColumnIndex(KeyValueStoreColumns.KEY);
+        int idxType = c.getColumnIndex(KeyValueStoreColumns.VALUE_TYPE);
+        int idxValue = c.getColumnIndex(KeyValueStoreColumns.VALUE);
+        
+        do {
+          KeyValueStoreEntry e = new KeyValueStoreEntry();
+          e.partition = c.getString(idxPartition);
+          e.aspect = c.getString(idxAspect);
+          e.key = c.getString(idxKey);
+          e.type = c.getString(idxType);
+          e.value = c.getString(idxValue);
+          entries.add(e);
+        } while ( c.moveToNext() );
+      }
+    } finally {
+      c.close();
+    }
+    return entries;
+  }
+  
   /*
    * Create a user defined database table metadata - table definiton and KVS
    * values
@@ -311,10 +511,9 @@ public class ODKDatabaseUtils {
     // Add the table id into table definitions
     ContentValues cvTableDef = new ContentValues();
     cvTableDef.put(TableDefinitionsColumns.TABLE_ID, tableId);
-    cvTableDef.put(TableDefinitionsColumns.SYNC_TAG, "");
+    cvTableDef.putNull(TableDefinitionsColumns.SCHEMA_ETAG);
+    cvTableDef.putNull(TableDefinitionsColumns.LAST_DATA_ETAG);
     cvTableDef.put(TableDefinitionsColumns.LAST_SYNC_TIME, -1);
-    cvTableDef.put(TableDefinitionsColumns.SYNC_STATE, SyncState.new_row.name());
-    cvTableDef.put(TableDefinitionsColumns.TRANSACTIONING, 0);
 
     db.replaceOrThrow(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, null, cvTableDef);
 
@@ -415,15 +614,16 @@ public class ODKDatabaseUtils {
   /*
    * Create a user defined database table with a transaction
    */
-  public static final void createOrOpenDBTableWithColumns(SQLiteDatabase db, String tableName,
+  public static final ArrayList<ColumnDefinition> createOrOpenDBTableWithColumns(SQLiteDatabase db, String tableId,
       List<Column> columns) {
     boolean success = false;
+    ArrayList<ColumnDefinition> orderedDefs = ColumnDefinition.buildColumnDefinitions(columns);
     try {
-      List<ColumnDefinition> orderedDefs = ColumnDefinition.buildColumnDefinitions(columns);
       db.beginTransaction();
-      createDBTableWithColumns(db, tableName, orderedDefs);
+      createDBTableWithColumns(db, tableId, orderedDefs);
       db.setTransactionSuccessful();
       success = true;
+      return orderedDefs;
     } finally {
       db.endTransaction();
       if (success == false) {
@@ -436,11 +636,11 @@ public class ODKDatabaseUtils {
           }
           if (colNames != null && colNames.length() > 0) {
             colNames.deleteCharAt(colNames.length() - 1);
-            Log.e(t, "createOrOpenDBTableWithColumns: Error while adding table " + tableName
+            Log.e(t, "createOrOpenDBTableWithColumns: Error while adding table " + tableId
                 + " with columns:" + colNames.toString());
           }
         } else {
-          Log.e(t, "createOrOpenDBTableWithColumns: Error while adding table " + tableName
+          Log.e(t, "createOrOpenDBTableWithColumns: Error while adding table " + tableId
               + " with columns: null");
         }
       }
@@ -451,13 +651,13 @@ public class ODKDatabaseUtils {
    * Create a user defined database table metadata - table definiton and KVS
    * values
    */
-  private static final void createDBTableWithColumns(SQLiteDatabase db, String tableName,
+  private static final void createDBTableWithColumns(SQLiteDatabase db, String tableId,
       List<ColumnDefinition> orderedDefs) {
-    if (tableName == null || tableName.length() <= 0) {
+    if (tableId == null || tableId.length() <= 0) {
       throw new IllegalArgumentException(t + ": application name and table name must be specified");
     }
 
-    String createTableCmd = getUserDefinedTableCreationStatement(tableName);
+    String createTableCmd = getUserDefinedTableCreationStatement(tableId);
 
     StringBuilder createTableCmdWithCols = new StringBuilder();
     createTableCmdWithCols.append(createTableCmd);
@@ -498,16 +698,16 @@ public class ODKDatabaseUtils {
     db.execSQL(createTableCmdWithCols.toString());
 
     // Create the metadata for the table - table def and KVS
-    createDBTableMetadata(db, tableName);
+    createDBTableMetadata(db, tableId);
 
     // Now need to call the function to write out all the column values
     for (ColumnDefinition column : orderedDefs) {
-      createNewColumnMetadata(db, tableName, column);
+      createNewColumnMetadata(db, tableId, column);
     }
 
     // Need to address column order
     ContentValues cvTableVal = new ContentValues();
-    cvTableVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+    cvTableVal.put(KeyValueStoreColumns.TABLE_ID, tableId);
     cvTableVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_TABLE);
     cvTableVal.put(KeyValueStoreColumns.ASPECT, KeyValueStoreConstants.ASPECT_DEFAULT);
     cvTableVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.TABLE_COL_ORDER);
@@ -527,7 +727,7 @@ public class ODKDatabaseUtils {
       tableDefCol.append("\"").append(def.getElementKey()).append("\"");
     }
     
-    Log.i(t, "Column order for table " + tableName + " is " + tableDefCol.toString());
+    Log.i(t, "Column order for table " + tableId + " is " + tableDefCol.toString());
     String colOrderVal = "[" + tableDefCol.toString() + "]";
     cvTableVal.put(KeyValueStoreColumns.VALUE, colOrderVal);
 
@@ -539,7 +739,7 @@ public class ODKDatabaseUtils {
    * Create a new column metadata in the database - add column values to KVS and
    * column definitions
    */
-  private static final void createNewColumnMetadata(SQLiteDatabase db, String tableName,
+  private static final void createNewColumnMetadata(SQLiteDatabase db, String tableId,
       ColumnDefinition column) {
     String colName = column.getElementKey();
     ArrayList<ContentValues> cvColValKVS = new ArrayList<ContentValues>();
@@ -547,7 +747,7 @@ public class ODKDatabaseUtils {
     ContentValues cvColVal;
     
     cvColVal = new ContentValues();
-    cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+    cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableId);
     cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
     cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
     cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST);
@@ -556,7 +756,7 @@ public class ODKDatabaseUtils {
     cvColValKVS.add(cvColVal);
 
     cvColVal = new ContentValues();
-    cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+    cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableId);
     cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
     cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
     cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_FORMAT);
@@ -565,7 +765,7 @@ public class ODKDatabaseUtils {
     cvColValKVS.add(cvColVal);
 
     cvColVal = new ContentValues();
-    cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+    cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableId);
     cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
     cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
     cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_NAME);
@@ -576,7 +776,7 @@ public class ODKDatabaseUtils {
 
     // TODO: change bool to be integer valued in the KVS?
     cvColVal = new ContentValues();
-    cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+    cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableId);
     cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
     cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
     cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_DISPLAY_VISIBLE);
@@ -585,7 +785,7 @@ public class ODKDatabaseUtils {
     cvColValKVS.add(cvColVal);
     
     cvColVal = new ContentValues();
-    cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableName);
+    cvColVal.put(KeyValueStoreColumns.TABLE_ID, tableId);
     cvColVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_COLUMN);
     cvColVal.put(KeyValueStoreColumns.ASPECT, colName);
     cvColVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.COLUMN_JOINS);
@@ -603,7 +803,7 @@ public class ODKDatabaseUtils {
     ContentValues cvColDefVal = null;
 
     cvColDefVal = new ContentValues();
-    cvColDefVal.put(ColumnDefinitionsColumns.TABLE_ID, tableName);
+    cvColDefVal.put(ColumnDefinitionsColumns.TABLE_ID, tableId);
     cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_KEY, colName);
     cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_NAME, column.getElementName());
     cvColDefVal.put(ColumnDefinitionsColumns.ELEMENT_TYPE, column.getElementType());
@@ -614,52 +814,163 @@ public class ODKDatabaseUtils {
           cvColDefVal);
   }
 
-  /*
-   * Write data into a user defined database table
+  /**
+   * Called when the schema on the server has changed w.r.t. the schema on
+   * the device. In this case, we do not know whether the rows on the device
+   * match those on the server.
+   *
+   * Reset all 'in_conflict' rows to their original local state (changed or deleted).
+   * Leave all 'deleted' rows in 'deleted' state.
+   * Leave all 'changed' rows in 'changed' state.
+   * Reset all 'synced' rows to 'new_row' to ensure they are sync'd to the server.
+   * Reset all 'synced_pending_files' rows to 'new_row' to ensure they are sync'd to the server.
    */
-  public static final void writeDataIntoExistingDBTable(SQLiteDatabase db, String tableName,
-      ContentValues cvValues) {
-    
-    if (cvValues.size() <= 0) {
-      throw new IllegalArgumentException(t + ": No values to add into table " + tableName);
-    }
+  public static void changeDataRowsToNewRowState(SQLiteDatabase db, String tableId) {
 
-    writeDataAndMetadataIntoExistingDBTable(db, tableName, cvValues, false);
+    StringBuilder b = new StringBuilder();
 
+    // remove server conflicting rows
+    b.setLength(0);
+    b.append("DELETE FROM \"").append(tableId).append("\" WHERE ").append(DataTableColumns.SYNC_STATE)
+    .append(" =? AND ").append(DataTableColumns.CONFLICT_TYPE).append(" IN (?, ?)");
+
+    String sqlConflictingServer = b.toString();
+    String argsConflictingServer[] = {
+        SyncState.in_conflict.name(),
+        Integer.toString(ConflictType.SERVER_DELETED_OLD_VALUES),
+        Integer.toString(ConflictType.SERVER_UPDATED_UPDATED_VALUES)
+    };
+
+    // update local delete conflicts to deletes
+    b.setLength(0);
+    b.append("UPDATE \"").append(tableId).append("\" SET ").append(DataTableColumns.SYNC_STATE)
+    .append(" =?, ").append(DataTableColumns.CONFLICT_TYPE).append(" = null WHERE ")
+    .append(DataTableColumns.CONFLICT_TYPE).append(" = ?");
+
+    String sqlConflictingLocalDeleting = b.toString();
+    String argsConflictingLocalDeleting[] = {
+        SyncState.deleted.name(),
+        Integer.toString(ConflictType.LOCAL_DELETED_OLD_VALUES)
+    };
+
+    // update local update conflicts to updates
+    String sqlConflictingLocalUpdating = sqlConflictingLocalDeleting;
+    String argsConflictingLocalUpdating[] = {
+        SyncState.changed.name(),
+        Integer.toString(ConflictType.LOCAL_UPDATED_UPDATED_VALUES)
+    };
+
+    // reset all 'rest' rows to 'insert'
+    b.setLength(0);
+    b.append("UPDATE \"").append(tableId).append("\" SET ").append(DataTableColumns.SYNC_STATE)
+    .append(" =? WHERE ").append(DataTableColumns.SYNC_STATE).append(" =?");
+
+    String sqlRest = b.toString();
+    String argsRest[] = {
+        SyncState.new_row.name(),
+        SyncState.synced.name()
+    };
+
+    String sqlRestPendingFiles = sqlRest;
+    String argsRestPendingFiles[] = {
+        SyncState.new_row.name(),
+        SyncState.synced_pending_files.name()
+    };
+
+    db.execSQL(sqlConflictingServer, argsConflictingServer);
+    db.execSQL(sqlConflictingLocalDeleting, argsConflictingLocalDeleting);
+    db.execSQL(sqlConflictingLocalUpdating, argsConflictingLocalUpdating);
+    db.execSQL(sqlRest, argsRest);
+    db.execSQL(sqlRestPendingFiles, argsRestPendingFiles);
   }
 
-  /*
-   * Write data into a user defined database table
+  public static final void deleteServerConflictRows(SQLiteDatabase db, String tableId, String rowId) {
+    // delete the old server-values in_conflict row if it exists
+    String whereClause = String.format("%s = ? AND %s = ? AND %s IN " + "( ?, ? )",
+        DataTableColumns.ID, DataTableColumns.SYNC_STATE, DataTableColumns.CONFLICT_TYPE);
+    String[] whereArgs = { rowId, SyncState.in_conflict.name(),
+        String.valueOf(ConflictType.SERVER_DELETED_OLD_VALUES),
+        String.valueOf(ConflictType.SERVER_UPDATED_UPDATED_VALUES) };
+    
+    db.delete(tableId,  whereClause,  whereArgs);
+  }
+  
+  /**
+   * Actually deletes a row from the table.
+   * This will delete any server conflict rows too,
+   * so we don't have to worry about cleaning those
+   * up separately.
+   *
+   * @param rowId the ID of the row to delete
    */
-  public static final void updateDataInExistingDBTableWithId(SQLiteDatabase db, String tableName,
-      ContentValues cvValues, String uuid) {
+  public static final void deleteDataInDBTableWithId(SQLiteDatabase db, String appName, String tableId, String rowId) {
+      String[] whereArgs = { rowId };
+      String whereClause = DataTableColumns.ID + " = ?";
+      db.delete(tableId, whereClause, whereArgs);
+      File instanceFolder = new File(ODKFileUtils.getInstanceFolder(appName, tableId, rowId));
+      try {
+        FileUtils.deleteDirectory(instanceFolder);
+      } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+        Log.e(t, "Unable to delete this directory: " + instanceFolder.getAbsolutePath());
+      }
+  }
+  
+  public static final void rawDeleteDataInDBTable(SQLiteDatabase db, String tableId, String whereClause, String[] whereArgs) {
+    db.delete(tableId, whereClause, whereArgs);
+  }
 
-    if (cvValues.size() <= 0) {
-      throw new IllegalArgumentException(t + ": No values to add into table " + tableName);
-    }
-
-    ContentValues cvDataTableVal = new ContentValues();
-    cvDataTableVal.put(DataTableColumns.ID, uuid);
-    cvDataTableVal.putAll(cvValues);
-
-    writeDataAndMetadataIntoExistingDBTable(db, tableName, cvDataTableVal, true);
+  public static final void deleteCheckpointDataInDBTableWithId(SQLiteDatabase db, String tableId, String rowId) {
+    rawDeleteDataInDBTable(db, tableId, 
+        DataTableColumns.ID + "=? AND " + DataTableColumns.SAVEPOINT_TYPE + " IS NULL",
+        new String[] { rowId });
+  }
+  
+  public static final void saveAsIncompleteMostRecentCheckpointDataInDBTableWithId(SQLiteDatabase db, String tableId, String rowId) {
+    db.execSQL("UPDATE \"" + tableId + "\" SET " +
+        DataTableColumns.SAVEPOINT_TYPE + "= ? WHERE " +
+        DataTableColumns.ID + "=?",
+        new String[] { SavepointTypeManipulator.incomplete(), rowId });
+    db.delete(tableId, 
+        DataTableColumns.ID + "=? AND " + DataTableColumns.SAVEPOINT_TIMESTAMP +
+        " NOT IN (SELECT MAX(" + DataTableColumns.SAVEPOINT_TIMESTAMP + ") FROM \"" +
+        tableId + "\" WHERE " + DataTableColumns.ID + "=?)",
+        new String[] { rowId, rowId });
   }
   
   /*
    * Write data into a user defined database table
    */
-  public static final void writeDataIntoExistingDBTableWithId(SQLiteDatabase db, String tableName,
-      ContentValues cvValues, String uuid) {
+  public static final void updateDataInExistingDBTableWithId(SQLiteDatabase db, String tableId,
+      ArrayList<ColumnDefinition> orderedColumns, ContentValues cvValues, String uuid) {
 
     if (cvValues.size() <= 0) {
-      throw new IllegalArgumentException(t + ": No values to add into table " + tableName);
+      throw new IllegalArgumentException(t + ": No values to add into table " + tableId);
     }
 
     ContentValues cvDataTableVal = new ContentValues();
     cvDataTableVal.put(DataTableColumns.ID, uuid);
     cvDataTableVal.putAll(cvValues);
 
-    writeDataAndMetadataIntoExistingDBTable(db, tableName, cvDataTableVal, false);
+    upsertDataAndMetadataIntoExistingDBTable(db, tableId, orderedColumns, cvDataTableVal, true);
+  }
+  
+  /*
+   * Write data into a user defined database table
+   */
+  public static final void insertDataIntoExistingDBTableWithId(SQLiteDatabase db, String tableId,
+      ArrayList<ColumnDefinition> orderedColumns, ContentValues cvValues, String uuid) {
+
+    if (cvValues.size() <= 0) {
+      throw new IllegalArgumentException(t + ": No values to add into table " + tableId);
+    }
+
+    ContentValues cvDataTableVal = new ContentValues();
+    cvDataTableVal.put(DataTableColumns.ID, uuid);
+    cvDataTableVal.putAll(cvValues);
+
+    upsertDataAndMetadataIntoExistingDBTable(db, tableId, orderedColumns, cvDataTableVal, false);
   }
 
   /*
@@ -667,21 +978,16 @@ public class ODKDatabaseUtils {
    * 
    * TODO: This is broken w.r.t. updates of partial fields
    */
-  public static final void writeDataAndMetadataIntoExistingDBTable(SQLiteDatabase db,
-      String tableName, ContentValues cvValues, boolean shouldUpdate) {
-    String nullString = null;
-    String id = null;
+  private static final void upsertDataAndMetadataIntoExistingDBTable(SQLiteDatabase db,
+      String tableId, ArrayList<ColumnDefinition> orderedColumns, ContentValues cvValues, boolean shouldUpdate) {
+    String rowId = null;
     String whereClause = null;
     String [] whereArgs = new String[1];
     boolean update = false;
 
     if (cvValues.size() <= 0) {
-      throw new IllegalArgumentException(t + ": No values to add into table " + tableName);
+      throw new IllegalArgumentException(t + ": No values to add into table " + tableId);
     }
-
-    // manufacture a rowId for this record...
-    String rowId = "uuid:" + UUID.randomUUID().toString();
-    String timeStamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
 
     ContentValues cvDataTableVal = new ContentValues();
     cvDataTableVal.putAll(cvValues);
@@ -689,10 +995,13 @@ public class ODKDatabaseUtils {
     // Bug fix for not updating a db row if an existing row id is used
     if (cvDataTableVal.containsKey(DataTableColumns.ID)) {
       // Select everything out of the table with given id
-      id = cvDataTableVal.getAsString(DataTableColumns.ID);
+      rowId = cvDataTableVal.getAsString(DataTableColumns.ID);
+      if ( rowId == null ) {
+        throw new IllegalArgumentException(DataTableColumns.ID + ", if specified, cannot be null");
+      }
       whereClause = DataTableColumns.ID + " = ?"; 
-      whereArgs[0] = "" + id;
-      String sel = "SELECT * FROM " + tableName + " WHERE "+ whereClause;
+      whereArgs[0] = rowId;
+      String sel = "SELECT * FROM " + tableId + " WHERE "+ whereClause;
       String[] selArgs = whereArgs;
       Cursor cursor = rawQuery(db, sel, selArgs);
       
@@ -701,14 +1010,16 @@ public class ODKDatabaseUtils {
         if (cursor.getCount() == 1) {
           update = true;
         } else if (cursor.getCount() > 1) {
-          throw new IllegalArgumentException(t + ": row id " + id + " has more than 1 row in table " + tableName);
+          throw new IllegalArgumentException(t + ": row id " + rowId + " has more than 1 row in table " + tableId);
         }
       } else {
         if (cursor.getCount() > 0) {
-          throw new IllegalArgumentException(t + ": id " + id + " is not unique in table " + tableName);
+          throw new IllegalArgumentException(t + ": id " + rowId + " is already present in table " + tableId);
         }
       }
 
+    } else {
+      rowId = "uuid:" + UUID.randomUUID().toString();
     }
 
     // TODO: This is broken w.r.t. updates of partial fields
@@ -720,58 +1031,199 @@ public class ODKDatabaseUtils {
       cvDataTableVal.put(DataTableColumns.ID, rowId);
     }
 
-    if (!cvDataTableVal.containsKey(DataTableColumns.ROW_ETAG)) {
-      cvDataTableVal.put(DataTableColumns.ROW_ETAG, nullString);
-    }
+    if ( update ) {
+  
+      if (!cvDataTableVal.containsKey(DataTableColumns.SYNC_STATE) ||
+          (cvDataTableVal.get(DataTableColumns.SYNC_STATE) == null)) {
+        cvDataTableVal.put(DataTableColumns.SYNC_STATE, SyncState.changed.name());
+      }
+  
+      if (cvDataTableVal.containsKey(DataTableColumns.LOCALE) &&
+          (cvDataTableVal.get(DataTableColumns.LOCALE) == null)) {
+        cvDataTableVal.put(DataTableColumns.LOCALE, DataTableColumns.DEFAULT_LOCALE);
+      }
+  
+      if (cvDataTableVal.containsKey(DataTableColumns.SAVEPOINT_TYPE) &&
+          (cvDataTableVal.get(DataTableColumns.SAVEPOINT_TYPE) == null)) {
+        cvDataTableVal.put(DataTableColumns.SAVEPOINT_TYPE, SavepointTypeManipulator.complete());
+      }
+  
+      if (!cvDataTableVal.containsKey(DataTableColumns.SAVEPOINT_TIMESTAMP) ||
+          cvDataTableVal.get(DataTableColumns.SAVEPOINT_TIMESTAMP) == null) {
+        String timeStamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
+        cvDataTableVal.put(DataTableColumns.SAVEPOINT_TIMESTAMP, timeStamp);
+      }
+  
+      if (!cvDataTableVal.containsKey(DataTableColumns.SAVEPOINT_CREATOR) ||
+          (cvDataTableVal.get(DataTableColumns.SAVEPOINT_CREATOR) == null)) {
+        cvDataTableVal.put(DataTableColumns.SAVEPOINT_CREATOR, DataTableColumns.DEFAULT_SAVEPOINT_CREATOR );
+      }
+      
+    } else {
+      if (!cvDataTableVal.containsKey(DataTableColumns.ID)) {
+        cvDataTableVal.put(DataTableColumns.ID, rowId);
+      }
 
-    if (!cvDataTableVal.containsKey(DataTableColumns.SYNC_STATE) ||
-        (cvDataTableVal.get(DataTableColumns.SYNC_STATE) == null)) {
-      cvDataTableVal.put(DataTableColumns.SYNC_STATE, SyncState.new_row.name());
-    }
-
-    if (!cvDataTableVal.containsKey(DataTableColumns.CONFLICT_TYPE)) {
-      cvDataTableVal.put(DataTableColumns.CONFLICT_TYPE, nullString);
-    }
-
-    if (!cvDataTableVal.containsKey(DataTableColumns.FILTER_TYPE) ||
-        (cvDataTableVal.get(DataTableColumns.FILTER_TYPE) == null)) {
-      cvDataTableVal.put(DataTableColumns.FILTER_TYPE, DataTableColumns.DEFAULT_FILTER_TYPE);
-    }
-
-    if (!cvDataTableVal.containsKey(DataTableColumns.FILTER_VALUE) ||
-        (cvDataTableVal.get(DataTableColumns.FILTER_VALUE) == null)) {
-      cvDataTableVal.put(DataTableColumns.FILTER_VALUE, DataTableColumns.DEFAULT_FILTER_VALUE);
-    }
-
-    if (!cvDataTableVal.containsKey(DataTableColumns.FORM_ID)) {
-      cvDataTableVal.put(DataTableColumns.FORM_ID, nullString);
-    }
-
-    if (!cvDataTableVal.containsKey(DataTableColumns.LOCALE) ||
-        (cvDataTableVal.get(DataTableColumns.LOCALE) == null)) {
-      cvDataTableVal.put(DataTableColumns.LOCALE, DataTableColumns.DEFAULT_LOCALE);
-    }
-
-    if (!cvDataTableVal.containsKey(DataTableColumns.SAVEPOINT_TYPE) ||
-        (cvDataTableVal.get(DataTableColumns.SAVEPOINT_TYPE) == null)) {
-      cvDataTableVal.put(DataTableColumns.SAVEPOINT_TYPE, SavepointTypeManipulator.complete());
-    }
-
-    if (!cvDataTableVal.containsKey(DataTableColumns.SAVEPOINT_TIMESTAMP)) {
-      cvDataTableVal.put(DataTableColumns.SAVEPOINT_TIMESTAMP, timeStamp);
-    }
-
-    if (!cvDataTableVal.containsKey(DataTableColumns.SAVEPOINT_CREATOR) ||
-        (cvDataTableVal.get(DataTableColumns.SAVEPOINT_CREATOR) == null)) {
-      cvDataTableVal.put(DataTableColumns.SAVEPOINT_CREATOR, DataTableColumns.DEFAULT_SAVEPOINT_CREATOR );
+      if (!cvDataTableVal.containsKey(DataTableColumns.ROW_ETAG) ||
+          cvDataTableVal.get(DataTableColumns.ROW_ETAG) == null) {
+        cvDataTableVal.put(DataTableColumns.ROW_ETAG, DataTableColumns.DEFAULT_ROW_ETAG);
+      }
+  
+      if (!cvDataTableVal.containsKey(DataTableColumns.SYNC_STATE) ||
+          (cvDataTableVal.get(DataTableColumns.SYNC_STATE) == null)) {
+        cvDataTableVal.put(DataTableColumns.SYNC_STATE, SyncState.new_row.name());
+      }
+  
+      if (!cvDataTableVal.containsKey(DataTableColumns.CONFLICT_TYPE)) {
+        cvDataTableVal.putNull(DataTableColumns.CONFLICT_TYPE);
+      }
+  
+      if (!cvDataTableVal.containsKey(DataTableColumns.FILTER_TYPE) ||
+          (cvDataTableVal.get(DataTableColumns.FILTER_TYPE) == null)) {
+        cvDataTableVal.put(DataTableColumns.FILTER_TYPE, DataTableColumns.DEFAULT_FILTER_TYPE);
+      }
+  
+      if (!cvDataTableVal.containsKey(DataTableColumns.FILTER_VALUE) ||
+          (cvDataTableVal.get(DataTableColumns.FILTER_VALUE) == null)) {
+        cvDataTableVal.put(DataTableColumns.FILTER_VALUE, DataTableColumns.DEFAULT_FILTER_VALUE);
+      }
+  
+      if (!cvDataTableVal.containsKey(DataTableColumns.FORM_ID)) {
+        cvDataTableVal.putNull(DataTableColumns.FORM_ID);
+      }
+  
+      if (!cvDataTableVal.containsKey(DataTableColumns.LOCALE) ||
+          (cvDataTableVal.get(DataTableColumns.LOCALE) == null)) {
+        cvDataTableVal.put(DataTableColumns.LOCALE, DataTableColumns.DEFAULT_LOCALE);
+      }
+  
+      if (!cvDataTableVal.containsKey(DataTableColumns.SAVEPOINT_TYPE) ||
+          (cvDataTableVal.get(DataTableColumns.SAVEPOINT_TYPE) == null)) {
+        cvDataTableVal.put(DataTableColumns.SAVEPOINT_TYPE, SavepointTypeManipulator.complete());
+      }
+  
+      if (!cvDataTableVal.containsKey(DataTableColumns.SAVEPOINT_TIMESTAMP) ||
+          cvDataTableVal.get(DataTableColumns.SAVEPOINT_TIMESTAMP) == null) {
+        String timeStamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
+        cvDataTableVal.put(DataTableColumns.SAVEPOINT_TIMESTAMP, timeStamp);
+      }
+  
+      if (!cvDataTableVal.containsKey(DataTableColumns.SAVEPOINT_CREATOR) ||
+          (cvDataTableVal.get(DataTableColumns.SAVEPOINT_CREATOR) == null)) {
+        cvDataTableVal.put(DataTableColumns.SAVEPOINT_CREATOR, DataTableColumns.DEFAULT_SAVEPOINT_CREATOR );
+      }
     }
     
+    cleanUpValuesMap(orderedColumns, cvDataTableVal);
+    
     if (update) {
-      db.update(tableName, cvDataTableVal, whereClause, whereArgs);
+      db.update(tableId, cvDataTableVal, whereClause, whereArgs);
     } else {
-      db.replaceOrThrow(tableName, null, cvDataTableVal);
+      db.insertOrThrow(tableId, null, cvDataTableVal);
     }
 
+  }
+
+  /**
+   * If the caller specified a complex json value for a structured type, flush the value through
+   * to the individual columns.
+   * 
+   * @param orderedColumns
+   * @param values
+   */
+  private static void cleanUpValuesMap(ArrayList<ColumnDefinition> orderedColumns, ContentValues values) {
+
+    Map<String, String> toBeResolved = new HashMap<String,String>();
+
+    for ( String key : values.keySet() ) {
+      if ( DataTableColumns.CONFLICT_TYPE.equals(key) ) {
+        continue;
+      } else if ( DataTableColumns.FILTER_TYPE.equals(key) ) {
+        continue;
+      } else if ( DataTableColumns.FILTER_TYPE.equals(key) ) {
+        continue;
+      } else if ( DataTableColumns.FILTER_VALUE.equals(key) ) {
+        continue;
+      } else if ( DataTableColumns.FORM_ID.equals(key) ) {
+        continue;
+      } else if ( DataTableColumns.ID.equals(key) ) {
+        continue;
+      } else if ( DataTableColumns.LOCALE.equals(key) ) {
+        continue;
+      } else if ( DataTableColumns.ROW_ETAG.equals(key) ) {
+        continue;
+      } else if ( DataTableColumns.SAVEPOINT_CREATOR.equals(key) ) {
+        continue;
+      } else if ( DataTableColumns.SAVEPOINT_TIMESTAMP.equals(key) ) {
+        continue;
+      } else if ( DataTableColumns.SAVEPOINT_TYPE.equals(key) ) {
+        continue;
+      } else if ( DataTableColumns.SYNC_STATE.equals(key) ) {
+        continue;
+      } else if ( DataTableColumns._ID.equals(key) ) {
+        continue;
+      }
+      // OK it is one of the data columns
+      ColumnDefinition cp = ColumnDefinition.find(orderedColumns, key);
+      if ( !cp.isUnitOfRetention() ) {
+        toBeResolved.put(key, values.getAsString(key));
+      }
+    }
+
+    // remove these non-retained values from the values set...
+    for ( String key : toBeResolved.keySet() ) {
+      values.remove(key);
+    }
+
+    while (!toBeResolved.isEmpty() ) {
+
+      Map<String, String> moreToResolve = new HashMap<String, String>();
+
+      for ( Map.Entry<String,String> entry : toBeResolved.entrySet() ) {
+        String key = entry.getKey();
+        String json = entry.getValue();
+        if ( json == null ) {
+          // don't need to do anything
+          // since the value is null
+          continue;
+        }
+        ColumnDefinition cp = ColumnDefinition.find(orderedColumns, key);
+        try {
+          Map<String,Object> struct = ODKFileUtils.mapper.readValue(json, Map.class);
+          for ( ColumnDefinition child : cp.getChildren() ) {
+            String subkey = child.getElementKey();
+            ColumnDefinition subcp = ColumnDefinition.find(orderedColumns, subkey);
+            if ( subcp.isUnitOfRetention() ) {
+              ElementType subtype = ElementType.parseElementType(subcp.getElementType(), !subcp.getChildren().isEmpty());
+              ElementDataType type = subtype.getDataType();
+              if ( type == ElementDataType.integer ) {
+                values.put(subkey, (Integer) struct.get(subcp.getElementName()));
+              } else if ( type == ElementDataType.number ) {
+                values.put(subkey, (Double) struct.get(subcp.getElementName()));
+              } else if ( type == ElementDataType.bool ) {
+                values.put(subkey, ((Boolean) struct.get(subcp.getElementName())) ? 1 : 0);
+              } else {
+                values.put(subkey, (String) struct.get(subcp.getElementName()));
+              }
+            } else {
+              // this must be a javascript structure... re-JSON it and save (for next round).
+              moreToResolve.put(subkey, ODKFileUtils.mapper.writeValueAsString(struct.get(subcp.getElementName())));
+            }
+          }
+        } catch (JsonParseException e) {
+          e.printStackTrace();
+          throw new IllegalStateException("should not be happening");
+        } catch (JsonMappingException e) {
+          e.printStackTrace();
+          throw new IllegalStateException("should not be happening");
+        } catch (IOException e) {
+          e.printStackTrace();
+          throw new IllegalStateException("should not be happening");
+        }
+      }
+
+      toBeResolved = moreToResolve;
+    }
   }
 
   /**

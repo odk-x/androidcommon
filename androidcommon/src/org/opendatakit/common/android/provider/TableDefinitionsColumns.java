@@ -22,10 +22,9 @@ public class TableDefinitionsColumns implements BaseColumns {
   public static final String CONTENT_ITEM_TYPE = "vnd.android.cursor.item/vnd.opendatakit.table";
 
   public static final String TABLE_ID = "_table_id";
-  public static final String SYNC_TAG = "_sync_tag";
+  public static final String SCHEMA_ETAG = "_schema_etag";
+  public static final String LAST_DATA_ETAG = "_last_data_etag";
   public static final String LAST_SYNC_TIME = "_last_sync_time";
-  public static final String SYNC_STATE = "_sync_state";
-  public static final String TRANSACTIONING = "_transactioning";
 
   // This class cannot be instantiated
   private TableDefinitionsColumns() {
@@ -35,11 +34,10 @@ public class TableDefinitionsColumns implements BaseColumns {
     //@formatter:off
     String create = "CREATE TABLE IF NOT EXISTS " + tableName + "("
 				+ TABLE_ID + " TEXT NOT NULL PRIMARY KEY, "
-				+ SYNC_TAG + " TEXT NULL,"
+				+ SCHEMA_ETAG + " TEXT NULL,"
+            + LAST_DATA_ETAG + " TEXT NULL,"
 				// TODO last sync time should probably become an int?
-				+ LAST_SYNC_TIME + " TEXT NOT NULL, "
-				+ SYNC_STATE + " TEXT NOT NULL, "
-				+ TRANSACTIONING + " INTEGER NOT NULL" + ")";
+				+ LAST_SYNC_TIME + " TEXT NOT NULL )";
     //@formatter:on
     return create;
   }
