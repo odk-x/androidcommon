@@ -25,7 +25,7 @@ package org.opendatakit.common.android.data;
  * @author sudar.sam@gmail.com
  *
  */
-public class KeyValueStoreEntry {
+public class KeyValueStoreEntry implements Comparable<KeyValueStoreEntry> {
 
   /**
    * The table id of the table to which this entry belongs.
@@ -110,6 +110,22 @@ public class KeyValueStoreEntry {
         && (key == null ? other.key == null : key.equals(other.key))
         && (type == null ? other.type == null : type.equals(other.type))
         && (value == null ? other.value == null : value.equals(other.value));
+  }
+
+  @Override
+  public int compareTo(KeyValueStoreEntry that) {
+    int partitionComparison = this.partition.compareTo(that.partition);
+    if (partitionComparison != 0) {
+      return partitionComparison;
+    }
+    int aspectComparison = this.aspect.compareTo(that.aspect);
+    if (aspectComparison != 0) {
+      return aspectComparison;
+    }
+    // Otherwise, we'll just return the value of the key, b/c if the key
+    // is also the same, we're equal.
+    int keyComparison = this.key.compareTo(that.key);
+    return keyComparison;
   }
 
 }

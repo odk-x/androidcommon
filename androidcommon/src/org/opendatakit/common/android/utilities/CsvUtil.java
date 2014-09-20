@@ -584,7 +584,7 @@ public class CsvUtil {
 
           try {
             db.beginTransaction();
-            ODKDatabaseUtils.updateDBTableMetadata(db, tableId, kvsEntries, true);
+            ODKDatabaseUtils.replaceDBTableMetadata(db, tableId, kvsEntries, true);
 
             for (ColumnDefinition ci : colDefns) {
               // put the displayName into the KVS
@@ -612,7 +612,7 @@ public class CsvUtil {
                 entry.value = ODKFileUtils.mapper.writeValueAsString(ci.getElementKey());
                 kvsList.add(entry);
               }
-              ODKDatabaseUtils.updateDBTableMetadata(db, tableId, kvsList, false);
+              ODKDatabaseUtils.replaceDBTableMetadata(db, tableId, kvsList, false);
             }
             db.setTransactionSuccessful();
           } finally {
@@ -663,12 +663,12 @@ public class CsvUtil {
             db.beginTransaction();
             ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableId, columns);
 
-            ODKDatabaseUtils.updateDBTableMetadata(db, tableId, kvsEntries, false);
+            ODKDatabaseUtils.replaceDBTableMetadata(db, tableId, kvsEntries, false);
 
             // we have created the table...
             for (ColumnDefinition ci : colDefns) {
               List<KeyValueStoreEntry> kvsList = colEntries.get(ci.getElementKey());
-              ODKDatabaseUtils.updateDBTableMetadata(db, tableId, kvsList, false);
+              ODKDatabaseUtils.replaceDBTableMetadata(db, tableId, kvsList, false);
             }
             db.setTransactionSuccessful();
           } finally {

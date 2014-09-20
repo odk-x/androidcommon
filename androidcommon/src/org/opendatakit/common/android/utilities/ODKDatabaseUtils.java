@@ -301,11 +301,14 @@ public class ODKDatabaseUtils {
   }
   
   public static void deleteTableAndData(SQLiteDatabase db, String tableId) {
+    boolean dbWithinTransaction = db.inTransaction();
     try {
       String whereClause = TableDefinitionsColumns.TABLE_ID + " = ?";
       String[] whereArgs = { tableId };
 
-      db.beginTransaction();
+      if ( !dbWithinTransaction ) {
+        db.beginTransaction();
+      }
 
       // Drop the table used for the formId
       db.execSQL("DROP TABLE IF EXISTS \"" + tableId + "\";");
@@ -324,10 +327,14 @@ public class ODKDatabaseUtils {
       db.delete(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, whereClause, whereArgs);
       db.delete(DataModelDatabaseHelper.KEY_VALULE_STORE_SYNC_TABLE_NAME, whereClause, whereArgs);
 
-      db.setTransactionSuccessful();
+      if ( !dbWithinTransaction ) {
+        db.setTransactionSuccessful();
+      }
 
     } finally {
-      db.endTransaction();
+      if ( !dbWithinTransaction ) {
+        db.endTransaction();
+      }
     }
   }
 
@@ -387,7 +394,20 @@ public class ODKDatabaseUtils {
     cvTableDef.put(TableDefinitionsColumns.SCHEMA_ETAG, schemaETag);
     cvTableDef.put(TableDefinitionsColumns.LAST_DATA_ETAG, lastDataETag);
     
-    db.update(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, cvTableDef, TableDefinitionsColumns.TABLE_ID + "=?", new String[]{ tableId});
+    boolean dbWithinTransaction = db.inTransaction();
+    try {
+      if ( !dbWithinTransaction ) {
+        db.beginTransaction();
+      }
+      db.update(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, cvTableDef, TableDefinitionsColumns.TABLE_ID + "=?", new String[]{ tableId});
+      if ( !dbWithinTransaction ) {
+        db.setTransactionSuccessful();
+      }
+    } finally {
+      if ( !dbWithinTransaction ) {
+        db.endTransaction();
+      }
+    }
   }
 
   public static final void updateDBTableLastSyncTime(SQLiteDatabase db, String tableId ) {
@@ -399,7 +419,20 @@ public class ODKDatabaseUtils {
     cvTableDef.put(TableDefinitionsColumns.LAST_SYNC_TIME, 
         TableConstants.nanoSecondsFromMillis(System.currentTimeMillis()));
     
-    db.update(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, cvTableDef, TableDefinitionsColumns.TABLE_ID + "=?", new String[]{ tableId});
+    boolean dbWithinTransaction = db.inTransaction();
+    try {
+      if ( !dbWithinTransaction ) {
+        db.beginTransaction();
+      }
+      db.update(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, cvTableDef, TableDefinitionsColumns.TABLE_ID + "=?", new String[]{ tableId});
+      if ( !dbWithinTransaction ) {
+        db.setTransactionSuccessful();
+      }
+    } finally {
+      if ( !dbWithinTransaction ) {
+        db.endTransaction();
+      }
+    }
   }
 
   public static final TableDefinitionEntry getTableDefinitionEntry(SQLiteDatabase db, String tableId) {
@@ -434,43 +467,168 @@ public class ODKDatabaseUtils {
     return e;
   }
   
-  public static final void updateDBTableMetadata(SQLiteDatabase db, String tableId, List<KeyValueStoreEntry> metadata, boolean clear) {
-    if ( clear ) {
-      db.delete( DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, 
-                 KeyValueStoreColumns.TABLE_ID + "=?", new String[]{ tableId });
-    }
-    for ( KeyValueStoreEntry e : metadata ) {
-      ContentValues values = new ContentValues();
-      values.put(KeyValueStoreColumns.TABLE_ID, e.tableId);
-      values.put(KeyValueStoreColumns.PARTITION, e.partition);
-      values.put(KeyValueStoreColumns.ASPECT, e.aspect);
-      values.put(KeyValueStoreColumns.VALUE_TYPE, e.type);
-      values.put(KeyValueStoreColumns.VALUE, e.value);
-      db.insert(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null, values);
+  public static final void replaceDBTableMetadata(SQLiteDatabase db, KeyValueStoreEntry entry) {
+    ContentValues values = new ContentValues();
+    values.put(KeyValueStoreColumns.TABLE_ID, entry.tableId);
+    values.put(KeyValueStoreColumns.PARTITION, entry.partition);
+    values.put(KeyValueStoreColumns.ASPECT, entry.aspect);
+    values.put(KeyValueStoreColumns.VALUE_TYPE, entry.type);
+    values.put(KeyValueStoreColumns.VALUE, entry.value);
+    
+    boolean dbWithinTransaction = db.inTransaction();
+    try {
+      if ( !dbWithinTransaction ) {
+        db.beginTransaction();
+      }
+      db.replace(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null, values);
+      if ( !dbWithinTransaction ) {
+        db.setTransactionSuccessful();
+      }
+    } finally {
+      if ( !dbWithinTransaction ) {
+        db.endTransaction();
+      }
     }
   }
   
-  public static final List<KeyValueStoreEntry> 
+  public static final void replaceDBTableMetadata(SQLiteDatabase db, String tableId, List<KeyValueStoreEntry> metadata, boolean clear) {
+    
+    boolean dbWithinTransaction = db.inTransaction();
+    try {
+      if ( !dbWithinTransaction ) {
+        db.beginTransaction();
+      }
+      
+      if ( clear ) {
+        db.delete( DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, 
+                   KeyValueStoreColumns.TABLE_ID + "=?", new String[]{ tableId });
+      }
+      for ( KeyValueStoreEntry e : metadata ) {
+        ContentValues values = new ContentValues();
+        if ( !tableId.equals(e.tableId) ) {
+          throw new IllegalArgumentException("updateDBTableMetadata: expected all kvs entries to share the same tableId");
+        }
+        values.put(KeyValueStoreColumns.TABLE_ID, e.tableId);
+        values.put(KeyValueStoreColumns.PARTITION, e.partition);
+        values.put(KeyValueStoreColumns.ASPECT, e.aspect);
+        values.put(KeyValueStoreColumns.VALUE_TYPE, e.type);
+        values.put(KeyValueStoreColumns.VALUE, e.value);
+        db.replace(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null, values);
+      }
+      
+      if ( !dbWithinTransaction ) {
+        db.setTransactionSuccessful();
+      }
+    } finally {
+      if ( !dbWithinTransaction ) {
+        db.endTransaction();
+      }
+    }
+  }
+
+  /**
+   * The deletion filter includes all non-null arguments. If all arguments (except the db) 
+   * are null, then all properties are removed.
+   * 
+   * @param db
+   * @param tableId
+   * @param partition
+   * @param aspect
+   * @param key
+   */
+  public static final void 
+    deleteDBTableMetadata(SQLiteDatabase db, String tableId, String partition, String aspect, String key) {
+
+    StringBuilder b = new StringBuilder();
+    ArrayList<String> selArgs = new ArrayList<String>();
+    if ( tableId != null ) {
+      b.append(KeyValueStoreColumns.TABLE_ID).append("=?");
+      selArgs.add(tableId);
+    }
+    if ( partition != null ) {
+      if ( b.length() != 0 ) {
+        b.append(" AND ");
+      }
+      b.append(KeyValueStoreColumns.PARTITION).append("=?");
+      selArgs.add(partition);
+    }
+    if ( aspect != null ) {
+      if ( b.length() != 0 ) {
+        b.append(" AND ");
+      }
+      b.append(KeyValueStoreColumns.ASPECT).append("=?");
+      selArgs.add(aspect);
+    }
+    if ( key != null ) {
+      if ( b.length() != 0 ) {
+        b.append(" AND ");
+      }
+      b.append(KeyValueStoreColumns.KEY).append("=?");
+      selArgs.add(key);
+    }
+    
+    boolean dbWithinTransaction = db.inTransaction();
+    try {
+      if ( !dbWithinTransaction ) {
+        db.beginTransaction();
+      }
+
+      db.delete(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, 
+          b.toString(), 
+          selArgs.toArray(new String[selArgs.size()]));
+      
+      if ( !dbWithinTransaction ) {
+        db.setTransactionSuccessful();
+      }
+    } finally {
+      if ( !dbWithinTransaction ) {
+        db.endTransaction();
+      }
+    }
+  }
+  
+  /**
+   * Filters results by all non-null field values.
+   * 
+   * @param db
+   * @param tableId
+   * @param partition
+   * @param aspect
+   * @param key
+   * @return
+   */
+  public static final ArrayList<KeyValueStoreEntry> 
     getDBTableMetadata(SQLiteDatabase db, String tableId, String partition, String aspect, String key) {
 
-    List<KeyValueStoreEntry> entries = new ArrayList<KeyValueStoreEntry>();
+    ArrayList<KeyValueStoreEntry> entries = new ArrayList<KeyValueStoreEntry>();
     
     Cursor c = null;
     try {
       StringBuilder b = new StringBuilder();
       ArrayList<String> selArgs = new ArrayList<String>();
-      b.append(KeyValueStoreColumns.TABLE_ID).append("=?");
-      selArgs.add(tableId);
+      if ( tableId != null ) {
+        b.append(KeyValueStoreColumns.TABLE_ID).append("=?");
+        selArgs.add(tableId);
+      }
       if ( partition != null ) {
-        b.append(" AND ").append(KeyValueStoreColumns.PARTITION).append("=?");
+        if ( b.length() != 0 ) {
+          b.append(" AND ");
+        }
+        b.append(KeyValueStoreColumns.PARTITION).append("=?");
         selArgs.add(partition);
       }
       if ( aspect != null ) {
-        b.append(" AND ").append(KeyValueStoreColumns.ASPECT).append("=?");
+        if ( b.length() != 0 ) {
+          b.append(" AND ");
+        }
+        b.append(KeyValueStoreColumns.ASPECT).append("=?");
         selArgs.add(aspect);
       }
       if ( key != null ) {
-        b.append(" AND ").append(KeyValueStoreColumns.KEY).append("=?");
+        if ( b.length() != 0 ) {
+          b.append(" AND ");
+        }
+        b.append(KeyValueStoreColumns.KEY).append("=?");
         selArgs.add(key);
       }
       
@@ -876,12 +1034,27 @@ public class ODKDatabaseUtils {
         SyncState.new_row.name(),
         SyncState.synced_pending_files.name()
     };
+    
+    boolean dbWithinTransaction = db.inTransaction();
+    try {
+      if ( !dbWithinTransaction ) {
+        db.beginTransaction();
+      }
 
-    db.execSQL(sqlConflictingServer, argsConflictingServer);
-    db.execSQL(sqlConflictingLocalDeleting, argsConflictingLocalDeleting);
-    db.execSQL(sqlConflictingLocalUpdating, argsConflictingLocalUpdating);
-    db.execSQL(sqlRest, argsRest);
-    db.execSQL(sqlRestPendingFiles, argsRestPendingFiles);
+      db.execSQL(sqlConflictingServer, argsConflictingServer);
+      db.execSQL(sqlConflictingLocalDeleting, argsConflictingLocalDeleting);
+      db.execSQL(sqlConflictingLocalUpdating, argsConflictingLocalUpdating);
+      db.execSQL(sqlRest, argsRest);
+      db.execSQL(sqlRestPendingFiles, argsRestPendingFiles);
+      
+      if ( !dbWithinTransaction ) {
+        db.setTransactionSuccessful();
+      }
+    } finally {
+      if ( !dbWithinTransaction ) {
+        db.endTransaction();
+      }
+    }
   }
 
   public static final void deleteServerConflictRows(SQLiteDatabase db, String tableId, String rowId) {
@@ -891,22 +1064,74 @@ public class ODKDatabaseUtils {
     String[] whereArgs = { rowId, SyncState.in_conflict.name(),
         String.valueOf(ConflictType.SERVER_DELETED_OLD_VALUES),
         String.valueOf(ConflictType.SERVER_UPDATED_UPDATED_VALUES) };
-    
-    db.delete(tableId,  whereClause,  whereArgs);
+        
+    boolean dbWithinTransaction = db.inTransaction();
+    try {
+      if ( !dbWithinTransaction ) {
+        db.beginTransaction();
+      }
+
+      db.delete(tableId,  whereClause,  whereArgs);
+      
+      if ( !dbWithinTransaction ) {
+        db.setTransactionSuccessful();
+      }
+    } finally {
+      if ( !dbWithinTransaction ) {
+        db.endTransaction();
+      }
+    }
   }
-  
+
   /**
-   * Actually deletes a row from the table.
-   * This will delete any server conflict rows too,
-   * so we don't have to worry about cleaning those
-   * up separately.
-   *
-   * @param rowId the ID of the row to delete
+   * @param rowId
+   * @return the sync state of the row (see {@link SyncState}), or null if
+   *         the row does not exist.
    */
+  public static SyncState getSyncState(SQLiteDatabase db, String appName, String tableId, String rowId) {
+    Cursor c = null;
+    try {
+       c = db.query(tableId, new String[] { DataTableColumns.SYNC_STATE }, DataTableColumns.ID + " = ?",
+           new String[] { rowId }, null, null, null);
+       if (c.moveToFirst()) {
+         int syncStateIndex = c.getColumnIndex(DataTableColumns.SYNC_STATE);
+         if ( !c.isNull(syncStateIndex) ) {
+           String val = ODKDatabaseUtils.getIndexAsString(c, syncStateIndex);
+           return SyncState.valueOf(val);
+         }
+       }
+       return null;
+     } finally {
+       if ( c != null && !c.isClosed() ) {
+          c.close();
+       }
+     }
+  }
+
   public static final void deleteDataInDBTableWithId(SQLiteDatabase db, String appName, String tableId, String rowId) {
+    SyncState syncState = getSyncState(db, appName, tableId, rowId);
+       
+    boolean dbWithinTransaction = db.inTransaction();
+    if (syncState == SyncState.new_row) {
       String[] whereArgs = { rowId };
       String whereClause = DataTableColumns.ID + " = ?";
-      db.delete(tableId, whereClause, whereArgs);
+          
+      try {
+        if ( !dbWithinTransaction ) {
+          db.beginTransaction();
+        }
+    
+        db.delete(tableId, whereClause, whereArgs);
+        
+        if ( !dbWithinTransaction ) {
+          db.setTransactionSuccessful();
+        }
+      } finally {
+        if ( !dbWithinTransaction ) {
+          db.endTransaction();
+        }
+      }
+
       File instanceFolder = new File(ODKFileUtils.getInstanceFolder(appName, tableId, rowId));
       try {
         FileUtils.deleteDirectory(instanceFolder);
@@ -915,10 +1140,46 @@ public class ODKDatabaseUtils {
         e.printStackTrace();
         Log.e(t, "Unable to delete this directory: " + instanceFolder.getAbsolutePath());
       }
+    } else if (syncState == SyncState.synced || syncState == SyncState.changed) {
+      String[] whereArgs = { rowId };
+      ContentValues values = new ContentValues();
+      values.put(DataTableColumns.SYNC_STATE, SyncState.deleted.name());
+      values.put(DataTableColumns.SAVEPOINT_TIMESTAMP, TableConstants.nanoSecondsFromMillis(System.currentTimeMillis()));
+      try {
+        if ( !dbWithinTransaction ) {
+          db.beginTransaction();
+        }
+    
+        db.update(tableId, values, DataTableColumns.ID + " = ?", whereArgs);
+        
+        if ( !dbWithinTransaction ) {
+          db.setTransactionSuccessful();
+        }
+      } finally {
+        if ( !dbWithinTransaction ) {
+          db.endTransaction();
+        }
+      }
+    }
   }
   
   public static final void rawDeleteDataInDBTable(SQLiteDatabase db, String tableId, String whereClause, String[] whereArgs) {
-    db.delete(tableId, whereClause, whereArgs);
+    boolean dbWithinTransaction = db.inTransaction();
+    try {
+      if ( !dbWithinTransaction ) {
+        db.beginTransaction();
+      }
+  
+      db.delete(tableId, whereClause, whereArgs);
+      
+      if ( !dbWithinTransaction ) {
+        db.setTransactionSuccessful();
+      }
+    } finally {
+      if ( !dbWithinTransaction ) {
+        db.endTransaction();
+      }
+    }
   }
 
   public static final void deleteCheckpointDataInDBTableWithId(SQLiteDatabase db, String tableId, String rowId) {
@@ -928,15 +1189,30 @@ public class ODKDatabaseUtils {
   }
   
   public static final void saveAsIncompleteMostRecentCheckpointDataInDBTableWithId(SQLiteDatabase db, String tableId, String rowId) {
-    db.execSQL("UPDATE \"" + tableId + "\" SET " +
-        DataTableColumns.SAVEPOINT_TYPE + "= ? WHERE " +
-        DataTableColumns.ID + "=?",
-        new String[] { SavepointTypeManipulator.incomplete(), rowId });
-    db.delete(tableId, 
-        DataTableColumns.ID + "=? AND " + DataTableColumns.SAVEPOINT_TIMESTAMP +
-        " NOT IN (SELECT MAX(" + DataTableColumns.SAVEPOINT_TIMESTAMP + ") FROM \"" +
-        tableId + "\" WHERE " + DataTableColumns.ID + "=?)",
-        new String[] { rowId, rowId });
+    boolean dbWithinTransaction = db.inTransaction();
+    try {
+      if ( !dbWithinTransaction ) {
+        db.beginTransaction();
+      }
+  
+      db.execSQL("UPDATE \"" + tableId + "\" SET " +
+          DataTableColumns.SAVEPOINT_TYPE + "= ? WHERE " +
+          DataTableColumns.ID + "=?",
+          new String[] { SavepointTypeManipulator.incomplete(), rowId });
+      db.delete(tableId, 
+          DataTableColumns.ID + "=? AND " + DataTableColumns.SAVEPOINT_TIMESTAMP +
+          " NOT IN (SELECT MAX(" + DataTableColumns.SAVEPOINT_TIMESTAMP + ") FROM \"" +
+          tableId + "\" WHERE " + DataTableColumns.ID + "=?)",
+          new String[] { rowId, rowId });
+      
+      if ( !dbWithinTransaction ) {
+        db.setTransactionSuccessful();
+      }
+    } finally {
+      if ( !dbWithinTransaction ) {
+        db.endTransaction();
+      }
+    }
   }
   
   /*
@@ -1116,10 +1392,25 @@ public class ODKDatabaseUtils {
     
     cleanUpValuesMap(orderedColumns, cvDataTableVal);
     
-    if (update) {
-      db.update(tableId, cvDataTableVal, whereClause, whereArgs);
-    } else {
-      db.insertOrThrow(tableId, null, cvDataTableVal);
+    boolean dbWithinTransaction = db.inTransaction();
+    try {
+      if ( !dbWithinTransaction ) {
+        db.beginTransaction();
+      }
+  
+      if (update) {
+        db.update(tableId, cvDataTableVal, whereClause, whereArgs);
+      } else {
+        db.insertOrThrow(tableId, null, cvDataTableVal);
+      }
+      
+      if ( !dbWithinTransaction ) {
+        db.setTransactionSuccessful();
+      }
+    } finally {
+      if ( !dbWithinTransaction ) {
+        db.endTransaction();
+      }
     }
 
   }
