@@ -46,6 +46,7 @@ public class ColumnDefinition {
   private boolean isUnitOfRetention = true; // assumed until revised...
 
   final ArrayList<ColumnDefinition> children = new ArrayList<ColumnDefinition>();
+  ElementType type = null;
   ColumnDefinition parent = null;
 
   public ColumnDefinition(String elementKey, String elementName, String elementType,
@@ -63,6 +64,13 @@ public class ColumnDefinition {
 
   public String getElementType() {
     return column.getElementType();
+  }
+  
+  public synchronized ElementType getType() {
+    if ( type == null ) {
+      type = ElementType.parseElementType(getElementType(), !getChildren().isEmpty());
+    }
+    return type;
   }
 
   public String getListChildElementKeys() {
@@ -117,19 +125,21 @@ public class ColumnDefinition {
    * use of that property to quickly retrieve the definition for an elementKey.
    * 
    * @param orderedDefns
-   * @param columnName
+   * @param elementKey
    * @return
+   * @throws IllegalArgumentException - if elementKey not found
    */
-  public static ColumnDefinition find(ArrayList<ColumnDefinition> orderedDefns, String columnName) {
-    if (columnName == null) {
-      throw new IllegalArgumentException("columnName cannot be null in ColumnDefinition::find()");
+  public static ColumnDefinition find(ArrayList<ColumnDefinition> orderedDefns, String elementKey)
+      throws IllegalArgumentException {
+    if (elementKey == null) {
+      throw new NullPointerException("elementKey cannot be null in ColumnDefinition::find()");
     }
     int iLow = 0;
     int iHigh = orderedDefns.size();
     int iGuess = (iLow + iHigh) / 2;
     while (iLow != iHigh) {
       ColumnDefinition cd = orderedDefns.get(iGuess);
-      int cmp = columnName.compareTo(cd.getElementKey());
+      int cmp = elementKey.compareTo(cd.getElementKey());
       if (cmp == 0) {
         return cd;
       }
@@ -142,14 +152,14 @@ public class ColumnDefinition {
     }
 
     if (iLow >= orderedDefns.size()) {
-      throw new IllegalStateException("could not find elementKey in columns list: " + columnName);
+      throw new IllegalArgumentException("could not find elementKey in columns list: " + elementKey);
     }
 
     ColumnDefinition cd = orderedDefns.get(iGuess);
-    if (cd.getElementKey().equals(columnName)) {
+    if (cd.getElementKey().equals(elementKey)) {
       return cd;
     }
-    throw new IllegalStateException("could not find elementKey in columns list: " + columnName);
+    throw new IllegalArgumentException("could not find elementKey in columns list: " + elementKey);
   }
 
   /**
@@ -227,8 +237,7 @@ public class ColumnDefinition {
             + defn.getElementKey());
       }
 
-      ElementType type = ElementType.parseElementType(defn.getElementType(), !defn.getChildren()
-          .isEmpty());
+      ElementType type = defn.getType();
 
       if (type.getDataType() == ElementDataType.array) {
         if (defn.getChildren().isEmpty()) {
@@ -351,7 +360,7 @@ public class ColumnDefinition {
   }
 
   private static void getDataModelHelper(TreeMap<String, Object> jsonSchema, ColumnDefinition c) {
-    ElementType type = ElementType.parseElementType(c.getElementType(), !c.getChildren().isEmpty());
+    ElementType type = c.getType();
     ElementDataType dataType = type.getDataType();
 
     if (dataType == ElementDataType.array) {

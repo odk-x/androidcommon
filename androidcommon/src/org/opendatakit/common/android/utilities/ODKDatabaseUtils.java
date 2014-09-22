@@ -183,9 +183,6 @@ public class ODKDatabaseUtils {
       if ( c != null && !c.isClosed() ) {
         c.close();
       }
-      if ( db != null ) {
-        db.close();
-      }
     }
   }
   
@@ -242,7 +239,9 @@ public class ODKDatabaseUtils {
         c.moveToNext();
       }
     } finally {
-      c.close();
+      if ( c != null && !c.isClosed() ) {
+        c.close();
+      }
     }
     return userDefinedColumns;
   }
@@ -462,7 +461,9 @@ public class ODKDatabaseUtils {
         e.setLastSyncTime(c.getString(idxLastSyncTime));
       }
     } finally {
-      c.close();
+      if ( c != null && !c.isClosed() ) {
+        c.close();
+      }
     }
     return e;
   }
@@ -508,12 +509,17 @@ public class ODKDatabaseUtils {
         if ( !tableId.equals(e.tableId) ) {
           throw new IllegalArgumentException("updateDBTableMetadata: expected all kvs entries to share the same tableId");
         }
-        values.put(KeyValueStoreColumns.TABLE_ID, e.tableId);
-        values.put(KeyValueStoreColumns.PARTITION, e.partition);
-        values.put(KeyValueStoreColumns.ASPECT, e.aspect);
-        values.put(KeyValueStoreColumns.VALUE_TYPE, e.type);
-        values.put(KeyValueStoreColumns.VALUE, e.value);
-        db.replace(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null, values);
+        if ( e.value == null || e.value.trim().length() == 0 ) {
+          deleteDBTableMetadata(db, e.tableId, e.partition, e.aspect, e.key);
+        } else {
+          values.put(KeyValueStoreColumns.TABLE_ID, e.tableId);
+          values.put(KeyValueStoreColumns.PARTITION, e.partition);
+          values.put(KeyValueStoreColumns.ASPECT, e.aspect);
+          values.put(KeyValueStoreColumns.KEY, e.key);
+          values.put(KeyValueStoreColumns.VALUE_TYPE, e.type);
+          values.put(KeyValueStoreColumns.VALUE, e.value);
+          db.replace(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null, values);
+        }
       }
       
       if ( !dbWithinTransaction ) {
@@ -652,7 +658,9 @@ public class ODKDatabaseUtils {
         } while ( c.moveToNext() );
       }
     } finally {
-      c.close();
+      if ( c != null && !c.isClosed() ) {
+        c.close();
+      }
     }
     return entries;
   }
@@ -824,8 +832,7 @@ public class ODKDatabaseUtils {
       if ( !column.isUnitOfRetention() ) {
         continue;
       }
-      ElementType elementType = ElementType.parseElementType(column.getElementType(), 
-          !column.getChildren().isEmpty());
+      ElementType elementType = column.getType();
 
       ElementDataType dataType = elementType.getDataType();
       String dbType;
@@ -1485,7 +1492,7 @@ public class ODKDatabaseUtils {
             String subkey = child.getElementKey();
             ColumnDefinition subcp = ColumnDefinition.find(orderedColumns, subkey);
             if ( subcp.isUnitOfRetention() ) {
-              ElementType subtype = ElementType.parseElementType(subcp.getElementType(), !subcp.getChildren().isEmpty());
+              ElementType subtype = subcp.getType();
               ElementDataType type = subtype.getDataType();
               if ( type == ElementDataType.integer ) {
                 values.put(subkey, (Integer) struct.get(subcp.getElementName()));

@@ -393,7 +393,7 @@ public class CsvUtil {
 
     SQLiteDatabase db = null;
     try {
-      DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(context, tableId);
+      DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(context, appName);
       db = dbh.getWritableDatabase();
       List<Column> columns = new ArrayList<Column>();
 
@@ -506,8 +506,9 @@ public class CsvUtil {
               kvList = new ArrayList<KeyValueStoreEntry>();
               colEntries.put(column, kvList);
             }
-            ColumnDefinition ci = ColumnDefinition.find(colDefns, column);
-            if (ci == null) {
+            try {
+              ColumnDefinition.find(colDefns, column);
+            } catch ( IllegalArgumentException e) {
               throw new IllegalStateException("Reference to non-existent column: " + column
                   + " of tableId: " + tableId);
             }
@@ -547,9 +548,10 @@ public class CsvUtil {
                 "Unexpectedly found tableId with different column definitions that already exists!");
           }
           for (ColumnDefinition ci : colDefns) {
-            ColumnDefinition existingDefn = ColumnDefinition
-                .find(existingDefns, ci.getElementKey());
-            if (existingDefn == null) {
+            ColumnDefinition existingDefn; 
+            try {
+              existingDefn = ColumnDefinition.find(existingDefns, ci.getElementKey());
+            } catch ( IllegalArgumentException e) {
               throw new IllegalStateException("Unexpectedly failed to match elementKey: "
                   + ci.getElementKey());
             }
@@ -570,10 +572,8 @@ public class CsvUtil {
                     + i + "] for elementKey: " + ci.getElementKey());
               }
             }
-            ElementType type = ElementType.parseElementType(ci.getElementType(), !ci.getChildren()
-                .isEmpty());
-            ElementType existingType = ElementType.parseElementType(existingDefn.getElementType(),
-                !existingDefn.getChildren().isEmpty());
+            ElementType type = ci.getType();
+            ElementType existingType = existingDefn.getType();
             if (!existingType.equals(type)) {
               throw new IllegalStateException(
                   "Unexpected mis-match of elementType for elementKey: " + ci.getElementKey());
@@ -602,6 +602,12 @@ public class CsvUtil {
                   break;
                 }
               }
+              
+              if (entry != null && (entry.value == null || entry.value.trim().length() == 0)) {
+                kvsList.remove(entry);
+                entry = null;
+              }
+
               if (entry == null) {
                 entry = new KeyValueStoreEntry();
                 entry.tableId = tableId;
@@ -636,6 +642,12 @@ public class CsvUtil {
                 break;
               }
             }
+            
+            if (entry != null && (entry.value == null || entry.value.trim().length() == 0)) {
+              kvsList.remove(entry);
+              entry = null;
+            }
+            
             if (entry == null) {
               entry = new KeyValueStoreEntry();
               entry.tableId = tableId;
@@ -800,40 +812,67 @@ public class CsvUtil {
               break;
             String column = columnsInFile[i];
             String tmp = row[i];
-            if (DataTableColumns.ID.equals(column) && (tmp != null && tmp.length() != 0)) {
-              foundId = true;
-              v_id = tmp;
+            if (DataTableColumns.ID.equals(column)) {
+              if (tmp != null && tmp.length() != 0) {
+                foundId = true;
+                v_id = tmp;
+              }
+              continue;
             }
-            if (DataTableColumns.FORM_ID.equals(column) && (tmp != null && tmp.length() != 0)) {
-              v_form_id = tmp;
+            if (DataTableColumns.FORM_ID.equals(column)) {
+              if (tmp != null && tmp.length() != 0) {
+                v_form_id = tmp;
+              }
+              continue;
             }
-            if (DataTableColumns.LOCALE.equals(column) && (tmp != null && tmp.length() != 0)) {
-              v_locale = tmp;
+            if (DataTableColumns.LOCALE.equals(column)) {
+              if (tmp != null && tmp.length() != 0) {
+                v_locale = tmp;
+              }
+              continue;
             }
-            if (DataTableColumns.SAVEPOINT_TYPE.equals(column)
-                && (tmp != null && tmp.length() != 0)) {
-              v_savepoint_type = tmp;
+            if (DataTableColumns.SAVEPOINT_TYPE.equals(column)) {
+              if (tmp != null && tmp.length() != 0) {
+                v_savepoint_type = tmp;
+              }
+              continue;
             }
-            if (DataTableColumns.SAVEPOINT_CREATOR.equals(column)
-                && (tmp != null && tmp.length() != 0)) {
-              v_savepoint_creator = tmp;
+            if (DataTableColumns.SAVEPOINT_CREATOR.equals(column)) {
+              if (tmp != null && tmp.length() != 0) {
+                v_savepoint_creator = tmp;
+              }
+              continue;
             }
-            if (DataTableColumns.SAVEPOINT_TIMESTAMP.equals(column)
-                && (tmp != null && tmp.length() != 0)) {
-              v_savepoint_timestamp = tmp;
+            if (DataTableColumns.SAVEPOINT_TIMESTAMP.equals(column)) {
+              if (tmp != null && tmp.length() != 0) {
+                v_savepoint_timestamp = tmp;
+              }
+              continue;
             }
-            if (DataTableColumns.ROW_ETAG.equals(column) && (tmp != null && tmp.length() != 0)) {
-              v_row_etag = tmp;
+            if (DataTableColumns.ROW_ETAG.equals(column)) {
+              if (tmp != null && tmp.length() != 0) {
+                v_row_etag = tmp;
+              }
+              continue;
             }
-            if (DataTableColumns.FILTER_TYPE.equals(column) && (tmp != null && tmp.length() != 0)) {
-              v_filter_type = tmp;
+            if (DataTableColumns.FILTER_TYPE.equals(column)) {
+              if (tmp != null && tmp.length() != 0) {
+                v_filter_type = tmp;
+              }
+              continue;
             }
-            if (DataTableColumns.FILTER_VALUE.equals(column) && (tmp != null && tmp.length() != 0)) {
-              v_filter_value = tmp;
+            if (DataTableColumns.FILTER_VALUE.equals(column)) {
+              if (tmp != null && tmp.length() != 0) {
+                v_filter_value = tmp;
+              }
+              continue;
             }
-            ColumnDefinition cd = ColumnDefinition.find(orderedDefns, column);
-            if (cd != null) {
+            try {
+              ColumnDefinition.find(orderedDefns, column);
               valueMap.put(column, tmp);
+            } catch ( IllegalArgumentException e) {
+              // this is OK -- 
+              // the csv contains an extra column 
             }
           }
 
