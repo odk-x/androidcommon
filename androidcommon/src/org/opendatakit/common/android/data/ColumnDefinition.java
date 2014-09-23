@@ -18,7 +18,6 @@ package org.opendatakit.common.android.data;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +30,7 @@ import org.opendatakit.common.android.utilities.ODKFileUtils;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 
-public class ColumnDefinition {
+public class ColumnDefinition implements Comparable<ColumnDefinition> {
   private static final String JSON_SCHEMA_ELEMENT_KEY = "elementKey";
   private static final String JSON_SCHEMA_ELEMENT_TYPE = "elementType";
   private static final String JSON_SCHEMA_PROPERTIES = "properties";
@@ -261,13 +260,7 @@ public class ColumnDefinition {
     }
     markUnitOfRetention(colDefs);
     ArrayList<ColumnDefinition> defns = new ArrayList<ColumnDefinition>(colDefs.values());
-    Collections.sort(defns, new Comparator<ColumnDefinition>() {
-
-      @Override
-      public int compare(ColumnDefinition lhs, ColumnDefinition rhs) {
-        return lhs.getElementKey().compareTo(rhs.getElementKey());
-      }
-    });
+    Collections.sort(defns);
 
     return defns;
   }
@@ -427,6 +420,11 @@ public class ColumnDefinition {
     } else {
       throw new IllegalStateException("unexpected alternative ElementDataType");
     }
+  }
+
+  @Override
+  public int compareTo(ColumnDefinition another) {
+    return this.getElementKey().compareTo(another.getElementKey());
   }
 
 }
