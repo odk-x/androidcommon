@@ -36,7 +36,7 @@ public class DataModelDatabaseHelperFactory {
    * @param appName
    * @return an entry in dbHelpers
    */
-  public synchronized static DataModelDatabaseHelper getDbHelper(Context context, String appName) {
+  private synchronized static DataModelDatabaseHelper getDbHelper(Context context, String appName) {
     WebLogger log = null;
 
     try {

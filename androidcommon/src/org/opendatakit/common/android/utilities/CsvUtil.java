@@ -140,7 +140,7 @@ public class CsvUtil {
     }
 
     // And now add all remaining export columns
-    for (String colName : ODKDatabaseUtils.getExportColumns()) {
+    for (String colName : ODKDatabaseUtils.get().getExportColumns()) {
       if (columns.contains(colName)) {
         continue;
       }
@@ -168,7 +168,7 @@ public class CsvUtil {
           + DataTableColumns.CONFLICT_TYPE + " IS NULL OR " + DataTableColumns.CONFLICT_TYPE
           + " = " + Integer.toString(ConflictType.LOCAL_UPDATED_UPDATED_VALUES) + ")";
 
-      UserTable table = ODKDatabaseUtils.rawSqlQuery(db, appName, tableId, persistedColumns,
+      UserTable table = ODKDatabaseUtils.get().rawSqlQuery(db, appName, tableId, persistedColumns,
           whereString, null, null, null, null, null);
 
       // emit data table...
@@ -294,7 +294,7 @@ public class CsvUtil {
        * Since the md5Hash of the file identifies identical properties, ensure
        * that the list of KVS entries is in alphabetical order.
        */
-      List<KeyValueStoreEntry> kvsEntries = ODKDatabaseUtils.getDBTableMetadata(db, tableId, null,
+      List<KeyValueStoreEntry> kvsEntries = ODKDatabaseUtils.get().getDBTableMetadata(db, tableId, null,
           null, null);
       Collections.sort(kvsEntries, new Comparator<KeyValueStoreEntry>() {
 
@@ -392,8 +392,7 @@ public class CsvUtil {
 
     SQLiteDatabase db = null;
     try {
-      DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(context, appName);
-      db = dbh.getWritableDatabase();
+      db = DataModelDatabaseHelperFactory.getDatabase(context, appName);
       List<Column> columns = new ArrayList<Column>();
 
       // reading data
@@ -536,8 +535,8 @@ public class CsvUtil {
         } catch (IOException e) {
         }
 
-        if (ODKDatabaseUtils.hasTableId(db, tableId)) {
-          List<Column> existingColumns = ODKDatabaseUtils.getUserDefinedColumns(db, tableId);
+        if (ODKDatabaseUtils.get().hasTableId(db, tableId)) {
+          List<Column> existingColumns = ODKDatabaseUtils.get().getUserDefinedColumns(db, tableId);
           ArrayList<ColumnDefinition> existingDefns = ColumnDefinition
               .buildColumnDefinitions(existingColumns);
 
@@ -583,7 +582,7 @@ public class CsvUtil {
 
           try {
             db.beginTransaction();
-            ODKDatabaseUtils.replaceDBTableMetadata(db, tableId, kvsEntries, true);
+            ODKDatabaseUtils.get().replaceDBTableMetadata(db, tableId, kvsEntries, true);
 
             for (ColumnDefinition ci : colDefns) {
               // put the displayName into the KVS
@@ -617,7 +616,7 @@ public class CsvUtil {
                 entry.value = ODKFileUtils.mapper.writeValueAsString(ci.getElementKey());
                 kvsList.add(entry);
               }
-              ODKDatabaseUtils.replaceDBTableMetadata(db, tableId, kvsList, false);
+              ODKDatabaseUtils.get().replaceDBTableMetadata(db, tableId, kvsList, false);
             }
             db.setTransactionSuccessful();
           } finally {
@@ -672,14 +671,14 @@ public class CsvUtil {
 
           try {
             db.beginTransaction();
-            ODKDatabaseUtils.createOrOpenDBTableWithColumns(db, tableId, columns);
+            ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, tableId, columns);
 
-            ODKDatabaseUtils.replaceDBTableMetadata(db, tableId, kvsEntries, false);
+            ODKDatabaseUtils.get().replaceDBTableMetadata(db, tableId, kvsEntries, false);
 
             // we have created the table...
             for (ColumnDefinition ci : colDefns) {
               List<KeyValueStoreEntry> kvsList = colEntries.get(ci.getElementKey());
-              ODKDatabaseUtils.replaceDBTableMetadata(db, tableId, kvsList, false);
+              ODKDatabaseUtils.get().replaceDBTableMetadata(db, tableId, kvsList, false);
             }
             db.setTransactionSuccessful();
           } finally {
@@ -724,12 +723,11 @@ public class CsvUtil {
 
     SQLiteDatabase db = null;
     try {
-      DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(context, appName);
-      db = dbh.getWritableDatabase();
-      if (!ODKDatabaseUtils.hasTableId(db, tableId)) {
+      db = DataModelDatabaseHelperFactory.getDatabase(context, appName);
+      if (!ODKDatabaseUtils.get().hasTableId(db, tableId)) {
         if (createIfNotPresent) {
           updateTablePropertiesFromCsv(importListener, tableId);
-          if (!ODKDatabaseUtils.hasTableId(db, tableId)) {
+          if (!ODKDatabaseUtils.get().hasTableId(db, tableId)) {
             return false;
           }
         } else {
@@ -737,7 +735,7 @@ public class CsvUtil {
         }
       }
 
-      List<Column> columns = ODKDatabaseUtils.getUserDefinedColumns(db, tableId);
+      List<Column> columns = ODKDatabaseUtils.get().getUserDefinedColumns(db, tableId);
       ArrayList<ColumnDefinition> orderedDefns = ColumnDefinition.buildColumnDefinitions(columns);
 
       List<String> persistedColumns = new ArrayList<String>();
@@ -879,7 +877,7 @@ public class CsvUtil {
           // uncommitted edits. For now, we just add our csv import to those,
           // rather
           // than resolve the problems.
-          UserTable table = ODKDatabaseUtils.getDataInExistingDBTableWithId(db, appName, tableId,
+          UserTable table = ODKDatabaseUtils.get().getDataInExistingDBTableWithId(db, appName, tableId,
               persistedColumns, v_id);
           if (table.getNumberOfRows() > 1) {
             throw new IllegalStateException(
@@ -932,7 +930,7 @@ public class CsvUtil {
 
             if (syncState == SyncState.new_row) {
               // we do the actual update here
-              ODKDatabaseUtils.updateDataInExistingDBTableWithId(db, tableId, orderedDefns, cv,
+              ODKDatabaseUtils.get().updateDataInExistingDBTableWithId(db, tableId, orderedDefns, cv,
                   v_id);
             }
             // otherwise, do NOT update the row.
@@ -961,7 +959,7 @@ public class CsvUtil {
 
             cv.put(DataTableColumns.ID, v_id);
 
-            ODKDatabaseUtils.insertDataIntoExistingDBTableWithId(db, tableId, orderedDefns, cv,
+            ODKDatabaseUtils.get().insertDataIntoExistingDBTableWithId(db, tableId, orderedDefns, cv,
                 v_id);
           }
         }

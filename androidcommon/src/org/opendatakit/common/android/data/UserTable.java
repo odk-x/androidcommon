@@ -115,7 +115,7 @@ public class UserTable {
     // array, dataKeyToIndex would then have a mapping of _my_data:5.
     // The sync_state column, if present at index 7, would have a mapping
     // in metadataKeyToIndex of sync_state:7.
-    List<String> adminColumnOrder = ODKDatabaseUtils.getAdminColumns();
+    List<String> adminColumnOrder = ODKDatabaseUtils.get().getAdminColumns();
     mElementKeyToIndex = new HashMap<String, Integer>();
     mElementKeyForIndex = new String[userColumnOrder.size()+adminColumnOrder.size()];
     int[] cursorIndex = new int[userColumnOrder.size()+adminColumnOrder.size()];
@@ -146,10 +146,10 @@ public class UserTable {
         if ( c.isNull(rowIdIndex)) {
           throw new IllegalStateException("Unexpected null value for rowId");
         }
-        String rowId = ODKDatabaseUtils.getIndexAsString(c, rowIdIndex);
+        String rowId = ODKDatabaseUtils.get().getIndexAsString(c, rowIdIndex);
         // First get the user-defined data for this row.
         for (i = 0; i < cursorIndex.length; i++) {
-          String value = ODKDatabaseUtils.getIndexAsString(c, cursorIndex[i]);
+          String value = ODKDatabaseUtils.get().getIndexAsString(c, cursorIndex[i]);
           rowData[i] = value;
         }
         Row nextRow = new Row(rowId, rowData.clone());

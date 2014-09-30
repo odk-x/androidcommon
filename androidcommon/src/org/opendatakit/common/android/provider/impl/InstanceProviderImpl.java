@@ -30,8 +30,8 @@ import org.opendatakit.aggregate.odktables.rest.TableConstants;
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.common.android.R;
 import org.opendatakit.common.android.data.ColumnDefinition;
-import org.opendatakit.common.android.database.DataModelDatabaseHelper;
 import org.opendatakit.common.android.database.DataModelDatabaseHelperFactory;
+import org.opendatakit.common.android.database.DatabaseConstants;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.InstanceColumns;
 import org.opendatakit.common.android.provider.KeyValueStoreColumns;
@@ -93,7 +93,6 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     // _ID in UPLOADS_TABLE_NAME
     String instanceId = (segments.size() == 3 ? segments.get(2) : null);
 
-    DataModelDatabaseHelper dbh = null;
     SQLiteDatabase db = null;
     String fullQuery;
     String filterArgs[];
@@ -105,17 +104,12 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     StringBuilder b = new StringBuilder();
     
     try {
-      dbh = DataModelDatabaseHelperFactory.getDbHelper(getContext(), appName);
-      if ( dbh == null ) {
-        throw new SQLException("Unable to access database for " + uri);
-      }
-
-      db = dbh.getWritableDatabase();
+      db = DataModelDatabaseHelperFactory.getDatabase(getContext(), appName);
       db.beginTransaction();
 
       boolean success = false;
       try {
-        success = ODKDatabaseUtils.hasTableId(db, tableId);
+        success = ODKDatabaseUtils.get().hasTableId(db, tableId);
       } catch ( Exception e ) {
         e.printStackTrace();
         throw new SQLException("Unknown URI (exception testing for tableId) " + uri);
@@ -127,7 +121,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       dbTableName = "\"" + tableId + "\"";
 
       try {
-        c = db.query(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME,
+        c = db.query(DatabaseConstants.KEY_VALUE_STORE_ACTIVE_TABLE_NAME,
             new String[] {KeyValueStoreColumns.VALUE},
             KeyValueStoreColumns.TABLE_ID + "=? AND " +
             KeyValueStoreColumns.PARTITION + "=? AND " +
@@ -152,7 +146,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       // for every distinct instance in the data table.
       b.setLength(0);
       //@formatter:off
-      b.append("INSERT INTO ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append("(")
+      b.append("INSERT INTO ").append(DatabaseConstants.UPLOADS_TABLE_NAME).append("(")
           .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
           .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(") ").append("SELECT ")
           .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
@@ -163,7 +157,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
             .append(dbTableName).append(" EXCEPT SELECT DISTINCT ")
             .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
             .append(InstanceColumns.DATA_TABLE_TABLE_ID).append(" FROM ")
-            .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(")");
+            .append(DatabaseConstants.UPLOADS_TABLE_NAME).append(")");
       //@formatter:on
 
       // TODO: should we collapse across FORM_ID or leave it this way?
@@ -173,7 +167,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       // Can't get away with dataTable.* because of collision with _ID column
       // get map of (elementKey -> ColumnDefinition)
       try {
-        List<Column> columns = ODKDatabaseUtils.getUserDefinedColumns(db, tableId);
+        List<Column> columns = ODKDatabaseUtils.get().getUserDefinedColumns(db, tableId);
         orderedDefns = ColumnDefinition.buildColumnDefinitions(columns);
       } catch (IllegalArgumentException e) {
         e.printStackTrace();
@@ -182,8 +176,10 @@ public abstract class InstanceProviderImpl extends ContentProvider {
 
       db.setTransactionSuccessful();
     } finally {
-      db.endTransaction();
-      db.close();
+      if ( db != null ) {
+        db.endTransaction();
+        db.close();
+      }
     }
 
     ////////////////////////////////////////////////////////////////
@@ -194,11 +190,11 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     b.setLength(0);
     // @formatter:off
     b.append("SELECT ");
-    b.append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+    b.append(DatabaseConstants.UPLOADS_TABLE_NAME).append(".")
         .append(InstanceColumns._ID).append(",")
-     .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+     .append(DatabaseConstants.UPLOADS_TABLE_NAME).append(".")
         .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
-     .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+     .append(DatabaseConstants.UPLOADS_TABLE_NAME).append(".")
         .append(InstanceColumns.SUBMISSION_INSTANCE_ID).append(",");
     // add the dataTable metadata except for _ID (which conflicts with InstanceColumns._ID)
     b.append(dbTableName).append(".").append(DataTableColumns.ROW_ETAG).append(",")
@@ -248,17 +244,17 @@ public abstract class InstanceProviderImpl extends ContentProvider {
         .append(DATA_TABLE_ID_COLUMN).append(" HAVING ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
         .append(" = MAX(").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(")").append(") as ")
         .append(dbTableName);
-    b.append(" JOIN ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(" ON ")
+    b.append(" JOIN ").append(DatabaseConstants.UPLOADS_TABLE_NAME).append(" ON ")
         .append(dbTableName).append(".").append(DATA_TABLE_ID_COLUMN).append("=")
-        .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+        .append(DatabaseConstants.UPLOADS_TABLE_NAME).append(".")
         .append(InstanceColumns.DATA_INSTANCE_ID).append(" AND ").append("? =")
-        .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+        .append(DatabaseConstants.UPLOADS_TABLE_NAME).append(".")
         .append(InstanceColumns.DATA_TABLE_TABLE_ID);
     b.append(" WHERE ").append(DATA_TABLE_SAVEPOINT_TYPE_COLUMN).append("=?");
     // @formatter:on
 
     if (instanceId != null) {
-      b.append(" AND ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
+      b.append(" AND ").append(DatabaseConstants.UPLOADS_TABLE_NAME).append(".")
           .append(InstanceColumns._ID).append("=?");
       String tempArgs[] = { tableId, InstanceColumns.STATUS_COMPLETE, instanceId };
       filterArgs = tempArgs;
@@ -288,12 +284,22 @@ public abstract class InstanceProviderImpl extends ContentProvider {
 
     fullQuery = b.toString();
 
-    db = dbh.getReadableDatabase();
-    c = db.rawQuery(fullQuery, filterArgs);
-    // Tell the cursor what uri to watch, so it knows when its source data
-    // changes
-    c.setNotificationUri(getContext().getContentResolver(), uri);
-    return c;
+    db = null;
+    boolean success = false;
+    try {
+      db = DataModelDatabaseHelperFactory.getDatabase(getContext(), appName);
+      c = db.rawQuery(fullQuery, filterArgs);
+      // Tell the cursor what uri to watch, so it knows when its source data
+      // changes
+      c.setNotificationUri(getContext().getContentResolver(), uri);
+      success = true;
+      return c;
+    } finally {
+      if ( db != null && !success ) {
+        // leave database open for cursor...
+        db.close();
+      }
+    }
   }
 
   @Override
@@ -354,17 +360,12 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     SQLiteDatabase db = null;
     List<IdStruct> idStructs = new ArrayList<IdStruct>();
     try {
-      DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(getContext(), appName);
-      if ( dbh == null ) {
-        throw new SQLException("Unable to access database for " + uri);
-      }
-
-      db = dbh.getWritableDatabase();
+      db = DataModelDatabaseHelperFactory.getDatabase(getContext(), appName);
       db.beginTransaction();
 
       boolean success = false;
       try {
-        success = ODKDatabaseUtils.hasTableId(db, tableId);
+        success = ODKDatabaseUtils.get().hasTableId(db, tableId);
       } catch ( Exception e ) {
         e.printStackTrace();
         throw new SQLException("Unknown URI (exception testing for tableId) " + uri);
@@ -394,8 +395,8 @@ public abstract class InstanceProviderImpl extends ContentProvider {
         del = this.query(uri, null, where, whereArgs, null);
         del.moveToPosition(-1);
         while (del.moveToNext()) {
-          String iId = ODKDatabaseUtils.getIndexAsString(del, del.getColumnIndex(InstanceColumns._ID));
-          String iIdDataTable = ODKDatabaseUtils.getIndexAsString(del, del.getColumnIndex(InstanceColumns.DATA_INSTANCE_ID));
+          String iId = ODKDatabaseUtils.get().getIndexAsString(del, del.getColumnIndex(InstanceColumns._ID));
+          String iIdDataTable = ODKDatabaseUtils.get().getIndexAsString(del, del.getColumnIndex(InstanceColumns.DATA_INSTANCE_ID));
           idStructs.add(new IdStruct(iId, iIdDataTable));
           String path = ODKFileUtils.getInstanceFolder(appName, tableId, iIdDataTable);
           File f = new File(path);
@@ -418,7 +419,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       }
 
       for (IdStruct idStruct : idStructs) {
-        db.delete(DataModelDatabaseHelper.UPLOADS_TABLE_NAME, InstanceColumns.DATA_INSTANCE_ID
+        db.delete(DatabaseConstants.UPLOADS_TABLE_NAME, InstanceColumns.DATA_INSTANCE_ID
             + "=?", new String[] { idStruct.idUploadsTable });
         db.delete(dbTableName, DATA_TABLE_ID_COLUMN + "=?", new String[] { idStruct.idDataTable });
       }
@@ -450,16 +451,11 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     SQLiteDatabase db = null;
     int count = 0;
     try {
-      DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(getContext(), appName);
-      if ( dbh == null ) {
-        throw new SQLException("Unable to access database for " + uri);
-      }
-
-      db = dbh.getWritableDatabase();
+      db = DataModelDatabaseHelperFactory.getDatabase(getContext(), appName);
 
       boolean success = false;
       try {
-        success = ODKDatabaseUtils.hasTableId(db, tableId);
+        success = ODKDatabaseUtils.get().hasTableId(db, tableId);
       } catch ( Exception e ) {
         e.printStackTrace();
         throw new SQLException("Unknown URI (exception testing for tableId) " + uri);
@@ -480,8 +476,8 @@ public abstract class InstanceProviderImpl extends ContentProvider {
         if ( ref.getCount() != 0 ) {
           ref.moveToFirst();
           do {
-            String iId = ODKDatabaseUtils.getIndexAsString(ref, ref.getColumnIndex(InstanceColumns._ID));
-            String iIdDataTable = ODKDatabaseUtils.getIndexAsString(ref, ref.getColumnIndex(InstanceColumns.DATA_INSTANCE_ID));
+            String iId = ODKDatabaseUtils.get().getIndexAsString(ref, ref.getColumnIndex(InstanceColumns._ID));
+            String iIdDataTable = ODKDatabaseUtils.get().getIndexAsString(ref, ref.getColumnIndex(InstanceColumns.DATA_INSTANCE_ID));
             idStructs.add(new IdStruct(iId, iIdDataTable));
           } while (ref.moveToNext());
         }
@@ -506,7 +502,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       String[] args = new String[1];
       for (IdStruct idStruct : idStructs) {
         args[0] = idStruct.idUploadsTable;
-        count += db.update(DataModelDatabaseHelper.UPLOADS_TABLE_NAME, values,
+        count += db.update(DatabaseConstants.UPLOADS_TABLE_NAME, values,
                            InstanceColumns._ID + "=?", args);
       }
       db.setTransactionSuccessful();

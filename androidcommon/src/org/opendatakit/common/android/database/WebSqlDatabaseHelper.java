@@ -50,12 +50,12 @@ public class WebSqlDatabaseHelper {
 
       if (c.moveToFirst()) {
         do {
-          String shortName = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(WebDbDatabaseHelper.DATABASES_NAME));
-          String displayName = ODKDatabaseUtils.getIndexAsString(c,
+          String shortName = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(WebDbDatabaseHelper.DATABASES_NAME));
+          String displayName = ODKDatabaseUtils.get().getIndexAsString(c,
               c.getColumnIndex(WebDbDatabaseHelper.DATABASES_DISPLAY_NAME));
-          String relPath = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(WebDbDatabaseHelper.COMMON_ORIGIN));
-          String dbName = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(WebDbDatabaseHelper.DATABASES_PATH));
-          Integer estimatedSize = ODKDatabaseUtils.getIndexAsType(c, Integer.class,
+          String relPath = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(WebDbDatabaseHelper.COMMON_ORIGIN));
+          String dbName = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(WebDbDatabaseHelper.DATABASES_PATH));
+          Integer estimatedSize = ODKDatabaseUtils.get().getIndexAsType(c, Integer.class,
               c.getColumnIndex(WebDbDatabaseHelper.DATABASES_ESTIMATED_SIZE));
 
           dbCandidates.add(new WebDbDefinition(shortName, displayName, estimatedSize, new File(path

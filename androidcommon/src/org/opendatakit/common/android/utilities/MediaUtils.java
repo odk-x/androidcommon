@@ -66,7 +66,7 @@ public class MediaUtils {
           selectArgs, null);
       if (c.getCount() > 0) {
         c.moveToFirst();
-        String id = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(Images.ImageColumns._ID));
+        String id = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(Images.ImageColumns._ID));
 
         return Uri.withAppendedPath(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
             id);
@@ -98,7 +98,7 @@ public class MediaUtils {
         imageCursor.moveToFirst();
         List<Uri> imagesToDelete = new ArrayList<Uri>();
         do {
-          String id = ODKDatabaseUtils.getIndexAsString(imageCursor, imageCursor.getColumnIndex(Images.ImageColumns._ID));
+          String id = ODKDatabaseUtils.get().getIndexAsString(imageCursor, imageCursor.getColumnIndex(Images.ImageColumns._ID));
 
           imagesToDelete.add(Uri.withAppendedPath(
               android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id));
@@ -142,7 +142,7 @@ public class MediaUtils {
         imageCursor.moveToFirst();
         List<Uri> imagesToDelete = new ArrayList<Uri>();
         do {
-          String id = ODKDatabaseUtils.getIndexAsString(imageCursor, imageCursor.getColumnIndex(Images.ImageColumns._ID));
+          String id = ODKDatabaseUtils.get().getIndexAsString(imageCursor, imageCursor.getColumnIndex(Images.ImageColumns._ID));
 
           imagesToDelete.add(Uri.withAppendedPath(
               android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id));
@@ -174,7 +174,7 @@ public class MediaUtils {
           selectArgs, null);
       if (c.getCount() > 0) {
         c.moveToFirst();
-        String id = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(Audio.AudioColumns._ID));
+        String id = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(Audio.AudioColumns._ID));
 
         return Uri.withAppendedPath(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
             id);
@@ -206,7 +206,7 @@ public class MediaUtils {
         audioCursor.moveToFirst();
         List<Uri> audioToDelete = new ArrayList<Uri>();
         do {
-          String id = ODKDatabaseUtils.getIndexAsString(audioCursor, audioCursor.getColumnIndex(Audio.AudioColumns._ID));
+          String id = ODKDatabaseUtils.get().getIndexAsString(audioCursor, audioCursor.getColumnIndex(Audio.AudioColumns._ID));
 
           audioToDelete.add(Uri.withAppendedPath(
               android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id));
@@ -250,7 +250,7 @@ public class MediaUtils {
         audioCursor.moveToFirst();
         List<Uri> audioToDelete = new ArrayList<Uri>();
         do {
-          String id = ODKDatabaseUtils.getIndexAsString(audioCursor, audioCursor.getColumnIndex(Audio.AudioColumns._ID));
+          String id = ODKDatabaseUtils.get().getIndexAsString(audioCursor, audioCursor.getColumnIndex(Audio.AudioColumns._ID));
 
           audioToDelete.add(Uri.withAppendedPath(
               android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id));
@@ -282,7 +282,7 @@ public class MediaUtils {
           selectArgs, null);
       if (c.getCount() > 0) {
         c.moveToFirst();
-        String id = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(Video.VideoColumns._ID));
+        String id = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(Video.VideoColumns._ID));
 
         return Uri.withAppendedPath(android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
             id);
@@ -314,7 +314,7 @@ public class MediaUtils {
         videoCursor.moveToFirst();
         List<Uri> videoToDelete = new ArrayList<Uri>();
         do {
-          String id = ODKDatabaseUtils.getIndexAsString(videoCursor, videoCursor.getColumnIndex(Video.VideoColumns._ID));
+          String id = ODKDatabaseUtils.get().getIndexAsString(videoCursor, videoCursor.getColumnIndex(Video.VideoColumns._ID));
 
           videoToDelete.add(Uri.withAppendedPath(
               android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id));
@@ -358,7 +358,7 @@ public class MediaUtils {
         videoCursor.moveToFirst();
         List<Uri> videoToDelete = new ArrayList<Uri>();
         do {
-          String id = ODKDatabaseUtils.getIndexAsString(videoCursor, videoCursor.getColumnIndex(Video.VideoColumns._ID));
+          String id = ODKDatabaseUtils.get().getIndexAsString(videoCursor, videoCursor.getColumnIndex(Video.VideoColumns._ID));
 
           videoToDelete.add(Uri.withAppendedPath(
               android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id));
@@ -397,7 +397,7 @@ public class MediaUtils {
           String path = null;
           if (c.getCount() > 0) {
             c.moveToFirst();
-            path = ODKDatabaseUtils.getIndexAsString(c, column_index);
+            path = ODKDatabaseUtils.get().getIndexAsString(c, column_index);
           }
           return path;
         } finally {
@@ -553,7 +553,7 @@ public class MediaUtils {
           if (cursor != null && cursor.moveToFirst()) {
 
               final int column_index = cursor.getColumnIndexOrThrow(column);
-              return ODKDatabaseUtils.getIndexAsString(cursor, column_index);
+              return ODKDatabaseUtils.get().getIndexAsString(cursor, column_index);
           }
       } finally {
           if (cursor != null)

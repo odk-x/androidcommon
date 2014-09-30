@@ -28,8 +28,8 @@ import java.util.Locale;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.opendatakit.common.android.R;
-import org.opendatakit.common.android.database.DataModelDatabaseHelper;
 import org.opendatakit.common.android.database.DataModelDatabaseHelperFactory;
+import org.opendatakit.common.android.database.DatabaseConstants;
 import org.opendatakit.common.android.provider.FormsColumns;
 import org.opendatakit.common.android.utilities.ODKDatabaseUtils;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
@@ -120,14 +120,8 @@ public abstract class FormsProviderImpl extends ContentProvider {
     boolean success = false;
     Cursor c = null;
     try {
-      DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(getContext(), appName);
-      if (dbh == null) {
-        log.w(t, "Unable to access database for appName " + appName);
-        return null;
-      }
-
-      db = dbh.getReadableDatabase();
-      c = db.query(DataModelDatabaseHelper.FORMS_TABLE_NAME, projection, whereId, whereIdArgs,
+      db = DataModelDatabaseHelperFactory.getDatabase(getContext(), appName);
+      c = db.query(DatabaseConstants.FORMS_TABLE_NAME, projection, whereId, whereIdArgs,
           null, null, sortOrder);
       success = true;
     } catch (Exception e) {
@@ -315,19 +309,12 @@ public abstract class FormsProviderImpl extends ContentProvider {
     String selection = FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH + "=?";
     Cursor c = null;
 
-    DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(getContext(), appName);
-    if (dbh == null) {
-      log.w(t, "Unable to access database for appName " + appName);
-      throw new SQLException("FAILED Insert into " + uri
-          + " -- unable to access metadata directory for appName: " + appName);
-    }
-
     SQLiteDatabase db = null;
     try {
-      db = dbh.getWritableDatabase();
+      db = DataModelDatabaseHelperFactory.getDatabase(getContext(), appName);
       db.beginTransaction();
       try {
-        c = db.query(DataModelDatabaseHelper.FORMS_TABLE_NAME, projection, selection, selectionArgs,
+        c = db.query(DatabaseConstants.FORMS_TABLE_NAME, projection, selection, selectionArgs,
             null, null, null);
         if (c == null) {
           throw new SQLException("FAILED Insert into " + uri
@@ -354,7 +341,7 @@ public abstract class FormsProviderImpl extends ContentProvider {
       }
 
       try {
-        long rowId = db.insert(DataModelDatabaseHelper.FORMS_TABLE_NAME, null, values);
+        long rowId = db.insert(DatabaseConstants.FORMS_TABLE_NAME, null, values);
         db.setTransactionSuccessful();
         if (rowId > 0) {
           Uri formUri = Uri.withAppendedPath(
@@ -498,11 +485,11 @@ public abstract class FormsProviderImpl extends ContentProvider {
       }
       del.moveToPosition(-1);
       while (del.moveToNext()) {
-        idValue = ODKDatabaseUtils.getIndexAsType(del, Integer.class, del.getColumnIndex(FormsColumns._ID));
-        tableIdValue = ODKDatabaseUtils.getIndexAsString(del, del.getColumnIndex(FormsColumns.TABLE_ID));
-        formIdValue = ODKDatabaseUtils.getIndexAsString(del, del.getColumnIndex(FormsColumns.FORM_ID));
+        idValue = ODKDatabaseUtils.get().getIndexAsType(del, Integer.class, del.getColumnIndex(FormsColumns._ID));
+        tableIdValue = ODKDatabaseUtils.get().getIndexAsString(del, del.getColumnIndex(FormsColumns.TABLE_ID));
+        formIdValue = ODKDatabaseUtils.get().getIndexAsString(del, del.getColumnIndex(FormsColumns.FORM_ID));
         File mediaDir = ODKFileUtils.asAppFile(appName,
-            ODKDatabaseUtils.getIndexAsString(del, del.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH)));
+            ODKDatabaseUtils.get().getIndexAsString(del, del.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH)));
         mediaDirs.put(mediaDir, (tableIdValue == null) ? DirType.FRAMEWORK : DirType.FORMS);
       }
     } catch (Exception e) {
@@ -523,19 +510,13 @@ public abstract class FormsProviderImpl extends ContentProvider {
     SQLiteDatabase db = null;
     int count;
     try {
-      DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(getContext(), appName);
-      if (dbh == null) {
-        log.w(t, "Unable to access database for appName " + appName);
-        return 0;
-      }
-
-      db = dbh.getWritableDatabase();
+      db = DataModelDatabaseHelperFactory.getDatabase(getContext(), appName);
       if (db == null) {
         log.w(t, "Unable to access database for appName " + appName);
         return 0;
       }
       db.beginTransaction();
-      count = db.delete(DataModelDatabaseHelper.FORMS_TABLE_NAME, whereId, whereIdArgs);
+      count = db.delete(DatabaseConstants.FORMS_TABLE_NAME, whereId, whereIdArgs);
       db.setTransactionSuccessful();
     } catch (Exception e) {
       e.printStackTrace();
@@ -666,16 +647,16 @@ public abstract class FormsProviderImpl extends ContentProvider {
         FormIdVersion ref = null;
         c.moveToPosition(-1);
         while (c.moveToNext()) {
-          idValue = ODKDatabaseUtils.getIndexAsType(c, Integer.class, c.getColumnIndex(FormsColumns._ID));
-          tableIdValue = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.TABLE_ID));
-          formIdValue = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_ID));
-          String tableId = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.TABLE_ID));
-          String formId = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_ID));
-          String formVersion = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_VERSION));
+          idValue = ODKDatabaseUtils.get().getIndexAsType(c, Integer.class, c.getColumnIndex(FormsColumns._ID));
+          tableIdValue = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(FormsColumns.TABLE_ID));
+          formIdValue = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_ID));
+          String tableId = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(FormsColumns.TABLE_ID));
+          String formId = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_ID));
+          String formVersion = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_VERSION));
           FormIdVersion cur = new FormIdVersion(tableId, formId, formVersion);
 
           int appRelativeMediaPathIdx = c.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH);
-          String mediaPath = ODKDatabaseUtils.getIndexAsString(c, appRelativeMediaPathIdx);
+          String mediaPath = ODKDatabaseUtils.get().getIndexAsString(c, appRelativeMediaPathIdx);
           if (mediaPath != null) {
             mediaDirs.put(ODKFileUtils.asAppFile(appName, mediaPath),
                 (tableIdValue == null) ? DirType.FRAMEWORK : DirType.FORMS);
@@ -747,19 +728,9 @@ public abstract class FormsProviderImpl extends ContentProvider {
     int count;
     try {
       // OK Finally, now do the update...
-      DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(getContext(), appName);
-      if (dbh == null) {
-        log.w(t, "Unable to access database for appName " + appName);
-        return 0;
-      }
-
-      db = dbh.getWritableDatabase();
-      if (db == null) {
-        log.w(t, "Unable to access metadata directory for appName " + appName);
-        return 0;
-      }
+      db = DataModelDatabaseHelperFactory.getDatabase(getContext(), appName);
       db.beginTransaction();
-      count = db.update(DataModelDatabaseHelper.FORMS_TABLE_NAME, values, whereId, whereIdArgs);
+      count = db.update(DatabaseConstants.FORMS_TABLE_NAME, values, whereId, whereIdArgs);
       db.setTransactionSuccessful();
     } catch (Exception e) {
       e.printStackTrace();

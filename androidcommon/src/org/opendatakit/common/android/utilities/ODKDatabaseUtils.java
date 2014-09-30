@@ -26,7 +26,7 @@ import org.opendatakit.common.android.data.ElementType;
 import org.opendatakit.common.android.data.KeyValueStoreEntry;
 import org.opendatakit.common.android.data.TableDefinitionEntry;
 import org.opendatakit.common.android.data.UserTable;
-import org.opendatakit.common.android.database.DataModelDatabaseHelper;
+import org.opendatakit.common.android.database.DatabaseConstants;
 import org.opendatakit.common.android.provider.ColumnDefinitionsColumns;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.InstanceColumns;
@@ -49,9 +49,6 @@ public class ODKDatabaseUtils {
 
   public static final String DEFAULT_LOCALE = "default";
   public static final String DEFAULT_CREATOR = "anonymous";
-
-  private static final String uriFrag = "uriFragment";
-  private static final String contentType = "contentType";
 
   /*
    * These are the columns that are present in any row in the database.
@@ -95,27 +92,41 @@ public class ODKDatabaseUtils {
     Collections.sort(exportColumns);
     EXPORT_COLUMNS = Collections.unmodifiableList(exportColumns);
   }
+  
+  private static ODKDatabaseUtils databaseUtil = new ODKDatabaseUtils();
+  
+  public static ODKDatabaseUtils get() {
+    return databaseUtil;
+  }
+ 
+  /**
+   * For mocking -- supply a mocked object.
+   * 
+   * @param util
+   */
+  public static void set(ODKDatabaseUtils util) {
+    databaseUtil = util;
+  }
+
+  protected ODKDatabaseUtils() {}
 
   /**
    * Return an unmodifiable list of the admin columns that must be present
    * in every database table.
    * @return
    */
-  public static final List<String> getAdminColumns() {
+  public List<String> getAdminColumns() {
     return ADMIN_COLUMNS;
   }
 
-  public static final List<String> getExportColumns() {
+  public List<String> getExportColumns() {
     return EXPORT_COLUMNS;
-  }
-
-  private ODKDatabaseUtils() {
   }
 
   /*
    * Perform raw query against current database
    */
-  public static final Cursor rawQuery(SQLiteDatabase db, String sql, String[] selectionArgs) {
+  public Cursor rawQuery(SQLiteDatabase db, String sql, String[] selectionArgs) {
     Cursor c = db.rawQuery(sql, selectionArgs);
     return c;
   }
@@ -123,7 +134,7 @@ public class ODKDatabaseUtils {
   /*
    * Query the current database with given parameters
    */
-  public static final Cursor query(SQLiteDatabase db, boolean distinct, String table,
+  public Cursor query(SQLiteDatabase db, boolean distinct, String table,
       String[] columns, String selection, String[] selectionArgs, String groupBy, String having,
       String orderBy, String limit) {
     Cursor c = db.query(distinct, table, columns, selection, selectionArgs, groupBy, having,
@@ -143,7 +154,7 @@ public class ODKDatabaseUtils {
    * @param selectionArgs the selection arguments for the where clause.
    * @return
    */
-  public static UserTable rawSqlQuery(SQLiteDatabase db, String appName, String tableId, 
+  public UserTable rawSqlQuery(SQLiteDatabase db, String appName, String tableId, 
       List<String> persistedColumns, String whereClause, String[] selectionArgs,
       String[] groupBy, String having, String orderByElementKey, String orderByDirection) {
     Cursor c = null;
@@ -188,7 +199,7 @@ public class ODKDatabaseUtils {
     }
   }
   
-  public static final UserTable getDataInExistingDBTableWithId(SQLiteDatabase db, 
+  public UserTable getDataInExistingDBTableWithId(SQLiteDatabase db, 
       String appName, String tableId, List<String> persistedColumns, String rowId ) {
     
     UserTable table = rawSqlQuery(db, appName, tableId, 
@@ -200,7 +211,7 @@ public class ODKDatabaseUtils {
   /*
    * Query the current database for all columns
    */
-  public static final String[] getAllColumnNames(SQLiteDatabase db, String tableId) {
+  public String[] getAllColumnNames(SQLiteDatabase db, String tableId) {
     Cursor cursor = db.rawQuery("SELECT * FROM " + tableId + " LIMIT 1", null);
     String[] colNames = cursor.getColumnNames();
 
@@ -213,7 +224,7 @@ public class ODKDatabaseUtils {
    * Returns both the grouping columns and the actual persisted
    * columns.
    */
-  public static final ArrayList<Column> getUserDefinedColumns(
+  public ArrayList<Column> getUserDefinedColumns(
       SQLiteDatabase db, String tableId) {
     ArrayList<Column> userDefinedColumns = new ArrayList<Column>();
     String selection = ColumnDefinitionsColumns.TABLE_ID + "=?";
@@ -224,7 +235,7 @@ public class ODKDatabaseUtils {
         ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS };
     Cursor c = null;
     try {
-      c = db.query(DataModelDatabaseHelper.COLUMN_DEFINITIONS_TABLE_NAME, cols, selection,
+      c = db.query(DatabaseConstants.COLUMN_DEFINITIONS_TABLE_NAME, cols, selection,
         selectionArgs, null, null, ColumnDefinitionsColumns.ELEMENT_KEY + " ASC");
 
       int elemKeyIndex = c.getColumnIndexOrThrow(ColumnDefinitionsColumns.ELEMENT_KEY);
@@ -255,10 +266,10 @@ public class ODKDatabaseUtils {
    * @param tableId
    * @return true if table is listed in table definitions.
    */
-  public static boolean hasTableId(SQLiteDatabase db, String tableId) {
+  public boolean hasTableId(SQLiteDatabase db, String tableId) {
     Cursor c = null;
     try {
-      c = db.query(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, null,
+      c = db.query(DatabaseConstants.TABLE_DEFS_TABLE_NAME, null,
           TableDefinitionsColumns.TABLE_ID + "=?", new String[] { tableId }, null, null, null);
 
       if (c.moveToFirst()) {
@@ -274,11 +285,11 @@ public class ODKDatabaseUtils {
     return false;
   }
 
-  public static ArrayList<String> getAllTableIds(SQLiteDatabase db) {
+  public ArrayList<String> getAllTableIds(SQLiteDatabase db) {
     ArrayList<String> tableIds = new ArrayList<String>();
     Cursor c = null;
     try {
-      c = db.query(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, 
+      c = db.query(DatabaseConstants.TABLE_DEFS_TABLE_NAME, 
           new String[] { TableDefinitionsColumns.TABLE_ID },
           null, null, null, null, TableDefinitionsColumns.TABLE_ID + " ASC");
 
@@ -301,7 +312,7 @@ public class ODKDatabaseUtils {
     return tableIds;
   }
   
-  public static void deleteTableAndData(SQLiteDatabase db, final String appName, final String tableId) {
+  public void deleteTableAndData(SQLiteDatabase db, final String appName, final String tableId) {
     boolean dbWithinTransaction = db.inTransaction();
     try {
       String whereClause = TableDefinitionsColumns.TABLE_ID + " = ?";
@@ -315,18 +326,18 @@ public class ODKDatabaseUtils {
       db.execSQL("DROP TABLE IF EXISTS \"" + tableId + "\";");
 
       // Delete the table definition for the tableId
-      int count = db.delete(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, whereClause, whereArgs);
+      int count = db.delete(DatabaseConstants.TABLE_DEFS_TABLE_NAME, whereClause, whereArgs);
 
       // Delete the column definitions for this tableId
-      db.delete(DataModelDatabaseHelper.COLUMN_DEFINITIONS_TABLE_NAME, whereClause, whereArgs);
+      db.delete(DatabaseConstants.COLUMN_DEFINITIONS_TABLE_NAME, whereClause, whereArgs);
 
       // Delete the uploads for the tableId
       String uploadWhereClause = InstanceColumns.DATA_TABLE_TABLE_ID + " = ?";
-      db.delete(DataModelDatabaseHelper.UPLOADS_TABLE_NAME, uploadWhereClause, whereArgs);
+      db.delete(DatabaseConstants.UPLOADS_TABLE_NAME, uploadWhereClause, whereArgs);
 
       // Delete the values from the 4 key value stores
-      db.delete(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, whereClause, whereArgs);
-      db.delete(DataModelDatabaseHelper.KEY_VALULE_STORE_SYNC_TABLE_NAME, whereClause, whereArgs);
+      db.delete(DatabaseConstants.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, whereClause, whereArgs);
+      db.delete(DatabaseConstants.KEY_VALULE_STORE_SYNC_TABLE_NAME, whereClause, whereArgs);
 
       if ( !dbWithinTransaction ) {
         db.setTransactionSuccessful();
@@ -394,7 +405,7 @@ public class ODKDatabaseUtils {
   /*
    * Get user defined table creation SQL statement
    */
-  private static final String getUserDefinedTableCreationStatement(String tableId) {
+  private String getUserDefinedTableCreationStatement(String tableId) {
     /*
      * Resulting string should be the following String createTableCmd =
      * "CREATE TABLE IF NOT EXISTS " + tableId + " (" + DataTableColumns.ID +
@@ -437,7 +448,7 @@ public class ODKDatabaseUtils {
     return createTableCmd;
   }
 
-  public static final void updateDBTableETags(SQLiteDatabase db, String tableId, 
+  public void updateDBTableETags(SQLiteDatabase db, String tableId, 
         String schemaETag, String lastDataETag ) {
     if (tableId == null || tableId.length() <= 0) {
       throw new IllegalArgumentException(t + ": application name and table name must be specified");
@@ -452,7 +463,7 @@ public class ODKDatabaseUtils {
       if ( !dbWithinTransaction ) {
         db.beginTransaction();
       }
-      db.update(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, cvTableDef, TableDefinitionsColumns.TABLE_ID + "=?", new String[]{ tableId});
+      db.update(DatabaseConstants.TABLE_DEFS_TABLE_NAME, cvTableDef, TableDefinitionsColumns.TABLE_ID + "=?", new String[]{ tableId});
       if ( !dbWithinTransaction ) {
         db.setTransactionSuccessful();
       }
@@ -463,7 +474,7 @@ public class ODKDatabaseUtils {
     }
   }
 
-  public static final void updateDBTableLastSyncTime(SQLiteDatabase db, String tableId ) {
+  public void updateDBTableLastSyncTime(SQLiteDatabase db, String tableId ) {
     if (tableId == null || tableId.length() <= 0) {
       throw new IllegalArgumentException(t + ": application name and table name must be specified");
     }
@@ -477,7 +488,7 @@ public class ODKDatabaseUtils {
       if ( !dbWithinTransaction ) {
         db.beginTransaction();
       }
-      db.update(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, cvTableDef, TableDefinitionsColumns.TABLE_ID + "=?", new String[]{ tableId});
+      db.update(DatabaseConstants.TABLE_DEFS_TABLE_NAME, cvTableDef, TableDefinitionsColumns.TABLE_ID + "=?", new String[]{ tableId});
       if ( !dbWithinTransaction ) {
         db.setTransactionSuccessful();
       }
@@ -488,7 +499,7 @@ public class ODKDatabaseUtils {
     }
   }
 
-  public static final TableDefinitionEntry getTableDefinitionEntry(SQLiteDatabase db, String tableId) {
+  public TableDefinitionEntry getTableDefinitionEntry(SQLiteDatabase db, String tableId) {
 
     TableDefinitionEntry e = null;
     Cursor c = null;
@@ -498,7 +509,7 @@ public class ODKDatabaseUtils {
       b.append(KeyValueStoreColumns.TABLE_ID).append("=?");
       selArgs.add(tableId);
 
-      c = db.query(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, null, 
+      c = db.query(DatabaseConstants.TABLE_DEFS_TABLE_NAME, null, 
           b.toString(), selArgs.toArray(new String[selArgs.size()]), null, null, null);
       if ( c.moveToFirst() ) {
         int idxSchemaETag = c.getColumnIndex(TableDefinitionsColumns.SCHEMA_ETAG);
@@ -522,7 +533,7 @@ public class ODKDatabaseUtils {
     return e;
   }
   
-  public static final void replaceDBTableMetadata(SQLiteDatabase db, KeyValueStoreEntry entry) {
+  public void replaceDBTableMetadata(SQLiteDatabase db, KeyValueStoreEntry entry) {
     ContentValues values = new ContentValues();
     values.put(KeyValueStoreColumns.TABLE_ID, entry.tableId);
     values.put(KeyValueStoreColumns.PARTITION, entry.partition);
@@ -535,7 +546,7 @@ public class ODKDatabaseUtils {
       if ( !dbWithinTransaction ) {
         db.beginTransaction();
       }
-      db.replace(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null, values);
+      db.replace(DatabaseConstants.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null, values);
       if ( !dbWithinTransaction ) {
         db.setTransactionSuccessful();
       }
@@ -546,7 +557,7 @@ public class ODKDatabaseUtils {
     }
   }
   
-  public static final void replaceDBTableMetadata(SQLiteDatabase db, String tableId, List<KeyValueStoreEntry> metadata, boolean clear) {
+  public void replaceDBTableMetadata(SQLiteDatabase db, String tableId, List<KeyValueStoreEntry> metadata, boolean clear) {
     
     boolean dbWithinTransaction = db.inTransaction();
     try {
@@ -555,7 +566,7 @@ public class ODKDatabaseUtils {
       }
       
       if ( clear ) {
-        db.delete( DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, 
+        db.delete( DatabaseConstants.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, 
                    KeyValueStoreColumns.TABLE_ID + "=?", new String[]{ tableId });
       }
       for ( KeyValueStoreEntry e : metadata ) {
@@ -572,7 +583,7 @@ public class ODKDatabaseUtils {
           values.put(KeyValueStoreColumns.KEY, e.key);
           values.put(KeyValueStoreColumns.VALUE_TYPE, e.type);
           values.put(KeyValueStoreColumns.VALUE, e.value);
-          db.replace(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null, values);
+          db.replace(DatabaseConstants.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null, values);
         }
       }
       
@@ -596,7 +607,7 @@ public class ODKDatabaseUtils {
    * @param aspect
    * @param key
    */
-  public static final void 
+  public void 
     deleteDBTableMetadata(SQLiteDatabase db, String tableId, String partition, String aspect, String key) {
 
     StringBuilder b = new StringBuilder();
@@ -633,7 +644,7 @@ public class ODKDatabaseUtils {
         db.beginTransaction();
       }
 
-      db.delete(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, 
+      db.delete(DatabaseConstants.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, 
           b.toString(), 
           selArgs.toArray(new String[selArgs.size()]));
       
@@ -657,7 +668,7 @@ public class ODKDatabaseUtils {
    * @param key
    * @return
    */
-  public static final ArrayList<KeyValueStoreEntry> 
+  public ArrayList<KeyValueStoreEntry> 
     getDBTableMetadata(SQLiteDatabase db, String tableId, String partition, String aspect, String key) {
 
     ArrayList<KeyValueStoreEntry> entries = new ArrayList<KeyValueStoreEntry>();
@@ -692,7 +703,7 @@ public class ODKDatabaseUtils {
         selArgs.add(key);
       }
       
-      c = db.query(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null, 
+      c = db.query(DatabaseConstants.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null, 
           b.toString(), selArgs.toArray(new String[selArgs.size()]), null, null, null);
       if ( c.moveToFirst() ) {
         int idxPartition = c.getColumnIndex(KeyValueStoreColumns.PARTITION);
@@ -723,7 +734,7 @@ public class ODKDatabaseUtils {
    * Create a user defined database table metadata - table definiton and KVS
    * values
    */
-  private static final void createDBTableMetadata(SQLiteDatabase db, String tableId) {
+  private void createDBTableMetadata(SQLiteDatabase db, String tableId) {
     if (tableId == null || tableId.length() <= 0) {
       throw new IllegalArgumentException(t + ": application name and table name must be specified");
     }
@@ -735,7 +746,7 @@ public class ODKDatabaseUtils {
     cvTableDef.putNull(TableDefinitionsColumns.LAST_DATA_ETAG);
     cvTableDef.put(TableDefinitionsColumns.LAST_SYNC_TIME, -1);
 
-    db.replaceOrThrow(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, null, cvTableDef);
+    db.replaceOrThrow(DatabaseConstants.TABLE_DEFS_TABLE_NAME, null, cvTableDef);
 
     // Add the tables values into KVS
     ArrayList<ContentValues> cvTableValKVS = new ArrayList<ContentValues>();
@@ -826,7 +837,7 @@ public class ODKDatabaseUtils {
 
     // Now add Tables values into KVS
     for (int i = 0; i < cvTableValKVS.size(); i++) {
-      db.replaceOrThrow(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null,
+      db.replaceOrThrow(DatabaseConstants.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null,
           cvTableValKVS.get(i));
     }
   }
@@ -834,7 +845,7 @@ public class ODKDatabaseUtils {
   /*
    * Create a user defined database table with a transaction
    */
-  public static final ArrayList<ColumnDefinition> createOrOpenDBTableWithColumns(SQLiteDatabase db, String tableId,
+  public ArrayList<ColumnDefinition> createOrOpenDBTableWithColumns(SQLiteDatabase db, String tableId,
       List<Column> columns) {
     boolean success = false;
     ArrayList<ColumnDefinition> orderedDefs = ColumnDefinition.buildColumnDefinitions(columns);
@@ -871,7 +882,7 @@ public class ODKDatabaseUtils {
    * Create a user defined database table metadata - table definiton and KVS
    * values
    */
-  private static final void createDBTableWithColumns(SQLiteDatabase db, String tableId,
+  private void createDBTableWithColumns(SQLiteDatabase db, String tableId,
       List<ColumnDefinition> orderedDefs) {
     if (tableId == null || tableId.length() <= 0) {
       throw new IllegalArgumentException(t + ": application name and table name must be specified");
@@ -951,14 +962,14 @@ public class ODKDatabaseUtils {
     cvTableVal.put(KeyValueStoreColumns.VALUE, colOrderVal);
 
     // Now add Tables values into KVS
-    db.replaceOrThrow(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null, cvTableVal);
+    db.replaceOrThrow(DatabaseConstants.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null, cvTableVal);
   }
 
   /*
    * Create a new column metadata in the database - add column values to KVS and
    * column definitions
    */
-  private static final void createNewColumnMetadata(SQLiteDatabase db, String tableId,
+  private void createNewColumnMetadata(SQLiteDatabase db, String tableId,
       ColumnDefinition column) {
     String colName = column.getElementKey();
     ArrayList<ContentValues> cvColValKVS = new ArrayList<ContentValues>();
@@ -1014,7 +1025,7 @@ public class ODKDatabaseUtils {
 
     // Now add all this data into the database
     for (int i = 0; i < cvColValKVS.size(); i++) {
-      db.replaceOrThrow(DataModelDatabaseHelper.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null,
+      db.replaceOrThrow(DatabaseConstants.KEY_VALUE_STORE_ACTIVE_TABLE_NAME, null,
           cvColValKVS.get(i));
     }
 
@@ -1029,7 +1040,7 @@ public class ODKDatabaseUtils {
     cvColDefVal.put(ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS, column.getListChildElementKeys());
 
     // Now add this data into the database
-    db.replaceOrThrow(DataModelDatabaseHelper.COLUMN_DEFINITIONS_TABLE_NAME, null,
+    db.replaceOrThrow(DatabaseConstants.COLUMN_DEFINITIONS_TABLE_NAME, null,
           cvColDefVal);
   }
 
@@ -1044,7 +1055,7 @@ public class ODKDatabaseUtils {
    * Reset all 'synced' rows to 'new_row' to ensure they are sync'd to the server.
    * Reset all 'synced_pending_files' rows to 'new_row' to ensure they are sync'd to the server.
    */
-  public static void changeDataRowsToNewRowState(SQLiteDatabase db, String tableId) {
+  public void changeDataRowsToNewRowState(SQLiteDatabase db, String tableId) {
 
     StringBuilder b = new StringBuilder();
 
@@ -1118,7 +1129,7 @@ public class ODKDatabaseUtils {
     }
   }
 
-  public static final void deleteServerConflictRows(SQLiteDatabase db, String tableId, String rowId) {
+  public void deleteServerConflictRows(SQLiteDatabase db, String tableId, String rowId) {
     // delete the old server-values in_conflict row if it exists
     String whereClause = String.format("%s = ? AND %s = ? AND %s IN " + "( ?, ? )",
         DataTableColumns.ID, DataTableColumns.SYNC_STATE, DataTableColumns.CONFLICT_TYPE);
@@ -1149,7 +1160,7 @@ public class ODKDatabaseUtils {
    * @return the sync state of the row (see {@link SyncState}), or null if
    *         the row does not exist.
    */
-  public static SyncState getSyncState(SQLiteDatabase db, String appName, String tableId, String rowId) {
+  public SyncState getSyncState(SQLiteDatabase db, String appName, String tableId, String rowId) {
     Cursor c = null;
     try {
        c = db.query(tableId, new String[] { DataTableColumns.SYNC_STATE }, DataTableColumns.ID + " = ?",
@@ -1157,7 +1168,7 @@ public class ODKDatabaseUtils {
        if (c.moveToFirst()) {
          int syncStateIndex = c.getColumnIndex(DataTableColumns.SYNC_STATE);
          if ( !c.isNull(syncStateIndex) ) {
-           String val = ODKDatabaseUtils.getIndexAsString(c, syncStateIndex);
+           String val = getIndexAsString(c, syncStateIndex);
            return SyncState.valueOf(val);
          }
        }
@@ -1169,7 +1180,7 @@ public class ODKDatabaseUtils {
      }
   }
 
-  public static final void deleteDataInDBTableWithId(SQLiteDatabase db, String appName, String tableId, String rowId) {
+  public void deleteDataInDBTableWithId(SQLiteDatabase db, String appName, String tableId, String rowId) {
     SyncState syncState = getSyncState(db, appName, tableId, rowId);
        
     boolean dbWithinTransaction = db.inTransaction();
@@ -1224,7 +1235,7 @@ public class ODKDatabaseUtils {
     }
   }
   
-  public static final void rawDeleteDataInDBTable(SQLiteDatabase db, String tableId, String whereClause, String[] whereArgs) {
+  public void rawDeleteDataInDBTable(SQLiteDatabase db, String tableId, String whereClause, String[] whereArgs) {
     boolean dbWithinTransaction = db.inTransaction();
     try {
       if ( !dbWithinTransaction ) {
@@ -1243,13 +1254,13 @@ public class ODKDatabaseUtils {
     }
   }
 
-  public static final void deleteCheckpointDataInDBTableWithId(SQLiteDatabase db, String tableId, String rowId) {
+  public void deleteCheckpointDataInDBTableWithId(SQLiteDatabase db, String tableId, String rowId) {
     rawDeleteDataInDBTable(db, tableId, 
         DataTableColumns.ID + "=? AND " + DataTableColumns.SAVEPOINT_TYPE + " IS NULL",
         new String[] { rowId });
   }
   
-  public static final void saveAsIncompleteMostRecentCheckpointDataInDBTableWithId(SQLiteDatabase db, String tableId, String rowId) {
+  public void saveAsIncompleteMostRecentCheckpointDataInDBTableWithId(SQLiteDatabase db, String tableId, String rowId) {
     boolean dbWithinTransaction = db.inTransaction();
     try {
       if ( !dbWithinTransaction ) {
@@ -1279,7 +1290,7 @@ public class ODKDatabaseUtils {
   /*
    * Write data into a user defined database table
    */
-  public static final void updateDataInExistingDBTableWithId(SQLiteDatabase db, String tableId,
+  public void updateDataInExistingDBTableWithId(SQLiteDatabase db, String tableId,
       ArrayList<ColumnDefinition> orderedColumns, ContentValues cvValues, String uuid) {
 
     if (cvValues.size() <= 0) {
@@ -1296,7 +1307,7 @@ public class ODKDatabaseUtils {
   /*
    * Write data into a user defined database table
    */
-  public static final void insertDataIntoExistingDBTableWithId(SQLiteDatabase db, String tableId,
+  public void insertDataIntoExistingDBTableWithId(SQLiteDatabase db, String tableId,
       ArrayList<ColumnDefinition> orderedColumns, ContentValues cvValues, String uuid) {
 
     if (cvValues.size() <= 0) {
@@ -1315,7 +1326,7 @@ public class ODKDatabaseUtils {
    * 
    * TODO: This is broken w.r.t. updates of partial fields
    */
-  private static final void upsertDataAndMetadataIntoExistingDBTable(SQLiteDatabase db,
+  private void upsertDataAndMetadataIntoExistingDBTable(SQLiteDatabase db,
       String tableId, ArrayList<ColumnDefinition> orderedColumns, ContentValues cvValues, boolean shouldUpdate) {
     String rowId = null;
     String whereClause = null;
@@ -1483,7 +1494,7 @@ public class ODKDatabaseUtils {
    * @param orderedColumns
    * @param values
    */
-  private static void cleanUpValuesMap(ArrayList<ColumnDefinition> orderedColumns, ContentValues values) {
+  private void cleanUpValuesMap(ArrayList<ColumnDefinition> orderedColumns, ContentValues values) {
 
     Map<String, String> toBeResolved = new HashMap<String,String>();
 
@@ -1589,7 +1600,7 @@ public class ODKDatabaseUtils {
    * @return
    */
   @SuppressLint("NewApi")
-  public static final String getIndexAsString(Cursor c, int i) {
+  public String getIndexAsString(Cursor c, int i) {
     // If you add additional return types here be sure to modify the javadoc.
     if (i == -1)
       return null;
@@ -1642,7 +1653,7 @@ public class ODKDatabaseUtils {
    * @return
    */
   @SuppressLint("NewApi")
-  public static final <T> T getIndexAsType(Cursor c, Class<T> clazz, int i) {
+  public final <T> T getIndexAsType(Cursor c, Class<T> clazz, int i) {
     // If you add additional return types here be sure to modify the javadoc.
     try {
       if (i == -1)

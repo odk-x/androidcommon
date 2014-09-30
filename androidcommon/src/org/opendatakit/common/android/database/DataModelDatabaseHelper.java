@@ -35,63 +35,18 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
 
   static final String t = "DataModelDatabaseHelper";
 
-  /**
-   * key-value store table
-   */
-
-  // tablenames for the various key value stores
-  public static final String KEY_VALUE_STORE_ACTIVE_TABLE_NAME = "_key_value_store_active";
-  public static final String KEY_VALULE_STORE_SYNC_TABLE_NAME = "_key_value_store_sync";
-
-  /**
-   * table definitions table
-   */
-
-  // only one of these...
-  public static final String TABLE_DEFS_TABLE_NAME = "_table_definitions";
-  /**
-   * column definitions table
-   */
-
-  // only one of these...
-  public static final String COLUMN_DEFINITIONS_TABLE_NAME = "_column_definitions";
-
-  /**
-   * For ODK Survey (only)
-   *
-   * Tracks all the forms present in the forms directory.
-   */
-  public static final String SURVEY_CONFIGURATION_TABLE_NAME = "_survey_configuration";
-
-  /**
-   * For ODK Survey (only)
-   *
-   * Tracks which rows have been sent to the server. TODO: rework to accommodate
-   * publishing to multiple formids for a given table row
-   */
-
-  public static final String UPLOADS_TABLE_NAME = "_uploads";
-
-  /**
-   * For ODK Survey (only)
-   *
-   * Tracks all the forms present in the forms directory.
-   */
-
-  public static final String FORMS_TABLE_NAME = "_formDefs";
-
   public DataModelDatabaseHelper(String appName, String dbPath, String databaseName) {
     super(appName, dbPath, databaseName, null, APP_KEY, APP_VERSION);
   }
 
   private void commonTableDefn(SQLiteDatabase db) {
     // db.execSQL(SurveyConfigurationColumns.getTableCreateSql(SURVEY_CONFIGURATION_TABLE_NAME));
-    db.execSQL(InstanceColumns.getTableCreateSql(UPLOADS_TABLE_NAME));
-    db.execSQL(FormsColumns.getTableCreateSql(FORMS_TABLE_NAME));
-    db.execSQL(ColumnDefinitionsColumns.getTableCreateSql(COLUMN_DEFINITIONS_TABLE_NAME));
-    db.execSQL(KeyValueStoreColumns.getTableCreateSql(KEY_VALUE_STORE_ACTIVE_TABLE_NAME));
-    db.execSQL(KeyValueStoreColumns.getTableCreateSql(KEY_VALULE_STORE_SYNC_TABLE_NAME));
-    db.execSQL(TableDefinitionsColumns.getTableCreateSql(TABLE_DEFS_TABLE_NAME));
+    db.execSQL(InstanceColumns.getTableCreateSql(DatabaseConstants.UPLOADS_TABLE_NAME));
+    db.execSQL(FormsColumns.getTableCreateSql(DatabaseConstants.FORMS_TABLE_NAME));
+    db.execSQL(ColumnDefinitionsColumns.getTableCreateSql(DatabaseConstants.COLUMN_DEFINITIONS_TABLE_NAME));
+    db.execSQL(KeyValueStoreColumns.getTableCreateSql(DatabaseConstants.KEY_VALUE_STORE_ACTIVE_TABLE_NAME));
+    db.execSQL(KeyValueStoreColumns.getTableCreateSql(DatabaseConstants.KEY_VALULE_STORE_SYNC_TABLE_NAME));
+    db.execSQL(TableDefinitionsColumns.getTableCreateSql(DatabaseConstants.TABLE_DEFS_TABLE_NAME));
   }
 
   @Override
@@ -132,7 +87,7 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
 
     Cursor c = null;
     try {
-      c = db.query(FORMS_TABLE_NAME, new String[] { FormsColumns._ID, FormsColumns.FORM_ID,
+      c = db.query(DatabaseConstants.FORMS_TABLE_NAME, new String[] { FormsColumns._ID, FormsColumns.FORM_ID,
           FormsColumns.TABLE_ID, FormsColumns.INSTANCE_NAME },
           (isNumericId ? FormsColumns._ID : FormsColumns.FORM_ID) + "=?",
           new String[] { formId }, null, null, null);
@@ -144,9 +99,9 @@ public class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
         int idxInstanceName = c.getColumnIndex(FormsColumns.INSTANCE_NAME);
 
         return new IdInstanceNameStruct(c.getInt(idxId),
-            ODKDatabaseUtils.getIndexAsString(c, idxFormId),
-            ODKDatabaseUtils.getIndexAsString(c, idxTableId),
-            ODKDatabaseUtils.getIndexAsString(c, idxInstanceName));
+            ODKDatabaseUtils.get().getIndexAsString(c, idxFormId),
+            ODKDatabaseUtils.get().getIndexAsString(c, idxTableId),
+            ODKDatabaseUtils.get().getIndexAsString(c, idxInstanceName));
       }
     } finally {
       if (c != null && !c.isClosed()) {

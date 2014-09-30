@@ -3,8 +3,8 @@ package org.opendatakit.common.android.provider.impl;
 import java.io.File;
 import java.util.List;
 
-import org.opendatakit.common.android.database.DataModelDatabaseHelper;
 import org.opendatakit.common.android.database.DataModelDatabaseHelperFactory;
+import org.opendatakit.common.android.database.DatabaseConstants;
 import org.opendatakit.common.android.provider.TableDefinitionsColumns;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
@@ -86,14 +86,8 @@ public abstract class TablesProviderImpl extends ContentProvider {
     boolean success = false;
     Cursor c = null;
     try {
-      DataModelDatabaseHelper dbh = DataModelDatabaseHelperFactory.getDbHelper(getContext(), appName);
-      if (dbh == null) {
-        log.w(t, "Unable to access database for appName " + appName);
-        return null;
-      }
-
-      db = dbh.getReadableDatabase();
-      c = db.query(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, projection, whereId, whereIdArgs,
+      db = DataModelDatabaseHelperFactory.getDatabase(getContext(), appName);
+      c = db.query(DatabaseConstants.TABLE_DEFS_TABLE_NAME, projection, whereId, whereIdArgs,
           null, null, sortOrder);
       success = true;
     } catch (Exception e) {
