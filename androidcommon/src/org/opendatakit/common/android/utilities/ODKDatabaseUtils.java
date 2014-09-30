@@ -47,6 +47,14 @@ public class ODKDatabaseUtils {
 
   private static final String t = "ODKDatabaseUtils";
 
+  /**
+   * values that can be returned from getTableHealth()
+   */
+  public static final int TABLE_HEALTH_IS_CLEAN = 0;
+  public static final int TABLE_HEALTH_HAS_CONFLICTS = 1;
+  public static final int TABLE_HEALTH_HAS_CHECKPOINTS = 2;
+  public static final int TABLE_HEALTH_HAS_CHECKPOINTS_AND_CONFLICTS = 3;
+
   public static final String DEFAULT_LOCALE = "default";
   public static final String DEFAULT_CREATOR = "anonymous";
 
@@ -283,6 +291,37 @@ public class ODKDatabaseUtils {
       }
     }
     return false;
+  }
+  
+  public int getTableHealth(SQLiteDatabase db, String tableId) {
+    StringBuilder b = new StringBuilder();
+    b.append("SELECT SUM(case when _savepoint_type is null then 1 else 0 end) as checkpoints,")
+     .append("SUM(case when _conflict_type is not null then 1 else 0 end) as conflicts from \"")
+     .append(tableId).append("\"");
+
+    Cursor c = null;
+    try {
+      c = db.rawQuery(b.toString(), null);
+      int idxCheckpoints = c.getColumnIndex("checkpoints");
+      int idxConflicts = c.getColumnIndex("conflicts");
+      c.moveToFirst();
+      Integer checkpoints = ODKDatabaseUtils.get().getIndexAsType(c, Integer.class, idxCheckpoints);
+      Integer conflicts = ODKDatabaseUtils.get().getIndexAsType(c, Integer.class, idxConflicts);
+      c.close();
+
+      int outcome = TABLE_HEALTH_IS_CLEAN;
+      if ( checkpoints != null && checkpoints != 0 ) {
+        outcome += TABLE_HEALTH_HAS_CHECKPOINTS;
+      }
+      if ( conflicts != null && conflicts != 0 ) {
+        outcome += TABLE_HEALTH_HAS_CONFLICTS;
+      }
+      return outcome;
+    } finally {
+      if ( c != null && !c.isClosed() ) {
+        c.close();
+      }
+    }
   }
 
   public ArrayList<String> getAllTableIds(SQLiteDatabase db) {

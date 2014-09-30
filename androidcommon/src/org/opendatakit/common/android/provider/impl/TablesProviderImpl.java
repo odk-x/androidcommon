@@ -3,7 +3,7 @@ package org.opendatakit.common.android.provider.impl;
 import java.io.File;
 import java.util.List;
 
-import org.opendatakit.common.android.database.DataModelDatabaseHelperFactory;
+import org.opendatakit.common.android.database.DatabaseFactory;
 import org.opendatakit.common.android.database.DatabaseConstants;
 import org.opendatakit.common.android.provider.TableDefinitionsColumns;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
@@ -86,7 +86,7 @@ public abstract class TablesProviderImpl extends ContentProvider {
     boolean success = false;
     Cursor c = null;
     try {
-      db = DataModelDatabaseHelperFactory.getDatabase(getContext(), appName);
+      db = DatabaseFactory.get().getDatabase(getContext(), appName);
       c = db.query(DatabaseConstants.TABLE_DEFS_TABLE_NAME, projection, whereId, whereIdArgs,
           null, null, sortOrder);
       success = true;

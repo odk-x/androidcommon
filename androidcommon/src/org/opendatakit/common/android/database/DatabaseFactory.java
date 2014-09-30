@@ -24,11 +24,28 @@ import org.opendatakit.common.android.utilities.WebLogger;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 
-public class DataModelDatabaseHelperFactory {
+public class DatabaseFactory {
+  
+  private static DatabaseFactory databaseFactory = new DatabaseFactory();
+  
+  public static DatabaseFactory get() {
+    return databaseFactory;
+  }
+ 
+  /**
+   * For mocking -- supply a mocked object.
+   * 
+   * @param databaseFactory
+   */
+  public static void set(DatabaseFactory factory) {
+    databaseFactory = factory;
+  }
+
+  protected DatabaseFactory() {}
 
   // array of the underlying database handles used by all the content provider
   // instances
-  private static final Map<String, DataModelDatabaseHelper> dbHelpers = new HashMap<String, DataModelDatabaseHelper>();
+  private final Map<String, DataModelDatabaseHelper> dbHelpers = new HashMap<String, DataModelDatabaseHelper>();
 
   /**
    * Shared accessor to get a database handle.
@@ -36,7 +53,7 @@ public class DataModelDatabaseHelperFactory {
    * @param appName
    * @return an entry in dbHelpers
    */
-  private synchronized static DataModelDatabaseHelper getDbHelper(Context context, String appName) {
+  private synchronized DataModelDatabaseHelper getDbHelper(Context context, String appName) {
     WebLogger log = null;
 
     try {
@@ -78,7 +95,7 @@ public class DataModelDatabaseHelperFactory {
     return dbHelper;
   }
 
-  public static SQLiteDatabase getDatabase(Context context, String appName) {
+  public SQLiteDatabase getDatabase(Context context, String appName) {
     return getDbHelper(context, appName).getWritableDatabase();
   }
 }

@@ -28,7 +28,7 @@ import java.util.Locale;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.opendatakit.common.android.R;
-import org.opendatakit.common.android.database.DataModelDatabaseHelperFactory;
+import org.opendatakit.common.android.database.DatabaseFactory;
 import org.opendatakit.common.android.database.DatabaseConstants;
 import org.opendatakit.common.android.provider.FormsColumns;
 import org.opendatakit.common.android.utilities.ODKDatabaseUtils;
@@ -120,7 +120,7 @@ public abstract class FormsProviderImpl extends ContentProvider {
     boolean success = false;
     Cursor c = null;
     try {
-      db = DataModelDatabaseHelperFactory.getDatabase(getContext(), appName);
+      db = DatabaseFactory.get().getDatabase(getContext(), appName);
       c = db.query(DatabaseConstants.FORMS_TABLE_NAME, projection, whereId, whereIdArgs,
           null, null, sortOrder);
       success = true;
@@ -311,7 +311,7 @@ public abstract class FormsProviderImpl extends ContentProvider {
 
     SQLiteDatabase db = null;
     try {
-      db = DataModelDatabaseHelperFactory.getDatabase(getContext(), appName);
+      db = DatabaseFactory.get().getDatabase(getContext(), appName);
       db.beginTransaction();
       try {
         c = db.query(DatabaseConstants.FORMS_TABLE_NAME, projection, selection, selectionArgs,
@@ -510,7 +510,7 @@ public abstract class FormsProviderImpl extends ContentProvider {
     SQLiteDatabase db = null;
     int count;
     try {
-      db = DataModelDatabaseHelperFactory.getDatabase(getContext(), appName);
+      db = DatabaseFactory.get().getDatabase(getContext(), appName);
       if (db == null) {
         log.w(t, "Unable to access database for appName " + appName);
         return 0;
@@ -728,7 +728,7 @@ public abstract class FormsProviderImpl extends ContentProvider {
     int count;
     try {
       // OK Finally, now do the update...
-      db = DataModelDatabaseHelperFactory.getDatabase(getContext(), appName);
+      db = DatabaseFactory.get().getDatabase(getContext(), appName);
       db.beginTransaction();
       count = db.update(DatabaseConstants.FORMS_TABLE_NAME, values, whereId, whereIdArgs);
       db.setTransactionSuccessful();

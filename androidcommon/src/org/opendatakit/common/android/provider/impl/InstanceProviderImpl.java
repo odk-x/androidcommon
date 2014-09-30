@@ -30,7 +30,7 @@ import org.opendatakit.aggregate.odktables.rest.TableConstants;
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.common.android.R;
 import org.opendatakit.common.android.data.ColumnDefinition;
-import org.opendatakit.common.android.database.DataModelDatabaseHelperFactory;
+import org.opendatakit.common.android.database.DatabaseFactory;
 import org.opendatakit.common.android.database.DatabaseConstants;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.InstanceColumns;
@@ -104,7 +104,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     StringBuilder b = new StringBuilder();
     
     try {
-      db = DataModelDatabaseHelperFactory.getDatabase(getContext(), appName);
+      db = DatabaseFactory.get().getDatabase(getContext(), appName);
       db.beginTransaction();
 
       boolean success = false;
@@ -287,7 +287,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     db = null;
     boolean success = false;
     try {
-      db = DataModelDatabaseHelperFactory.getDatabase(getContext(), appName);
+      db = DatabaseFactory.get().getDatabase(getContext(), appName);
       c = db.rawQuery(fullQuery, filterArgs);
       // Tell the cursor what uri to watch, so it knows when its source data
       // changes
@@ -360,7 +360,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     SQLiteDatabase db = null;
     List<IdStruct> idStructs = new ArrayList<IdStruct>();
     try {
-      db = DataModelDatabaseHelperFactory.getDatabase(getContext(), appName);
+      db = DatabaseFactory.get().getDatabase(getContext(), appName);
       db.beginTransaction();
 
       boolean success = false;
@@ -451,7 +451,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     SQLiteDatabase db = null;
     int count = 0;
     try {
-      db = DataModelDatabaseHelperFactory.getDatabase(getContext(), appName);
+      db = DatabaseFactory.get().getDatabase(getContext(), appName);
 
       boolean success = false;
       try {

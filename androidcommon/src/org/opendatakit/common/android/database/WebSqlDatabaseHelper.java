@@ -25,7 +25,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
-public class WebSqlDatabaseHelper {
+class WebSqlDatabaseHelper {
   private static final String t = "WebSqlDatabaseHelper";
 
   private List<WebDbDefinition> webDatabasePaths;
@@ -77,7 +77,7 @@ public class WebSqlDatabaseHelper {
 
   public WebDbDefinition getWebKitDatabaseInfoHelper() {
     for (WebDbDefinition defn : webDatabasePaths) {
-      if (defn.shortName.equalsIgnoreCase(WebDbDatabaseHelper.WEBDB_INSTANCE_DB_SHORT_NAME)) {
+      if (defn.shortName.equalsIgnoreCase(ArchaicConstantsToRemove.WEBDB_INSTANCE_DB_SHORT_NAME)) {
         return defn;
       }
     }

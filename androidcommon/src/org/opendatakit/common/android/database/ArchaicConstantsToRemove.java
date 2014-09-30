@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 University of Washington
+ * Copyright (C) 2014 University of Washington
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
@@ -14,24 +14,10 @@
 
 package org.opendatakit.common.android.database;
 
-import java.io.File;
+public class ArchaicConstantsToRemove {
+  public static final String WEBDB_INSTANCE_DB_SHORT_NAME = "odk";
+  public static final String WEBDB_INSTANCE_DB_DISPLAY_NAME = "ODK Instances Database";
+  public static final Integer WEBDB_INSTANCE_DB_ESTIMATED_SIZE = 65536;
+  public static final Integer WEBDB_INSTANCE_DB_VERSION = 1;
 
-/**
- * Description of the tables available in the WebSQL-controlled databases list.
- *
- * @author mitchellsundt@gmail.com
- *
- */
-class WebDbDefinition {
-  public final String shortName;
-  public final String displayName;
-  public final Integer estimatedSize;
-  public final File dbFile;
-
-  WebDbDefinition(String shortName, String displayName, Integer estimatedSize, File dbFile) {
-    this.shortName = shortName;
-    this.displayName = displayName;
-    this.estimatedSize = estimatedSize;
-    this.dbFile = dbFile;
-  }
 }
