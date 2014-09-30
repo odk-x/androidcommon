@@ -383,7 +383,6 @@ public class CsvUtil {
    *
    * @param importListener
    * @param tableId
-   * @return either the updated TableProperties or null if an error occurs
    * @throws IOException
    */
   public void updateTablePropertiesFromCsv(ImportListener importListener, String tableId)

@@ -332,6 +332,23 @@ public class ColumnDefinition implements Comparable<ColumnDefinition> {
   }
 
   /**
+   * Get the names of the columns that are written into the underlying database table.
+   * These are the isUnitOfRetention() columns.
+   * 
+   * @param orderedDefns
+   * @return
+   */
+  public static ArrayList<String> getRetentionColumnNames(ArrayList<ColumnDefinition> orderedDefns) {
+    ArrayList<String> writtenColumns = new ArrayList<String>();
+    for ( ColumnDefinition cd : orderedDefns ) {
+      if ( cd.isUnitOfRetention() ) {
+        writtenColumns.add(cd.getElementKey());
+      }
+    }
+    return writtenColumns;
+  }
+  
+  /**
    * Covert the ColumnDefinition map into a JSON schema.
    *
    * @param defns

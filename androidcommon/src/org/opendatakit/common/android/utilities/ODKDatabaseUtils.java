@@ -3,6 +3,7 @@ package org.opendatakit.common.android.utilities;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.TreeMap;
 import java.util.UUID;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.IOFileFilter;
 import org.opendatakit.aggregate.odktables.rest.ConflictType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.aggregate.odktables.rest.SavepointTypeManipulator;
@@ -272,8 +274,8 @@ public class ODKDatabaseUtils {
     return false;
   }
 
-  public static List<String> getAllTableIds(SQLiteDatabase db) {
-    List<String> tableIds = new ArrayList<String>();
+  public static ArrayList<String> getAllTableIds(SQLiteDatabase db) {
+    ArrayList<String> tableIds = new ArrayList<String>();
     Cursor c = null;
     try {
       c = db.query(DataModelDatabaseHelper.TABLE_DEFS_TABLE_NAME, 
@@ -299,7 +301,7 @@ public class ODKDatabaseUtils {
     return tableIds;
   }
   
-  public static void deleteTableAndData(SQLiteDatabase db, String tableId) {
+  public static void deleteTableAndData(SQLiteDatabase db, final String appName, final String tableId) {
     boolean dbWithinTransaction = db.inTransaction();
     try {
       String whereClause = TableDefinitionsColumns.TABLE_ID + " = ?";
@@ -334,6 +336,58 @@ public class ODKDatabaseUtils {
       if ( !dbWithinTransaction ) {
         db.endTransaction();
       }
+    }
+
+    // And delete the files from the SDCard...
+    String tableDir = ODKFileUtils.getTablesFolder(appName, tableId);
+    try {
+      FileUtils.deleteDirectory(new File(tableDir));
+    } catch (IOException e1) {
+      e1.printStackTrace();
+      throw new IllegalStateException("Unable to delete the " + tableDir + " directory", e1);
+    }
+
+    String assetsCsvDir = ODKFileUtils.getAssetsFolder(appName) + "/csv";
+    try {
+      Collection<File> files = FileUtils.listFiles(new File(assetsCsvDir), new IOFileFilter() {
+
+        @Override
+        public boolean accept(File file) {
+          String[] parts = file.getName().split("\\.");
+          return (parts[0].equals(tableId) && parts[parts.length - 1].equals("csv") && (parts.length == 2
+              || parts.length == 3 || (parts.length == 4 && parts[parts.length - 2]
+              .equals("properties"))));
+        }
+
+        @Override
+        public boolean accept(File dir, String name) {
+          String[] parts = name.split("\\.");
+          return (parts[0].equals(tableId) && parts[parts.length - 1].equals("csv") && (parts.length == 2
+              || parts.length == 3 || (parts.length == 4 && parts[parts.length - 2]
+              .equals("properties"))));
+        }
+      }, new IOFileFilter() {
+
+        // don't traverse into directories
+        @Override
+        public boolean accept(File arg0) {
+          return false;
+        }
+
+        // don't traverse into directories
+        @Override
+        public boolean accept(File arg0, String arg1) {
+          return false;
+        }
+      });
+
+      FileUtils.deleteDirectory(new File(tableDir));
+      for (File f : files) {
+        FileUtils.deleteQuietly(f);
+      }
+    } catch (IOException e1) {
+      e1.printStackTrace();
+      throw new IllegalStateException("Unable to delete the " + tableDir + " directory", e1);
     }
   }
 

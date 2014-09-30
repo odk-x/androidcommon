@@ -22,6 +22,7 @@ import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
 
 import android.content.Context;
+import android.database.sqlite.SQLiteDatabase;
 
 public class DataModelDatabaseHelperFactory {
 
@@ -77,4 +78,7 @@ public class DataModelDatabaseHelperFactory {
     return dbHelper;
   }
 
+  public static SQLiteDatabase getDatabase(Context context, String appName) {
+    return getDbHelper(context, appName).getWritableDatabase();
+  }
 }
