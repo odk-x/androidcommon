@@ -13,9 +13,11 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package org.opendatakit.common.android.data;
+package org.opendatakit.common.android.utilities;
 
 import java.util.ArrayList;
+
+import org.opendatakit.common.android.data.KeyValueStoreEntry;
 
 /**
  * Defines various methods used for getting and setting keys in the key value

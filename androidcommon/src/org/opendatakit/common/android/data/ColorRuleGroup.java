@@ -21,6 +21,8 @@ import java.util.List;
 
 import org.opendatakit.common.android.data.UserTable.Row;
 import org.opendatakit.common.android.database.DatabaseFactory;
+import org.opendatakit.common.android.utilities.KeyValueHelper;
+import org.opendatakit.common.android.utilities.KeyValueStoreHelper;
 import org.opendatakit.common.android.utilities.ODKDatabaseUtils;
 
 import android.content.Context;
@@ -246,10 +248,6 @@ public class ColorRuleGroup {
         Log.e(TAG, "i/o problem with json list of color rules");
         e.printStackTrace();
       }
-    }
-
-    private void addRule(ColorRule rule) {
-      ruleList.add(rule);
     }
 
     /**

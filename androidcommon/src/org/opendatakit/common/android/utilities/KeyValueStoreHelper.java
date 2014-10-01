@@ -13,18 +13,17 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package org.opendatakit.common.android.data;
+package org.opendatakit.common.android.utilities;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
+import org.opendatakit.common.android.data.ElementDataType;
+import org.opendatakit.common.android.data.KeyValueStoreEntry;
 import org.opendatakit.common.android.database.DatabaseFactory;
 import org.opendatakit.common.android.database.DatabaseConstants;
-import org.opendatakit.common.android.utilities.DataHelper;
-import org.opendatakit.common.android.utilities.ODKDatabaseUtils;
-import org.opendatakit.common.android.utilities.ODKFileUtils;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;

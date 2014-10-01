@@ -84,6 +84,7 @@ public class JoinColumn {
     */
 
     ArrayList<JoinColumn> jcs = new ArrayList<JoinColumn>();
+    @SuppressWarnings("unchecked")
     ArrayList<Object> joins = ODKFileUtils.mapper.readValue(str, ArrayList.class);
     if ( joins == null ) {
       return null;
@@ -118,7 +119,7 @@ public class JoinColumn {
   /*
    * Just in case we need this for serialization.
    */
-  private JoinColumn() {
+  protected JoinColumn() {
   }
 
   public JoinColumn(String tableId, String elementKey) {

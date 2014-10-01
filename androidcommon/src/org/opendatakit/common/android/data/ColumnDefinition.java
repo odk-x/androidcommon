@@ -181,6 +181,7 @@ public class ColumnDefinition implements Comparable<ColumnDefinition> {
    * @param columns
    * @return
    */
+  @SuppressWarnings("unchecked")
   public static final ArrayList<ColumnDefinition> buildColumnDefinitions(List<Column> columns) {
 
     Log.d(TAG, "[buildColumnDefinitions] size: " + columns.size() + " first column: " + 

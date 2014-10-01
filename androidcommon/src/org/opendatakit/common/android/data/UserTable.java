@@ -341,6 +341,7 @@ public class UserTable {
      * @param i
      * @return
      */
+    @SuppressWarnings("unchecked")
     public final <T> T getRawDataType(String elementKey, Class<T> clazz) {
       // If you add additional return types here be sure to modify the javadoc.
       try {
