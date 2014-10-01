@@ -511,10 +511,6 @@ public abstract class FormsProviderImpl extends ContentProvider {
     int count;
     try {
       db = DatabaseFactory.get().getDatabase(getContext(), appName);
-      if (db == null) {
-        log.w(t, "Unable to access database for appName " + appName);
-        return 0;
-      }
       db.beginTransaction();
       count = db.delete(DatabaseConstants.FORMS_TABLE_NAME, whereId, whereIdArgs);
       db.setTransactionSuccessful();

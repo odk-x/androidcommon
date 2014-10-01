@@ -768,6 +768,96 @@ public class ODKDatabaseUtils {
     }
     return entries;
   }
+
+  public void enforceTypesDBTableMetadata(SQLiteDatabase db, String tableId) {
+    
+    boolean dbWithinTransaction = db.inTransaction();
+    try {
+      if ( !dbWithinTransaction ) {
+        db.beginTransaction();
+      }
+
+      StringBuilder b = new StringBuilder();
+      b.setLength(0);
+      b.append("UPDATE \"").append(DatabaseConstants.KEY_VALUE_STORE_ACTIVE_TABLE_NAME)
+       .append("\" SET ").append(KeyValueStoreColumns.VALUE_TYPE)
+       .append("=? WHERE ").append(KeyValueStoreColumns.PARTITION)
+       .append("=? AND ").append(KeyValueStoreColumns.KEY).append("=?");
+      
+      String sql = b.toString();
+      String[] fields = new String[3];
+      
+      // for columns
+      
+      fields[0] = ElementDataType.array.name();
+      fields[1] = KeyValueStoreConstants.PARTITION_COLUMN;
+      fields[2] = KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST;
+      db.execSQL(sql, fields);
+      
+      fields[0] = ElementDataType.string.name();
+      fields[1] = KeyValueStoreConstants.PARTITION_COLUMN;
+      fields[2] = KeyValueStoreConstants.COLUMN_DISPLAY_FORMAT;
+      db.execSQL(sql, fields);
+      
+      fields[0] = ElementDataType.object.name();
+      fields[1] = KeyValueStoreConstants.PARTITION_COLUMN;
+      fields[2] = KeyValueStoreConstants.COLUMN_DISPLAY_NAME;
+      db.execSQL(sql, fields);
+      
+      fields[0] = ElementDataType.bool.name();
+      fields[1] = KeyValueStoreConstants.PARTITION_COLUMN;
+      fields[2] = KeyValueStoreConstants.COLUMN_DISPLAY_VISIBLE;
+      db.execSQL(sql, fields);
+      
+      fields[0] = ElementDataType.array.name();
+      fields[1] = KeyValueStoreConstants.PARTITION_COLUMN;
+      fields[2] = KeyValueStoreConstants.COLUMN_JOINS;
+      db.execSQL(sql, fields);
+      
+      // and for the table...
+      
+      fields[0] = ElementDataType.array.name();
+      fields[1] = KeyValueStoreConstants.PARTITION_TABLE;
+      fields[2] = KeyValueStoreConstants.TABLE_COL_ORDER;
+      db.execSQL(sql, fields);
+
+      fields[0] = ElementDataType.object.name();
+      fields[1] = KeyValueStoreConstants.PARTITION_TABLE;
+      fields[2] = KeyValueStoreConstants.TABLE_DISPLAY_NAME;
+      db.execSQL(sql, fields);
+      
+      fields[0] = ElementDataType.array.name();
+      fields[1] = KeyValueStoreConstants.PARTITION_TABLE;
+      fields[2] = KeyValueStoreConstants.TABLE_GROUP_BY_COLS;
+      db.execSQL(sql, fields);
+
+      fields[0] = ElementDataType.string.name();
+      fields[1] = KeyValueStoreConstants.PARTITION_TABLE;
+      fields[2] = KeyValueStoreConstants.TABLE_INDEX_COL;
+      db.execSQL(sql, fields);
+
+      fields[0] = ElementDataType.object.name();
+      fields[1] = KeyValueStoreConstants.PARTITION_TABLE;
+      fields[2] = KeyValueStoreConstants.TABLE_SORT_COL;
+      db.execSQL(sql, fields);
+
+      fields[0] = ElementDataType.object.name();
+      fields[1] = KeyValueStoreConstants.PARTITION_TABLE;
+      fields[2] = KeyValueStoreConstants.TABLE_SORT_ORDER;
+      db.execSQL(sql, fields);
+      
+      // TODO: color rule groups
+      
+      if ( !dbWithinTransaction ) {
+        db.setTransactionSuccessful();
+      }
+    } finally {
+      if ( !dbWithinTransaction ) {
+        db.endTransaction();
+      }
+    }
+  }
+
   
   /*
    * Create a user defined database table metadata - table definiton and KVS

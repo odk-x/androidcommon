@@ -425,8 +425,10 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       }
       db.setTransactionSuccessful();
     } finally {
-      db.endTransaction();
-      db.close();
+      if ( db != null ) {
+        db.endTransaction();
+        db.close();
+      }
     }
     getContext().getContentResolver().notifyChange(uri, null);
     return idStructs.size();
@@ -507,8 +509,10 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       }
       db.setTransactionSuccessful();
     } finally {
-      db.endTransaction();
-      db.close();
+      if ( db != null ) {
+        db.endTransaction();
+        db.close();
+      }
     }
     getContext().getContentResolver().notifyChange(uri, null);
     return count;

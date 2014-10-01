@@ -686,6 +686,18 @@ public class CsvUtil {
         } catch (IOException e) {
         }
       }
+      
+      // And update the inserted properties so that 
+      // the known entries have their expected types.
+      try {
+        db.beginTransaction();
+        
+        ODKDatabaseUtils.get().enforceTypesDBTableMetadata(db, tableId);
+        
+        db.setTransactionSuccessful();
+      } finally {
+        db.endTransaction();
+      }
     } finally {
       if (db != null) {
         db.close();
