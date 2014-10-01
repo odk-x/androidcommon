@@ -27,10 +27,13 @@ import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.common.android.utilities.NameUtil;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 
+import android.util.Log;
+
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 
 public class ColumnDefinition implements Comparable<ColumnDefinition> {
+  private static final String TAG = "ColumnDefinition";
   private static final String JSON_SCHEMA_ELEMENT_KEY = "elementKey";
   private static final String JSON_SCHEMA_ELEMENT_TYPE = "elementType";
   private static final String JSON_SCHEMA_PROPERTIES = "properties";
@@ -180,6 +183,9 @@ public class ColumnDefinition implements Comparable<ColumnDefinition> {
    */
   public static final ArrayList<ColumnDefinition> buildColumnDefinitions(List<Column> columns) {
 
+    Log.d(TAG, "[buildColumnDefinitions] size: " + columns.size() + " first column: " + 
+        (columns.isEmpty() ? "<none>" : columns.get(0).getElementKey()));
+    
     Map<String, ColumnDefinition> colDefs = new HashMap<String, ColumnDefinition>();
     List<ColumnContainer> ccList = new ArrayList<ColumnContainer>();
     for (Column col : columns) {

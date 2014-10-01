@@ -18,8 +18,6 @@ package org.opendatakit.common.android.utilities;
 import java.util.Locale;
 import java.util.TreeSet;
 
-import android.util.Log;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 /**
@@ -208,8 +206,6 @@ public class NameUtil {
     boolean matchHit = name.matches(PATTERN_VALID_USER_DEFINED_DB_NAME);
     // TODO: uppercase is bad...
     boolean reserveHit = reservedNames.contains(name.toUpperCase(Locale.US));
-    Log.d(TAG, "[isValidUserDefinedDatabaseName] " + name + ": " +
-        (!reserveHit && matchHit));
     return (!reserveHit && matchHit);
   }
 

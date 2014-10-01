@@ -27,16 +27,16 @@ import java.util.Locale;
 import org.apache.commons.io.FileUtils;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.aggregate.odktables.rest.TableConstants;
-import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.common.android.R;
 import org.opendatakit.common.android.data.ColumnDefinition;
-import org.opendatakit.common.android.database.DatabaseFactory;
 import org.opendatakit.common.android.database.DatabaseConstants;
+import org.opendatakit.common.android.database.DatabaseFactory;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.InstanceColumns;
 import org.opendatakit.common.android.provider.KeyValueStoreColumns;
 import org.opendatakit.common.android.utilities.ODKDatabaseUtils;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
+import org.opendatakit.common.android.utilities.TableUtil;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;
@@ -167,8 +167,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       // Can't get away with dataTable.* because of collision with _ID column
       // get map of (elementKey -> ColumnDefinition)
       try {
-        List<Column> columns = ODKDatabaseUtils.get().getUserDefinedColumns(db, tableId);
-        orderedDefns = ColumnDefinition.buildColumnDefinitions(columns);
+        orderedDefns = TableUtil.get().getColumnDefinitions(db, tableId);
       } catch (IllegalArgumentException e) {
         e.printStackTrace();
         throw new SQLException("Unable to retrieve column definitions for tableId " + tableId);

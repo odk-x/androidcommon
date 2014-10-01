@@ -531,9 +531,7 @@ public class CsvUtil {
         }
 
         if (ODKDatabaseUtils.get().hasTableId(db, tableId)) {
-          List<Column> existingColumns = ODKDatabaseUtils.get().getUserDefinedColumns(db, tableId);
-          ArrayList<ColumnDefinition> existingDefns = ColumnDefinition
-              .buildColumnDefinitions(existingColumns);
+          ArrayList<ColumnDefinition> existingDefns = TableUtil.get().getColumnDefinitions(db, tableId);
 
           // confirm that the column definitions are unchanged...
           if (existingDefns.size() != colDefns.size()) {
@@ -742,8 +740,7 @@ public class CsvUtil {
         }
       }
 
-      List<Column> columns = ODKDatabaseUtils.get().getUserDefinedColumns(db, tableId);
-      ArrayList<ColumnDefinition> orderedDefns = ColumnDefinition.buildColumnDefinitions(columns);
+      ArrayList<ColumnDefinition> orderedDefns = TableUtil.get().getColumnDefinitions(db, tableId);
 
       List<String> persistedColumns = new ArrayList<String>();
       for (ColumnDefinition cd : orderedDefns) {
