@@ -447,7 +447,7 @@ public class CsvUtil {
         } catch (IOException e) {
         }
 
-        ArrayList<ColumnDefinition> colDefns = ColumnDefinition.buildColumnDefinitions(columns);
+        ArrayList<ColumnDefinition> colDefns = ColumnDefinition.buildColumnDefinitions(tableId, columns);
         Map<String, List<KeyValueStoreEntry>> colEntries = new TreeMap<String, List<KeyValueStoreEntry>>();
 
         file = new File(ODKFileUtils.getTablePropertiesCsvFile(appName, tableId));

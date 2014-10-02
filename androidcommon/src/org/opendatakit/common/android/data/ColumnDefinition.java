@@ -178,13 +178,14 @@ public class ColumnDefinition implements Comparable<ColumnDefinition> {
    * Construct the rich ColumnDefinition objects for a table from the underlying
    * information in the list of Column objects.
    * 
+   * @param tableId
    * @param columns
    * @return
    */
   @SuppressWarnings("unchecked")
-  public static final ArrayList<ColumnDefinition> buildColumnDefinitions(List<Column> columns) {
+  public static final ArrayList<ColumnDefinition> buildColumnDefinitions(String tableId, List<Column> columns) {
 
-    Log.d(TAG, "[buildColumnDefinitions] size: " + columns.size() + " first column: " + 
+    Log.d(TAG, "[buildColumnDefinitions] tableId: " + tableId + " size: " + columns.size() + " first column: " + 
         (columns.isEmpty() ? "<none>" : columns.get(0).getElementKey()));
     
     Map<String, ColumnDefinition> colDefs = new HashMap<String, ColumnDefinition>();

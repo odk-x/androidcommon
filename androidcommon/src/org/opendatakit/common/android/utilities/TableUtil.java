@@ -68,7 +68,7 @@ public class TableUtil {
   
   public ArrayList<ColumnDefinition> getColumnDefinitions(SQLiteDatabase db, String tableId) {
     List<Column> columns = ODKDatabaseUtils.get().getUserDefinedColumns(db, tableId);
-    return ColumnDefinition.buildColumnDefinitions(columns);
+    return ColumnDefinition.buildColumnDefinitions(tableId, columns);
   }
   
   public String getLocalizedDisplayName(SQLiteDatabase db, String tableId) {

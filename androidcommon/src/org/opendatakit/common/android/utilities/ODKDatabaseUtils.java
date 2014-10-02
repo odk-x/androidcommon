@@ -978,7 +978,7 @@ public class ODKDatabaseUtils {
   public ArrayList<ColumnDefinition> createOrOpenDBTableWithColumns(SQLiteDatabase db, String tableId,
       List<Column> columns) {
     boolean success = false;
-    ArrayList<ColumnDefinition> orderedDefs = ColumnDefinition.buildColumnDefinitions(columns);
+    ArrayList<ColumnDefinition> orderedDefs = ColumnDefinition.buildColumnDefinitions(tableId, columns);
     try {
       db.beginTransaction();
       createDBTableWithColumns(db, tableId, orderedDefs);
