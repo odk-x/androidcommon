@@ -126,14 +126,6 @@ public class CsvUtil {
     columns.add(DataTableColumns.SAVEPOINT_TIMESTAMP);
     columns.add(DataTableColumns.SAVEPOINT_CREATOR);
 
-    List<String> persistedColumns = new ArrayList<String>();
-    for (ColumnDefinition cd : orderedDefns) {
-      if (cd.isUnitOfRetention()) {
-        columns.add(cd.getElementKey());
-        persistedColumns.add(cd.getElementKey());
-      }
-    }
-
     // And now add all remaining export columns
     for (String colName : ODKDatabaseUtils.get().getExportColumns()) {
       if (columns.contains(colName)) {
@@ -163,7 +155,7 @@ public class CsvUtil {
           + DataTableColumns.CONFLICT_TYPE + " IS NULL OR " + DataTableColumns.CONFLICT_TYPE
           + " = " + Integer.toString(ConflictType.LOCAL_UPDATED_UPDATED_VALUES) + ")";
 
-      UserTable table = ODKDatabaseUtils.get().rawSqlQuery(db, appName, tableId, persistedColumns,
+      UserTable table = ODKDatabaseUtils.get().rawSqlQuery(db, appName, tableId, orderedDefns,
           whereString, null, null, null, null, null);
 
       // emit data table...
@@ -742,13 +734,6 @@ public class CsvUtil {
 
       ArrayList<ColumnDefinition> orderedDefns = TableUtil.get().getColumnDefinitions(db, tableId);
 
-      List<String> persistedColumns = new ArrayList<String>();
-      for (ColumnDefinition cd : orderedDefns) {
-        if (cd.isUnitOfRetention()) {
-          persistedColumns.add(cd.getElementKey());
-        }
-      }
-
       Log.i(TAG, "importSeparable: tableId: " + tableId + " fileQualifier: "
           + ((fileQualifier == null) ? "<null>" : fileQualifier));
 
@@ -882,7 +867,7 @@ public class CsvUtil {
           // rather
           // than resolve the problems.
           UserTable table = ODKDatabaseUtils.get().getDataInExistingDBTableWithId(db, appName, tableId,
-              persistedColumns, v_id);
+              orderedDefns, v_id);
           if (table.getNumberOfRows() > 1) {
             throw new IllegalStateException(
                 "There are either checkpoint or conflict rows in the destination table");

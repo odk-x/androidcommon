@@ -55,6 +55,7 @@ public class UserTable {
 
   private final String mAppName;
   private final String mTableId;
+  private final ArrayList<ColumnDefinition> mColumnDefns;
   private final ArrayList<Row> mRows;
   /**
    * The {@link TableProperties} associated with this table. Included so that
@@ -76,6 +77,7 @@ public class UserTable {
   public UserTable(UserTable table, List<Integer> indexes) {
     this.mAppName = table.mAppName;
     this.mTableId = table.mTableId;
+    this.mColumnDefns = table.mColumnDefns;
     du = table.du;
     mRows = new ArrayList<Row>(indexes.size());
     for (int i = 0 ; i < indexes.size(); ++i) {
@@ -93,13 +95,13 @@ public class UserTable {
   }
 
   public UserTable(Cursor c, String appName, String tableId,
-      List<String> userColumnOrder, /*List<String> userColumnOrder = mTp.getPersistedColumns();
-*/
+      ArrayList<ColumnDefinition> columnDefns,
       String sqlWhereClause, String[] sqlSelectionArgs,
       String[] sqlGroupByArgs, String sqlHavingClause,
       String sqlOrderByElementKey, String sqlOrderByDirection) {
     this.mAppName = appName;
     this.mTableId = tableId;
+    this.mColumnDefns = columnDefns;
     du = new DataUtil(Locale.ENGLISH, TimeZone.getDefault());
 //    mTp = tableProperties;
     this.mSqlWhereClause = sqlWhereClause;
@@ -117,6 +119,7 @@ public class UserTable {
     // in metadataKeyToIndex of sync_state:7.
     List<String> adminColumnOrder = ODKDatabaseUtils.get().getAdminColumns();
     mElementKeyToIndex = new HashMap<String, Integer>();
+    List<String> userColumnOrder = ColumnDefinition.getRetentionColumnNames(mColumnDefns);
     mElementKeyForIndex = new String[userColumnOrder.size()+adminColumnOrder.size()];
     int[] cursorIndex = new int[userColumnOrder.size()+adminColumnOrder.size()];
     int i = 0;
@@ -165,6 +168,10 @@ public class UserTable {
   
   public String getTableId() {
     return mTableId;
+  }
+  
+  public ArrayList<ColumnDefinition> getColumnDefinitions() {
+    return mColumnDefns;
   }
   
   public Row getRowAtIndex(int index) {

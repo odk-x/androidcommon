@@ -163,7 +163,7 @@ public class ODKDatabaseUtils {
    * @return
    */
   public UserTable rawSqlQuery(SQLiteDatabase db, String appName, String tableId, 
-      List<String> persistedColumns, String whereClause, String[] selectionArgs,
+      ArrayList<ColumnDefinition> columnDefns, String whereClause, String[] selectionArgs,
       String[] groupBy, String having, String orderByElementKey, String orderByDirection) {
     Cursor c = null;
     try {
@@ -197,7 +197,7 @@ public class ODKDatabaseUtils {
       String sqlQuery = s.toString();
       c = db.rawQuery(sqlQuery, selectionArgs);
       UserTable table = new UserTable(c, appName, tableId, 
-                persistedColumns, whereClause, selectionArgs,
+                columnDefns, whereClause, selectionArgs,
                 groupBy, having, orderByElementKey, orderByDirection);
       return table;
     } finally {
@@ -208,10 +208,11 @@ public class ODKDatabaseUtils {
   }
   
   public UserTable getDataInExistingDBTableWithId(SQLiteDatabase db, 
-      String appName, String tableId, List<String> persistedColumns, String rowId ) {
+      String appName, String tableId, 
+      ArrayList<ColumnDefinition> orderedDefns, String rowId ) {
     
     UserTable table = rawSqlQuery(db, appName, tableId, 
-        persistedColumns, DataTableColumns.ID + "=?", new String[]{ rowId },
+        orderedDefns, DataTableColumns.ID + "=?", new String[]{ rowId },
         null, null, DataTableColumns.SAVEPOINT_TIMESTAMP, "DESC");
     
     return table;
