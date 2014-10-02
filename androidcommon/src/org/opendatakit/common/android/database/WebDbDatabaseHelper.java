@@ -27,7 +27,7 @@ import fi.iki.elonen.SimpleWebServer;
  * @author mitchellsundt@gmail.com
  *
  */
-public class WebDbDatabaseHelper extends ODKSQLiteOpenHelper {
+class WebDbDatabaseHelper extends ODKSQLiteOpenHelper {
 
   // private static final String t = "WebDbDatabaseHelper";
 
@@ -35,10 +35,6 @@ public class WebDbDatabaseHelper extends ODKSQLiteOpenHelper {
   static final String WEBDB_DATABASES_TABLE = "Databases";
   static final String WEBDB_ORIGINS_TABLE = "Origins";
 
-  public static final String WEBDB_INSTANCE_DB_SHORT_NAME = "odk";
-  public static final String WEBDB_INSTANCE_DB_DISPLAY_NAME = "ODK Instances Database";
-  public static final Integer WEBDB_INSTANCE_DB_ESTIMATED_SIZE = 65536;
-  public static final Integer WEBDB_INSTANCE_DB_VERSION = 1;
   static final int WEBDB_VERSION = 1;
 
   static final String COMMON_ORIGIN = "origin";
@@ -92,10 +88,10 @@ public class WebDbDatabaseHelper extends ODKSQLiteOpenHelper {
     ContentValues v = new ContentValues();
     v.put(DATABASES_GUID, 1);
     v.put(COMMON_ORIGIN, getFileOriginString(context));
-    v.put(DATABASES_NAME, WEBDB_INSTANCE_DB_SHORT_NAME);
-    v.put(DATABASES_DISPLAY_NAME, WEBDB_INSTANCE_DB_DISPLAY_NAME);
-    v.put(DATABASES_ESTIMATED_SIZE, WEBDB_INSTANCE_DB_ESTIMATED_SIZE);
-    v.put(DATABASES_PATH, String.format("%1$016d.db", WEBDB_INSTANCE_DB_VERSION));
+    v.put(DATABASES_NAME, ArchaicConstantsToRemove.WEBDB_INSTANCE_DB_SHORT_NAME);
+    v.put(DATABASES_DISPLAY_NAME, ArchaicConstantsToRemove.WEBDB_INSTANCE_DB_DISPLAY_NAME);
+    v.put(DATABASES_ESTIMATED_SIZE, ArchaicConstantsToRemove.WEBDB_INSTANCE_DB_ESTIMATED_SIZE);
+    v.put(DATABASES_PATH, String.format("%1$016d.db", ArchaicConstantsToRemove.WEBDB_INSTANCE_DB_VERSION));
     db.insert("Databases", null, v);
 
   }

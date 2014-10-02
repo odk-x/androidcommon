@@ -149,22 +149,22 @@ public class FormInfo {
   public FormInfo(String appName, Cursor c, boolean parseFormDef) {
     this.appName = appName;
 
-    formPath = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_PATH));
-    appRelativeFormMediaPath = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH));
-    appRelativeFormFilePath = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_FILE_PATH));
+    formPath = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_PATH));
+    appRelativeFormMediaPath = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_MEDIA_PATH));
+    appRelativeFormFilePath = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(FormsColumns.APP_RELATIVE_FORM_FILE_PATH));
 
     File formFolder = ODKFileUtils.asAppFile(appName, appRelativeFormMediaPath);
     formDefFile = new File( formFolder, ODKFileUtils.FORMDEF_JSON_FILENAME);
 
-    lastModificationDate = ODKDatabaseUtils.getIndexAsType(c, Long.class, c.getColumnIndex(FormsColumns.DATE));
-    formId = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_ID));
-    formVersion = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_VERSION));
-    tableId = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.TABLE_ID));
-    formTitle = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.DISPLAY_NAME));
-    description = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.DESCRIPTION));
-    displaySubtext = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.DISPLAY_SUBTEXT));
-    defaultLocale = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.DEFAULT_FORM_LOCALE));
-    instanceName = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(FormsColumns.INSTANCE_NAME));
+    lastModificationDate = ODKDatabaseUtils.get().getIndexAsType(c, Long.class, c.getColumnIndex(FormsColumns.DATE));
+    formId = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_ID));
+    formVersion = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_VERSION));
+    tableId = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(FormsColumns.TABLE_ID));
+    formTitle = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(FormsColumns.DISPLAY_NAME));
+    description = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(FormsColumns.DESCRIPTION));
+    displaySubtext = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(FormsColumns.DISPLAY_SUBTEXT));
+    defaultLocale = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(FormsColumns.DEFAULT_FORM_LOCALE));
+    instanceName = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(FormsColumns.INSTANCE_NAME));
 
     if (parseFormDef && !formDefFile.exists()) {
       throw new IllegalArgumentException("File does not exist! " + formDefFile.getAbsolutePath());

@@ -25,7 +25,7 @@ import android.database.sqlite.SQLiteDatabase.CursorFactory;
  * @author mitchellsundt@gmail.com
  *
  */
-public abstract class WebKitDatabaseInfoHelper extends ODKSQLiteOpenHelper {
+abstract class WebKitDatabaseInfoHelper extends ODKSQLiteOpenHelper {
 
   // private static final String t = "WebKitDatabaseInfoHelper";
 

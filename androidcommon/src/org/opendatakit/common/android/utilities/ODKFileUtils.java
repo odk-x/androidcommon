@@ -281,6 +281,10 @@ public class ODKFileUtils {
   }
 
   public static void assertDirectoryStructure(String appName) {
+    if ( !appName.equals("tables") ) {
+      int i=0;
+      ++i;
+    }
     String[] dirs = { ODKFileUtils.getAppFolder(appName), ODKFileUtils.getAssetsFolder(appName),
         ODKFileUtils.getTablesFolder(appName),
         ODKFileUtils.getStaleFormsFolder(appName), ODKFileUtils.getFrameworkFolder(appName),

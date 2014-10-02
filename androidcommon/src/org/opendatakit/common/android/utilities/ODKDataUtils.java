@@ -54,4 +54,26 @@ public class ODKDataUtils {
     }
   }
 
+  public static String getLocalizedDisplayName(Map<String, Object> localeMap) {
+    Locale locale = Locale.getDefault();
+    String full_locale = locale.toString();
+    int underscore = full_locale.indexOf('_');
+    String lang_only_locale = (underscore == -1)
+        ? full_locale : full_locale.substring(0, underscore);
+    
+    String candidate = (String) localeMap.get(full_locale);
+    if (candidate != null) {
+      return candidate;
+    }
+    candidate = (String) localeMap.get(lang_only_locale);
+    if (candidate != null) {
+      return candidate;
+    }
+    candidate = (String) localeMap.get("default");
+    if (candidate != null) {
+      return candidate;
+    }
+    return null;
+  }
+
 }

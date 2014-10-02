@@ -25,7 +25,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
-public class WebSqlDatabaseHelper {
+class WebSqlDatabaseHelper {
   private static final String t = "WebSqlDatabaseHelper";
 
   private List<WebDbDefinition> webDatabasePaths;
@@ -50,12 +50,12 @@ public class WebSqlDatabaseHelper {
 
       if (c.moveToFirst()) {
         do {
-          String shortName = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(WebDbDatabaseHelper.DATABASES_NAME));
-          String displayName = ODKDatabaseUtils.getIndexAsString(c,
+          String shortName = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(WebDbDatabaseHelper.DATABASES_NAME));
+          String displayName = ODKDatabaseUtils.get().getIndexAsString(c,
               c.getColumnIndex(WebDbDatabaseHelper.DATABASES_DISPLAY_NAME));
-          String relPath = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(WebDbDatabaseHelper.COMMON_ORIGIN));
-          String dbName = ODKDatabaseUtils.getIndexAsString(c, c.getColumnIndex(WebDbDatabaseHelper.DATABASES_PATH));
-          Integer estimatedSize = ODKDatabaseUtils.getIndexAsType(c, Integer.class,
+          String relPath = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(WebDbDatabaseHelper.COMMON_ORIGIN));
+          String dbName = ODKDatabaseUtils.get().getIndexAsString(c, c.getColumnIndex(WebDbDatabaseHelper.DATABASES_PATH));
+          Integer estimatedSize = ODKDatabaseUtils.get().getIndexAsType(c, Integer.class,
               c.getColumnIndex(WebDbDatabaseHelper.DATABASES_ESTIMATED_SIZE));
 
           dbCandidates.add(new WebDbDefinition(shortName, displayName, estimatedSize, new File(path
@@ -77,7 +77,7 @@ public class WebSqlDatabaseHelper {
 
   public WebDbDefinition getWebKitDatabaseInfoHelper() {
     for (WebDbDefinition defn : webDatabasePaths) {
-      if (defn.shortName.equalsIgnoreCase(WebDbDatabaseHelper.WEBDB_INSTANCE_DB_SHORT_NAME)) {
+      if (defn.shortName.equalsIgnoreCase(ArchaicConstantsToRemove.WEBDB_INSTANCE_DB_SHORT_NAME)) {
         return defn;
       }
     }
