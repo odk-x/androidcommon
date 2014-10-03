@@ -239,10 +239,11 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     }
     b.append(" as ").append(InstanceColumns.DISPLAY_NAME);
     b.append(" FROM ");
-    b.append("( SELECT * FROM ").append(dbTableName).append(" GROUP BY ")
-        .append(DATA_TABLE_ID_COLUMN).append(" HAVING ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
-        .append(" = MAX(").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(")").append(") as ")
-        .append(dbTableName);
+    b.append("( SELECT * FROM ").append(dbTableName).append(" AS T WHERE T.")
+     .append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append("=(SELECT MAX(V.")
+     .append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(") FROM ").append(dbTableName).append(" AS V WHERE V.")
+     .append(DATA_TABLE_ID_COLUMN).append("=T.").append(DATA_TABLE_ID_COLUMN).append(")")
+     .append(") as ").append(dbTableName);
     b.append(" JOIN ").append(DatabaseConstants.UPLOADS_TABLE_NAME).append(" ON ")
         .append(dbTableName).append(".").append(DATA_TABLE_ID_COLUMN).append("=")
         .append(DatabaseConstants.UPLOADS_TABLE_NAME).append(".")
