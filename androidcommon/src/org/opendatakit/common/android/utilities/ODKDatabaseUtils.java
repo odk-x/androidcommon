@@ -1286,6 +1286,42 @@ public class ODKDatabaseUtils {
   }
 
   /**
+   * Changes the conflictType for the given row from null (not in conflict) to the specified one
+   * 
+   * @param db
+   * @param tableId
+   * @param rowId
+   * @param conflictType
+   */
+  public void placeRowIntoConflict(SQLiteDatabase db, String tableId, String rowId, int conflictType) {
+
+    String whereClause = String.format("%s = ? AND %s IS NULL",
+        DataTableColumns.ID, DataTableColumns.CONFLICT_TYPE);
+    String[] whereArgs = { rowId };
+
+    ContentValues cv = new ContentValues();
+    cv.put(DataTableColumns.SYNC_STATE, SyncState.in_conflict.name());
+    cv.put(DataTableColumns.CONFLICT_TYPE, conflictType);
+    
+    boolean dbWithinTransaction = db.inTransaction();
+    try {
+      if ( !dbWithinTransaction ) {
+        db.beginTransaction();
+      }
+
+      db.update(tableId, cv, whereClause, whereArgs);
+      
+      if ( !dbWithinTransaction ) {
+        db.setTransactionSuccessful();
+      }
+    } finally {
+      if ( !dbWithinTransaction ) {
+        db.endTransaction();
+      }
+    }
+  }
+
+  /**
    * Changes the conflictType for the given row from the specified one to null
    * 
    * @param db
@@ -1293,7 +1329,7 @@ public class ODKDatabaseUtils {
    * @param rowId
    * @param conflictType
    */
-  public void restoreFromConflictRow(SQLiteDatabase db, String tableId, String rowId, int conflictType) {
+  public void restoreRowFromConflict(SQLiteDatabase db, String tableId, String rowId, SyncState syncState, int conflictType) {
 
     String whereClause = String.format("%s = ? AND %s = ?",
         DataTableColumns.ID, DataTableColumns.CONFLICT_TYPE);
@@ -1301,6 +1337,7 @@ public class ODKDatabaseUtils {
 
     ContentValues cv = new ContentValues();
     cv.putNull(DataTableColumns.CONFLICT_TYPE);
+    cv.put(DataTableColumns.SYNC_STATE, syncState.name());
     boolean dbWithinTransaction = db.inTransaction();
     try {
       if ( !dbWithinTransaction ) {
