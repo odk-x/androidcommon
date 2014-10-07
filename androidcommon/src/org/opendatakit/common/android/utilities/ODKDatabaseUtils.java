@@ -1460,7 +1460,8 @@ public class ODKDatabaseUtils {
       String tableId, ArrayList<ColumnDefinition> orderedColumns, ContentValues cvValues, boolean shouldUpdate) {
     String rowId = null;
     String whereClause = null;
-    String [] whereArgs = new String[1];
+    boolean specifiesConflictType = cvValues.containsKey(DataTableColumns.CONFLICT_TYPE);
+    String [] whereArgs = new String[specifiesConflictType ? 2 : 1];
     boolean update = false;
 
     if (cvValues.size() <= 0) {
@@ -1470,15 +1471,37 @@ public class ODKDatabaseUtils {
     ContentValues cvDataTableVal = new ContentValues();
     cvDataTableVal.putAll(cvValues);
     
-    // Bug fix for not updating a db row if an existing row id is used
     if (cvDataTableVal.containsKey(DataTableColumns.ID)) {
-      // Select everything out of the table with given id
+      // The user specified a row id; we need to determine whether to 
+      // insert or update the record, or to reject the action because 
+      // there are either checkpoint records for this row id, or, if 
+      // a server conflict is associated with this row, that the 
+      // _conflict_type to update was not specified. 
+      // 
+      // i.e., the tuple (_id, _conflict_type) should be unique. If 
+      // we find that there are more than 0 or 1 records matching this
+      // tuple, then we should reject the update request.
+      //
+      // TODO: perhaps we want to allow updates to the local conflict
+      // row if there are no checkpoints on it? I.e., change the 
+      // tri-state conflict type to a pair of states (local / remote).
+      // and all local changes are flagged local. Remote only exists
+      // if the server is in conflict.
+      
       rowId = cvDataTableVal.getAsString(DataTableColumns.ID);
       if ( rowId == null ) {
         throw new IllegalArgumentException(DataTableColumns.ID + ", if specified, cannot be null");
       }
-      whereClause = DataTableColumns.ID + " = ?"; 
-      whereArgs[0] = rowId;
+      
+      if ( specifiesConflictType ) {
+        whereClause = DataTableColumns.ID + " = ?" + " AND " + DataTableColumns.CONFLICT_TYPE + " = ?"; 
+        whereArgs[0] = rowId;
+        whereArgs[1] = cvValues.getAsString(DataTableColumns.CONFLICT_TYPE);
+      } else {
+        whereClause = DataTableColumns.ID + " = ?"; 
+        whereArgs[0] = rowId;
+      }
+      
       String sel = "SELECT * FROM " + tableId + " WHERE "+ whereClause;
       String[] selArgs = whereArgs;
       Cursor cursor = rawQuery(db, sel, selArgs);
