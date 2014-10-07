@@ -1286,6 +1286,40 @@ public class ODKDatabaseUtils {
   }
 
   /**
+   * Changes the conflictType for the given row from the specified one to null
+   * 
+   * @param db
+   * @param tableId
+   * @param rowId
+   * @param conflictType
+   */
+  public void restoreFromConflictRow(SQLiteDatabase db, String tableId, String rowId, int conflictType) {
+
+    String whereClause = String.format("%s = ? AND %s = ?",
+        DataTableColumns.ID, DataTableColumns.CONFLICT_TYPE);
+    String[] whereArgs = { rowId, String.valueOf(conflictType) };
+
+    ContentValues cv = new ContentValues();
+    cv.putNull(DataTableColumns.CONFLICT_TYPE);
+    boolean dbWithinTransaction = db.inTransaction();
+    try {
+      if ( !dbWithinTransaction ) {
+        db.beginTransaction();
+      }
+
+      db.update(tableId, cv, whereClause, whereArgs);
+      
+      if ( !dbWithinTransaction ) {
+        db.setTransactionSuccessful();
+      }
+    } finally {
+      if ( !dbWithinTransaction ) {
+        db.endTransaction();
+      }
+    }
+  }
+  
+  /**
    * @param rowId
    * @return the sync state of the row (see {@link SyncState}), or null if
    *         the row does not exist.
@@ -1461,7 +1495,8 @@ public class ODKDatabaseUtils {
     String rowId = null;
     String whereClause = null;
     boolean specifiesConflictType = cvValues.containsKey(DataTableColumns.CONFLICT_TYPE);
-    String [] whereArgs = new String[specifiesConflictType ? 2 : 1];
+    boolean nullConflictType = specifiesConflictType && (cvValues.get(DataTableColumns.CONFLICT_TYPE) == null);
+    String [] whereArgs = new String[specifiesConflictType ? (1 + (nullConflictType ? 0 : 1)) : 1];
     boolean update = false;
 
     if (cvValues.size() <= 0) {
@@ -1494,9 +1529,14 @@ public class ODKDatabaseUtils {
       }
       
       if ( specifiesConflictType ) {
-        whereClause = DataTableColumns.ID + " = ?" + " AND " + DataTableColumns.CONFLICT_TYPE + " = ?"; 
-        whereArgs[0] = rowId;
-        whereArgs[1] = cvValues.getAsString(DataTableColumns.CONFLICT_TYPE);
+        if ( nullConflictType ) {
+          whereClause = DataTableColumns.ID + " = ?" + " AND " + DataTableColumns.CONFLICT_TYPE + " IS NULL"; 
+          whereArgs[0] = rowId;
+        } else {
+          whereClause = DataTableColumns.ID + " = ?" + " AND " + DataTableColumns.CONFLICT_TYPE + " = ?"; 
+          whereArgs[0] = rowId;
+          whereArgs[1] = cvValues.getAsString(DataTableColumns.CONFLICT_TYPE);
+        }
       } else {
         whereClause = DataTableColumns.ID + " = ?"; 
         whereArgs[0] = rowId;
