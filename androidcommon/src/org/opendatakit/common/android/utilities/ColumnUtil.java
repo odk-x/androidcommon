@@ -96,24 +96,29 @@ public class ColumnUtil {
     return jsonDisplayName;
   }
 
-  public ArrayList<? extends Map<String,Object>> getDisplayChoicesList(SQLiteDatabase db, String tableId, String elementKey) {
+  public ArrayList<Map<String,Object>> getDisplayChoicesList(SQLiteDatabase db, String tableId, String elementKey) {
     
     KeyValueStoreHelper kvsh = new KeyValueStoreHelper(db, tableId, KeyValueStoreConstants.PARTITION_COLUMN);
     AspectHelper ah = kvsh.getAspectHelper(elementKey);
     
 
+    @SuppressWarnings("rawtypes")
     ArrayList<Map> untypedJsonDisplayChoices = ah.getArray(KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST, Map.class);
     
     if(untypedJsonDisplayChoices == null) {
       return new ArrayList<Map<String,Object>>();
     }
     
-    ArrayList<? extends Map<String,Object>> jsonDisplayChoices =  (ArrayList<? extends Map<String,Object>>) untypedJsonDisplayChoices;
-    
+    ArrayList<Map<String,Object>> jsonDisplayChoices = new ArrayList<Map<String,Object>>();
+    for ( @SuppressWarnings("rawtypes") Map m : untypedJsonDisplayChoices) {
+      @SuppressWarnings("unchecked")
+      Map<String,Object> tm = (Map<String,Object>) m;
+      jsonDisplayChoices.add(tm);
+    }
     return jsonDisplayChoices;
   }
 
-  public void setDisplayChoicesList( SQLiteDatabase db, String tableId, ColumnDefinition cd, ArrayList<? extends Map<String,Object>> choices) {
+  public void setDisplayChoicesList( SQLiteDatabase db, String tableId, ColumnDefinition cd, ArrayList<Map<String,Object>> choices) {
     KeyValueStoreEntry e = new KeyValueStoreEntry();
     e.tableId = tableId;
     e.partition = KeyValueStoreConstants.PARTITION_COLUMN;
