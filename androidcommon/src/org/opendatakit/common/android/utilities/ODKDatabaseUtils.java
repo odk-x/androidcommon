@@ -1528,7 +1528,8 @@ public class ODKDatabaseUtils {
    * TODO: This is broken w.r.t. updates of partial fields
    */
   private void upsertDataAndMetadataIntoExistingDBTable(SQLiteDatabase db,
-      String tableId, ArrayList<ColumnDefinition> orderedColumns, ContentValues cvValues, boolean shouldUpdate) {
+      String tableId, ArrayList<ColumnDefinition> orderedColumns, ContentValues cvValues,
+      boolean shouldUpdate) {
     String rowId = null;
     String whereClause = null;
     boolean specifiesConflictType = cvValues.containsKey(DataTableColumns.CONFLICT_TYPE);
@@ -1610,7 +1611,6 @@ public class ODKDatabaseUtils {
     }
 
     if ( update ) {
-  
       if (!cvDataTableVal.containsKey(DataTableColumns.SYNC_STATE) ||
           (cvDataTableVal.get(DataTableColumns.SYNC_STATE) == null)) {
         cvDataTableVal.put(DataTableColumns.SYNC_STATE, SyncState.changed.name());
@@ -1636,11 +1636,7 @@ public class ODKDatabaseUtils {
           (cvDataTableVal.get(DataTableColumns.SAVEPOINT_CREATOR) == null)) {
         cvDataTableVal.put(DataTableColumns.SAVEPOINT_CREATOR, DataTableColumns.DEFAULT_SAVEPOINT_CREATOR );
       }
-      
     } else {
-      if (!cvDataTableVal.containsKey(DataTableColumns.ID)) {
-        cvDataTableVal.put(DataTableColumns.ID, rowId);
-      }
 
       if (!cvDataTableVal.containsKey(DataTableColumns.ROW_ETAG) ||
           cvDataTableVal.get(DataTableColumns.ROW_ETAG) == null) {
@@ -1705,6 +1701,56 @@ public class ODKDatabaseUtils {
       } else {
         db.insertOrThrow(tableId, null, cvDataTableVal);
       }
+      
+      if ( !dbWithinTransaction ) {
+        db.setTransactionSuccessful();
+      }
+    } finally {
+      if ( !dbWithinTransaction ) {
+        db.endTransaction();
+      }
+    }
+
+  }
+
+  /**
+   * Update the ETag and SyncState of a given rowId. 
+   * There should be exactly one record for this rowId in thed database
+   * (i.e., no conflicts or checkpoints).
+   * 
+   * @param db
+   * @param tableId
+   * @param rowId
+   * @param rowETag
+   * @param state
+   */
+  public void updateRowETagAndSyncState(SQLiteDatabase db,
+      String tableId, String rowId, String rowETag, SyncState state) {
+
+    String whereClause = DataTableColumns.ID + " = ?";
+    String [] whereArgs = { rowId };
+
+    ContentValues cvDataTableVal = new ContentValues();
+    
+    String sel = "SELECT * FROM " + tableId + " WHERE "+ whereClause;
+    String[] selArgs = whereArgs;
+    Cursor cursor = rawQuery(db, sel, selArgs);
+    
+    // There must be only one row in the db
+    if (cursor.getCount() != 1) {
+      throw new IllegalArgumentException(t + ": row id " + rowId + " does not have exactly 1 row in table " + tableId);
+    }
+
+    cvDataTableVal.put(DataTableColumns.ROW_ETAG, rowETag);
+    cvDataTableVal.put(DataTableColumns.SYNC_STATE, state.name());
+    
+    boolean dbWithinTransaction = db.inTransaction();
+    try {
+      if ( !dbWithinTransaction ) {
+        db.beginTransaction();
+      }
+  
+      db.update(tableId, cvDataTableVal, whereClause, whereArgs);
       
       if ( !dbWithinTransaction ) {
         db.setTransactionSuccessful();
