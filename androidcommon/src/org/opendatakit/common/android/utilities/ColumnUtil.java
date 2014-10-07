@@ -100,13 +100,17 @@ public class ColumnUtil {
     
     KeyValueStoreHelper kvsh = new KeyValueStoreHelper(db, tableId, KeyValueStoreConstants.PARTITION_COLUMN);
     AspectHelper ah = kvsh.getAspectHelper(elementKey);
-    @SuppressWarnings("unchecked")
-    ArrayList<? extends Map<String,Object>> jsonDisplayChoices = (ArrayList<? extends Map<String, Object>>) 
-        ah.getArray(KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST, Map.class);
-    if ( jsonDisplayChoices != null ) {
-      return jsonDisplayChoices;
+    
+
+    ArrayList<Map> untypedJsonDisplayChoices = ah.getArray(KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST, Map.class);
+    
+    if(untypedJsonDisplayChoices == null) {
+      return new ArrayList<Map<String,Object>>();
     }
-    return new ArrayList<Map<String,Object>>();
+    
+    ArrayList<? extends Map<String,Object>> jsonDisplayChoices =  (ArrayList<? extends Map<String,Object>>) untypedJsonDisplayChoices;
+    
+    return jsonDisplayChoices;
   }
 
   public void setDisplayChoicesList( SQLiteDatabase db, String tableId, ColumnDefinition cd, ArrayList<? extends Map<String,Object>> choices) {

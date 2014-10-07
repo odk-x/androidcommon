@@ -22,8 +22,8 @@ import java.util.List;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.common.android.data.ElementDataType;
 import org.opendatakit.common.android.data.KeyValueStoreEntry;
-import org.opendatakit.common.android.database.DatabaseFactory;
 import org.opendatakit.common.android.database.DatabaseConstants;
+import org.opendatakit.common.android.database.DatabaseFactory;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
@@ -32,6 +32,7 @@ import android.util.Log;
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.type.CollectionType;
 
 /**
  * A helper class to access values in the key value store. The partition must
@@ -139,6 +140,8 @@ public class KeyValueStoreHelper implements KeyValueHelper {
   }
 
   private <T> ArrayList<T> getArray(String aspect, String key, Class<T> clazz) {
+    CollectionType javaType =
+        ODKFileUtils.mapper.getTypeFactory().constructCollectionType(ArrayList.class, clazz);
     KeyValueStoreEntry entry = getEntry(aspect, key);
     if (entry == null) {
       return null;
@@ -151,7 +154,7 @@ public class KeyValueStoreHelper implements KeyValueHelper {
     ArrayList<T> result = null;
     try {
       if ( entry.value != null && entry.value.length() != 0 ) {
-        result = ODKFileUtils.mapper.readValue(entry.value, ArrayList.class);
+        result = ODKFileUtils.mapper.readValue(entry.value, javaType);
       }
     } catch (JsonParseException e) {
       Log.e(TAG, "problem parsing json list entry from the kvs");
