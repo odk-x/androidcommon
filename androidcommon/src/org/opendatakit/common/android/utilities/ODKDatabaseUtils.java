@@ -977,16 +977,23 @@ public class ODKDatabaseUtils {
    */
   public ArrayList<ColumnDefinition> createOrOpenDBTableWithColumns(SQLiteDatabase db, String tableId,
       List<Column> columns) {
+    boolean dbWithinTransaction = db.inTransaction();
     boolean success = false;
     ArrayList<ColumnDefinition> orderedDefs = ColumnDefinition.buildColumnDefinitions(tableId, columns);
     try {
-      db.beginTransaction();
+      if ( !dbWithinTransaction ) {
+        db.beginTransaction();
+      }
       createDBTableWithColumns(db, tableId, orderedDefs);
-      db.setTransactionSuccessful();
+      if ( !dbWithinTransaction ) {
+        db.setTransactionSuccessful();
+      }
       success = true;
       return orderedDefs;
     } finally {
-      db.endTransaction();
+      if ( !dbWithinTransaction ) {
+        db.endTransaction();
+      }
       if (success == false) {
 
         // Get the names of the columns
