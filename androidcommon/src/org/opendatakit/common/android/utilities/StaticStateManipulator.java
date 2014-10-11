@@ -104,7 +104,8 @@ public class StaticStateManipulator {
    *     <li>50 -- ODKDatabaseUtils</li>
    *     <li>50 -- RowPathColumnUtil</li>
    *     <li>50 -- TableUtil</li>
-   *     <li>75 -- WebUtils</li>
+   *     <li>50 -- WebUtils</li>
+   *     <li>75 -- ClientConnectionManagerFactory</li>
    *     <li>99 -- WebLogger (live OutputStreamWriter objects)</li>
    *     </ul>
    * @param fm a manipulator that can perform the reset.
