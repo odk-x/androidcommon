@@ -31,7 +31,6 @@ import android.provider.MediaStore;
 import android.provider.MediaStore.Audio;
 import android.provider.MediaStore.Images;
 import android.provider.MediaStore.Video;
-import android.util.Log;
 
 /**
  * Consolidate all interactions with media providers here.
@@ -79,7 +78,7 @@ public class MediaUtils {
     }
   }
 
-  public static final int deleteImageFileFromMediaProvider(Context ctxt, String imageFile) {
+  public static final int deleteImageFileFromMediaProvider(Context ctxt, String appName, String imageFile) {
     if (imageFile == null)
       return 0;
 
@@ -105,12 +104,12 @@ public class MediaUtils {
         } while (imageCursor.moveToNext());
 
         for (Uri uri : imagesToDelete) {
-          Log.i(t, "attempting to delete: " + uri);
+          WebLogger.getLogger(appName).i(t, "attempting to delete: " + uri);
           count += cr.delete(uri, null, null);
         }
       }
     } catch (Exception e) {
-      Log.e(t, e.toString());
+      WebLogger.getLogger(appName).e(t, e.toString());
     } finally {
       if (imageCursor != null) {
         imageCursor.close();
@@ -123,7 +122,7 @@ public class MediaUtils {
     return count;
   }
 
-  public static final int deleteImagesInFolderFromMediaProvider(Context ctxt, File folder) {
+  public static final int deleteImagesInFolderFromMediaProvider(Context ctxt, String appName, File folder) {
     if (folder == null)
       return 0;
 
@@ -149,12 +148,12 @@ public class MediaUtils {
         } while (imageCursor.moveToNext());
 
         for (Uri uri : imagesToDelete) {
-          Log.i(t, "attempting to delete: " + uri);
+          WebLogger.getLogger(appName).i(t, "attempting to delete: " + uri);
           count += cr.delete(uri, null, null);
         }
       }
     } catch (Exception e) {
-      Log.e(t, e.toString());
+      WebLogger.getLogger(appName).e(t, e.toString());
     } finally {
       if (imageCursor != null) {
         imageCursor.close();
@@ -187,7 +186,7 @@ public class MediaUtils {
     }
   }
 
-  public static final int deleteAudioFileFromMediaProvider(Context ctxt, String audioFile) {
+  public static final int deleteAudioFileFromMediaProvider(Context ctxt, String appName, String audioFile) {
     if (audioFile == null)
       return 0;
 
@@ -213,12 +212,12 @@ public class MediaUtils {
         } while (audioCursor.moveToNext());
 
         for (Uri uri : audioToDelete) {
-          Log.i(t, "attempting to delete: " + uri);
+          WebLogger.getLogger(appName).i(t, "attempting to delete: " + uri);
           count += cr.delete(uri, null, null);
         }
       }
     } catch (Exception e) {
-      Log.e(t, e.toString());
+      WebLogger.getLogger(appName).e(t, e.toString());
     } finally {
       if (audioCursor != null) {
         audioCursor.close();
@@ -231,7 +230,7 @@ public class MediaUtils {
     return count;
   }
 
-  public static final int deleteAudioInFolderFromMediaProvider(Context ctxt, File folder) {
+  public static final int deleteAudioInFolderFromMediaProvider(Context ctxt, String appName, File folder) {
     if (folder == null)
       return 0;
 
@@ -257,12 +256,12 @@ public class MediaUtils {
         } while (audioCursor.moveToNext());
 
         for (Uri uri : audioToDelete) {
-          Log.i(t, "attempting to delete: " + uri);
+          WebLogger.getLogger(appName).i(t, "attempting to delete: " + uri);
           count += cr.delete(uri, null, null);
         }
       }
     } catch (Exception e) {
-      Log.e(t, e.toString());
+      WebLogger.getLogger(appName).e(t, e.toString());
     } finally {
       if (audioCursor != null) {
         audioCursor.close();
@@ -295,7 +294,7 @@ public class MediaUtils {
     }
   }
 
-  public static final int deleteVideoFileFromMediaProvider(Context ctxt, String videoFile) {
+  public static final int deleteVideoFileFromMediaProvider(Context ctxt, String appName, String videoFile) {
     if (videoFile == null)
       return 0;
 
@@ -321,12 +320,12 @@ public class MediaUtils {
         } while (videoCursor.moveToNext());
 
         for (Uri uri : videoToDelete) {
-          Log.i(t, "attempting to delete: " + uri);
+          WebLogger.getLogger(appName).i(t, "attempting to delete: " + uri);
           count += cr.delete(uri, null, null);
         }
       }
     } catch (Exception e) {
-      Log.e(t, e.toString());
+      WebLogger.getLogger(appName).e(t, e.toString());
     } finally {
       if (videoCursor != null) {
         videoCursor.close();
@@ -339,7 +338,7 @@ public class MediaUtils {
     return count;
   }
 
-  public static final int deleteVideoInFolderFromMediaProvider(Context ctxt, File folder) {
+  public static final int deleteVideoInFolderFromMediaProvider(Context ctxt, String appName, File folder) {
     if (folder == null)
       return 0;
 
@@ -365,12 +364,12 @@ public class MediaUtils {
         } while (videoCursor.moveToNext());
 
         for (Uri uri : videoToDelete) {
-          Log.i(t, "attempting to delete: " + uri);
+          WebLogger.getLogger(appName).i(t, "attempting to delete: " + uri);
           count += cr.delete(uri, null, null);
         }
       }
     } catch (Exception e) {
-      Log.e(t, e.toString());
+      WebLogger.getLogger(appName).e(t, e.toString());
     } finally {
       if (videoCursor != null) {
         videoCursor.close();

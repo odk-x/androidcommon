@@ -842,7 +842,7 @@ public class ODKFileUtils {
     return relativePath;
   }
 
-  public static byte[] getFileAsBytes(File file) {
+  public static byte[] getFileAsBytes(String appName, File file) {
     byte[] bytes = null;
     InputStream is = null;
     try {
@@ -851,7 +851,7 @@ public class ODKFileUtils {
       // Get the size of the file
       long length = file.length();
       if (length > Integer.MAX_VALUE) {
-        Log.e(t, "File " + file.getName() + "is too large");
+        WebLogger.getLogger(appName).e(t, "File " + file.getName() + "is too large");
         return null;
       }
 
@@ -867,7 +867,7 @@ public class ODKFileUtils {
           offset += read;
         }
       } catch (IOException e) {
-        Log.e(t, "Cannot read " + file.getName());
+        WebLogger.getLogger(appName).e(t, "Cannot read " + file.getName());
         e.printStackTrace();
         return null;
       }
@@ -877,7 +877,7 @@ public class ODKFileUtils {
         try {
           throw new IOException("Could not completely read file " + file.getName());
         } catch (IOException e) {
-          e.printStackTrace();
+          WebLogger.getLogger(appName).printStackTrace(e);
           return null;
         }
       }
@@ -885,8 +885,8 @@ public class ODKFileUtils {
       return bytes;
 
     } catch (FileNotFoundException e) {
-      Log.e(t, "Cannot find " + file.getName());
-      e.printStackTrace();
+      WebLogger.getLogger(appName).e(t, "Cannot find " + file.getName());
+      WebLogger.getLogger(appName).printStackTrace(e);
       return null;
 
     } finally {
@@ -894,15 +894,15 @@ public class ODKFileUtils {
       try {
         is.close();
       } catch (IOException e) {
-        Log.e(t, "Cannot close input stream for " + file.getName());
-        e.printStackTrace();
+        WebLogger.getLogger(appName).e(t, "Cannot close input stream for " + file.getName());
+        WebLogger.getLogger(appName).printStackTrace(e);
         return null;
       }
     }
   }
 
-  public static String getMd5Hash(File file) {
-    return MD5_COLON_PREFIX + getNakedMd5Hash(file);
+  public static String getMd5Hash(String appName, File file) {
+    return MD5_COLON_PREFIX + getNakedMd5Hash(appName, file);
   }
 
   /**
@@ -924,7 +924,7 @@ public class ODKFileUtils {
     return lastModifiedDate;
   }
 
-  public static String getNakedMd5Hash(File file) {
+  public static String getNakedMd5Hash(String appName, File file) {
     try {
       // CTS (6/15/2010) : stream file through digest instead of handing
       // it the byte[]
@@ -937,7 +937,7 @@ public class ODKFileUtils {
       long lLength = file.length();
 
       if (lLength > Integer.MAX_VALUE) {
-        Log.e(t, "File " + file.getName() + "is too large");
+        WebLogger.getLogger(appName).e(t, "File " + file.getName() + "is too large");
         return null;
       }
 
@@ -967,20 +967,20 @@ public class ODKFileUtils {
       return md5;
 
     } catch (NoSuchAlgorithmException e) {
-      Log.e("MD5", e.getMessage());
+      WebLogger.getLogger(appName).e("MD5", e.getMessage());
       return null;
 
     } catch (FileNotFoundException e) {
-      Log.e("No Cache File", e.getMessage());
+      WebLogger.getLogger(appName).e("No Cache File", e.getMessage());
       return null;
     } catch (IOException e) {
-      Log.e("Problem reading from file", e.getMessage());
+      WebLogger.getLogger(appName).e("Problem reading from file", e.getMessage());
       return null;
     }
 
   }
 
-  public static String getNakedMd5Hash(String contents) {
+  public static String getNakedMd5Hash(String appName, String contents) {
     try {
       // CTS (6/15/2010) : stream file through digest instead of handing
       // it the byte[]
@@ -993,7 +993,7 @@ public class ODKFileUtils {
       long lLength = contents.length();
 
       if (lLength > Integer.MAX_VALUE) {
-        Log.e(t, "Contents is too large");
+        WebLogger.getLogger(appName).e(t, "Contents is too large");
         return null;
       }
 
@@ -1023,20 +1023,20 @@ public class ODKFileUtils {
       return md5;
 
     } catch (NoSuchAlgorithmException e) {
-      Log.e("MD5", e.getMessage());
+      WebLogger.getLogger(appName).e("MD5", e.getMessage());
       return null;
 
     } catch (FileNotFoundException e) {
-      Log.e("No Cache File", e.getMessage());
+      WebLogger.getLogger(appName).e("No Cache File", e.getMessage());
       return null;
     } catch (IOException e) {
-      Log.e("Problem reading from file", e.getMessage());
+      WebLogger.getLogger(appName).e("Problem reading from file", e.getMessage());
       return null;
     }
 
   }
 
-  public static Bitmap getBitmapScaledToDisplay(File f, int screenHeight, int screenWidth) {
+  public static Bitmap getBitmapScaledToDisplay(String appName, File f, int screenHeight, int screenWidth) {
     // Determine image size of f
     BitmapFactory.Options o = new BitmapFactory.Options();
     o.inJustDecodeBounds = true;
@@ -1054,7 +1054,7 @@ public class ODKFileUtils {
     options.inSampleSize = scale;
     Bitmap b = BitmapFactory.decodeFile(f.getAbsolutePath(), options);
     if (b != null) {
-      Log.i(t,
+      WebLogger.getLogger(appName).i(t,
           "Screen is " + screenHeight + "x" + screenWidth + ".  Image has been scaled down by "
               + scale + " to " + b.getHeight() + "x" + b.getWidth());
     }

@@ -65,7 +65,7 @@ public abstract class FormsProviderImpl extends ContentProvider {
         return false;
       }
     } catch (Exception e) {
-      Log.e(t, "External storage not available -- purging dbHelpers");
+      Log.e(t, "External storage not available");
       return false;
     }
 
@@ -241,13 +241,13 @@ public abstract class FormsProviderImpl extends ContentProvider {
 
     String md5;
     if (xformsFile.exists()) {
-      md5 = ODKFileUtils.getMd5Hash(xformsFile);
+      md5 = ODKFileUtils.getMd5Hash(appName, xformsFile);
     } else {
       md5 = "-none-";
     }
     values.put(FormsColumns.MD5_HASH, md5);
 
-    md5 = ODKFileUtils.getMd5Hash(formDefFile);
+    md5 = ODKFileUtils.getMd5Hash(appName, formDefFile);
     values.put(FormsColumns.JSON_MD5_HASH, md5);
   }
 

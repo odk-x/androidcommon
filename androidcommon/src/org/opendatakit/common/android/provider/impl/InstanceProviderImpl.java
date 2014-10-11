@@ -44,13 +44,14 @@ import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
+import android.util.Log;
 
 /**
  * TODO: convert to true app-scoped instance provider
  */
 public abstract class InstanceProviderImpl extends ContentProvider {
 
-  // private static final String t = "InstancesProviderImpl";
+  private static final String t = "InstancesProviderImpl";
 
   private static final String DATA_TABLE_ID_COLUMN = DataTableColumns.ID;
   private static final String DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN = DataTableColumns.SAVEPOINT_TIMESTAMP;
@@ -72,6 +73,20 @@ public abstract class InstanceProviderImpl extends ContentProvider {
 
   @Override
   public boolean onCreate() {
+
+    try {
+      ODKFileUtils.verifyExternalStorageAvailability();
+      File f = new File(ODKFileUtils.getOdkFolder());
+      if (!f.exists()) {
+        f.mkdir();
+      } else if (!f.isDirectory()) {
+        Log.e(t, f.getAbsolutePath() + " is not a directory!");
+        return false;
+      }
+    } catch (Exception e) {
+      Log.e(t, "External storage not available");
+      return false;
+    }
 
     return true;
   }
@@ -167,7 +182,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       // Can't get away with dataTable.* because of collision with _ID column
       // get map of (elementKey -> ColumnDefinition)
       try {
-        orderedDefns = TableUtil.get().getColumnDefinitions(db, tableId);
+        orderedDefns = TableUtil.get().getColumnDefinitions(db, appName, tableId);
       } catch (IllegalArgumentException e) {
         e.printStackTrace();
         throw new SQLException("Unable to retrieve column definitions for tableId " + tableId);

@@ -24,16 +24,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
 
-import org.opendatakit.common.android.data.ElementDataType;
-import org.opendatakit.common.android.data.ElementType;
 import org.opendatakit.common.android.provider.DataTableColumns;
+import org.opendatakit.common.android.utilities.DataUtil;
 import org.opendatakit.common.android.utilities.ODKDatabaseUtils;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
-import org.opendatakit.common.android.utilities.DataUtil;
+import org.opendatakit.common.android.utilities.WebLogger;
 
 import android.content.Context;
 import android.database.Cursor;
-import android.util.Log;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -322,9 +320,9 @@ public class UserTable {
      */
     public String getRawDataOrMetadataByElementKey(String elementKey) {
       String result;
-      Integer cell = UserTable.this.mElementKeyToIndex.get(elementKey);
+      Integer cell = mElementKeyToIndex.get(elementKey);
       if ( cell == null ) {
-        Log.e(TAG, "elementKey [" + elementKey + "] was not found in table");
+        WebLogger.getLogger(mAppName).e(TAG, "elementKey [" + elementKey + "] was not found in table");
         return null;
       }
       result = this.mRowData[cell];

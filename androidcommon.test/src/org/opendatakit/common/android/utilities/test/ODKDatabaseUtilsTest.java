@@ -34,6 +34,8 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
 
   private static final String TAG = "ODKDatabaseUtilsTest";
 
+  private static final String APP_NAME = "androidCommonTest";
+  
   private static final String TEST_FILE_PREFIX = "test_";
 
   private static final String DATABASE_NAME = "test.db";
@@ -163,7 +165,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column("col1", "col1", "string", "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     // Check that the user defined rows are in the table
     Cursor cursor = ODKDatabaseUtils.get().query(db, false, tableId, null, null, null, null, null,
@@ -236,7 +238,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column("col1", "col1", "string", "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     // Check that the user defined rows are in the table
     Cursor cursor = ODKDatabaseUtils.get().rawQuery(db, query, null);
@@ -292,7 +294,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     List<Column> coldefs = ODKDatabaseUtils.get().getUserDefinedColumns(db, tableId);
     assertEquals(coldefs.size(), 1);
@@ -322,9 +324,9 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
     ArrayList<ColumnDefinition> orderedColumns2 = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     List<Column> coldefs = ODKDatabaseUtils.get().getUserDefinedColumns(db, tableId);
     assertEquals(coldefs.size(), 1);
@@ -353,7 +355,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     ArrayList<ColumnDefinition> orderedColumns = null;
 
     try {
-      orderedColumns = ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, tableId, null);
+      orderedColumns = ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, APP_NAME, tableId, null);
     } catch (Exception e) {
       thrown = true;
       e.printStackTrace();
@@ -375,7 +377,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     List<Column> coldefs = ODKDatabaseUtils.get().getUserDefinedColumns(db, tableId);
     assertEquals(coldefs.size(), 1);
@@ -411,7 +413,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     ArrayList<ColumnDefinition> orderedColumns;
 
     try {
-      orderedColumns = ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, tableId, columns);
+      orderedColumns = ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
       success = true;
     } catch (IllegalArgumentException e) {
       // no-op
@@ -437,7 +439,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     ArrayList<ColumnDefinition> orderedColumns;
 
     try {
-      orderedColumns = ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, tableId, columns);
+      orderedColumns = ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
       success = true;
     } catch (IllegalArgumentException e) {
       // no-op
@@ -462,7 +464,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     columns.add(new Column(testCol, testCol, testColType, "[\"" + testColItems + "\"]"));
     columns.add(new Column(testColItems, itemsStr, ElementDataType.string.name(), "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     List<Column> coldefs = ODKDatabaseUtils.get().getUserDefinedColumns(db, tableId);
     assertEquals(coldefs.size(), 2);
@@ -528,7 +530,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     List<Column> coldefs = ODKDatabaseUtils.get().getUserDefinedColumns(db, tableId);
     assertEquals(coldefs.size(), 1);
@@ -558,7 +560,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     List<Column> coldefs = ODKDatabaseUtils.get().getUserDefinedColumns(db, tableId);
     assertEquals(coldefs.size(), 1);
@@ -588,7 +590,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     List<Column> coldefs = ODKDatabaseUtils.get().getUserDefinedColumns(db, tableId);
     assertEquals(coldefs.size(), 1);
@@ -618,7 +620,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     List<Column> coldefs = ODKDatabaseUtils.get().getUserDefinedColumns(db, tableId);
     assertEquals(coldefs.size(), 1);
@@ -648,7 +650,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     List<Column> coldefs = ODKDatabaseUtils.get().getUserDefinedColumns(db, tableId);
     assertEquals(coldefs.size(), 1);
@@ -695,7 +697,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     ArrayList<ColumnDefinition> orderedColumns;
 
     try {
-      orderedColumns = ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, tableId, columns);
+      orderedColumns = ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
       success = true;
     } catch (IllegalArgumentException e) {
       // expected
@@ -734,7 +736,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     ArrayList<ColumnDefinition> orderedColumns;
 
     try {
-      orderedColumns = ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, tableId, columns);
+      orderedColumns = ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
       success = true;
     } catch (IllegalArgumentException e) {
       // expected
@@ -773,7 +775,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     ArrayList<ColumnDefinition> orderedColumns;
 
     try {
-      orderedColumns = ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, tableId, columns);
+      orderedColumns = ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
       success = true;
     } catch (IllegalArgumentException e) {
       // expected
@@ -816,7 +818,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     ArrayList<ColumnDefinition> orderedColumns;
 
     try {
-      orderedColumns = ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, tableId, columns);
+      orderedColumns = ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
       success = true;
     } catch (IllegalArgumentException e) {
       // expected
@@ -851,7 +853,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     ArrayList<ColumnDefinition> orderedColumns;
 
     try {
-      orderedColumns = ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, tableId, columns);
+      orderedColumns = ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
       success = true;
     } catch (IllegalArgumentException e) {
       // expected
@@ -890,7 +892,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     ArrayList<ColumnDefinition> orderedColumns;
 
     try {
-      orderedColumns = ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, tableId, columns);
+      orderedColumns = ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
       success = true;
     } catch (IllegalArgumentException e) {
       // expected
@@ -926,7 +928,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     columns.add(new Column(testColAlt, alt, testColResType, "[]"));
     columns.add(new Column(testColAcc, acc, testColResType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     List<Column> coldefs = ODKDatabaseUtils.get().getUserDefinedColumns(db, tableId);
     assertEquals(coldefs.size(), 5);
@@ -980,7 +982,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     columns.add(new Column(testColUriFrag, "uriFragment", ElementDataType.rowpath.name(), "[]"));
     columns.add(new Column(testColContType, "contentType", ElementDataType.string.name(), "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     List<Column> coldefs = ODKDatabaseUtils.get().getUserDefinedColumns(db, tableId);
     assertEquals(coldefs.size(), 3);
@@ -1065,7 +1067,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     String tableId = testTable;
     List<Column> columns = new ArrayList<Column>();
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     String[] colNames = ODKDatabaseUtils.get().getAllColumnNames(db, tableId);
     boolean colLength = (colNames.length > 0);
@@ -1108,7 +1110,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column("testCol", "testCol", "string", "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     List<Column> defns = ODKDatabaseUtils.get().getUserDefinedColumns(db, tableId);
 
@@ -1150,7 +1152,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     try {
       ODKDatabaseUtils.get().insertDataIntoExistingDBTableWithId(db, tableId, orderedColumns, null,
@@ -1176,7 +1178,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
     int testVal = 5;
 
     ContentValues cvValues = new ContentValues();
@@ -1214,7 +1216,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
     int testVal = 5;
 
     ContentValues cvValues = new ContentValues();
@@ -1255,7 +1257,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     int testVal = 5;
     boolean thrown = false;
@@ -1330,7 +1332,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     int testVal = 5;
 
@@ -1372,7 +1374,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     int testVal = 5;
     boolean thrown = false;
@@ -1439,7 +1441,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     int testVal = 5;
     boolean thrown = false;
@@ -1473,7 +1475,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column("col1", "col1", testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     String uuid = UUID.randomUUID().toString();
     String timeStamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
@@ -1524,7 +1526,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column("col1", "col1", testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     String timeStamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
 
@@ -1568,7 +1570,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column("col1", "col1", testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     String uuid = UUID.randomUUID().toString();
     String timeStamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
@@ -1613,7 +1615,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column("col1", "col1", testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     String uuid = UUID.randomUUID().toString();
 
@@ -1659,7 +1661,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     columns.add(new Column(testCol, testCol, testColType, "[\"" + testCol + "_items\"]"));
     columns.add(new Column(testCol + "_items", "items", ElementDataType.string.name(), "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     ContentValues cvValues = new ContentValues();
     cvValues.put(testCol, testVal);
@@ -1695,7 +1697,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     int testVal = 1;
 
@@ -1733,7 +1735,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     String testVal = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
 
@@ -1771,7 +1773,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     String testVal = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
 
@@ -1822,7 +1824,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     columns.add(new Column(testColAlt, "altitude", ElementDataType.number.name(), "[]"));
     columns.add(new Column(testColAcc, "accuracy", ElementDataType.number.name(), "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     ContentValues cvValues = new ContentValues();
     cvValues.put(testColLat, pos_lat);
@@ -1883,7 +1885,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     int testVal = 5;
 
@@ -1928,7 +1930,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
         .add(new Column(testColUriFragment, "uriFragment", ElementDataType.rowpath.name(), "[]"));
     columns.add(new Column(testColContentType, "contentType", ElementDataType.string.name(), "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     String uuid = UUID.randomUUID().toString();
 
@@ -1978,7 +1980,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     double testVal = 5.5;
 
@@ -2016,7 +2018,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     String testVal = "test";
 
@@ -2054,7 +2056,7 @@ public class ODKDatabaseUtilsTest extends AndroidTestCase {
     List<Column> columns = new ArrayList<Column>();
     columns.add(new Column(testCol, testCol, testColType, "[]"));
     ArrayList<ColumnDefinition> orderedColumns = ODKDatabaseUtils.get()
-        .createOrOpenDBTableWithColumns(db, tableId, columns);
+        .createOrOpenDBTableWithColumns(db, APP_NAME, tableId, columns);
 
     String interMed = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
     int pos = interMed.indexOf('T');

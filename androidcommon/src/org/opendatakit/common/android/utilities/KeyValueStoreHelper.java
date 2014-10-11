@@ -27,7 +27,6 @@ import org.opendatakit.common.android.database.DatabaseFactory;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
-import android.util.Log;
 
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonParseException;
@@ -157,14 +156,14 @@ public class KeyValueStoreHelper implements KeyValueHelper {
         result = ODKFileUtils.mapper.readValue(entry.value, javaType);
       }
     } catch (JsonParseException e) {
-      Log.e(TAG, "problem parsing json list entry from the kvs");
-      e.printStackTrace();
+      WebLogger.getLogger(appName).e(TAG, "problem parsing json list entry from the kvs");
+      WebLogger.getLogger(appName).printStackTrace(e);
     } catch (JsonMappingException e) {
-      Log.e(TAG, "problem mapping json list entry from the kvs");
-      e.printStackTrace();
+      WebLogger.getLogger(appName).e(TAG, "problem mapping json list entry from the kvs");
+      WebLogger.getLogger(appName).printStackTrace(e);
     } catch (IOException e) {
-      Log.e(TAG, "i/o problem with json for list entry from the kvs");
-      e.printStackTrace();
+      WebLogger.getLogger(appName).e(TAG, "i/o problem with json for list entry from the kvs");
+      WebLogger.getLogger(appName).printStackTrace(e);
     }
     return result;
   }
@@ -411,18 +410,18 @@ public class KeyValueStoreHelper implements KeyValueHelper {
         entryValue = ODKFileUtils.mapper.writeValueAsString(new ArrayList<T>());
       }
     } catch (JsonGenerationException e) {
-      Log.e(TAG, "problem parsing json list entry while writing to the kvs");
-      e.printStackTrace();
+      WebLogger.getLogger(appName).e(TAG, "problem parsing json list entry while writing to the kvs");
+      WebLogger.getLogger(appName).printStackTrace(e);
     } catch (JsonMappingException e) {
-      Log.e(TAG, "problem mapping json list entry while writing to the kvs");
-      e.printStackTrace();
+      WebLogger.getLogger(appName).e(TAG, "problem mapping json list entry while writing to the kvs");
+      WebLogger.getLogger(appName).printStackTrace(e);
     } catch (IOException e) {
-      Log.e(TAG, "i/o exception with json list entry while writing to the" +
+      WebLogger.getLogger(appName).e(TAG, "i/o exception with json list entry while writing to the" +
             " kvs");
-      e.printStackTrace();
+      WebLogger.getLogger(appName).printStackTrace(e);
     }
     if (entryValue == null) {
-      Log.e(TAG, "problem parsing list to json, not updating key");
+      WebLogger.getLogger(appName).e(TAG, "problem parsing list to json, not updating key");
       return;
     }
     SQLiteDatabase db = this.acquireDatabase();
@@ -483,7 +482,7 @@ public class KeyValueStoreHelper implements KeyValueHelper {
           ODKDatabaseUtils.get().getDBTableMetadata(db, this.getTableId(), this.getPartition(), aspect, key);
       // Do some sanity checking. There should only ever be one entry per key.
       if (entries.size() > 1) {
-        Log.e(TAG, "request for key: " + key + " in KVS " +
+        WebLogger.getLogger(appName).e(TAG, "request for key: " + key + " in KVS " +
             DatabaseConstants.KEY_VALUE_STORE_ACTIVE_TABLE_NAME +
             " for table: " + this.getTableId() + " returned " + entries.size() +
             "entries. It should return at most 1, as it is a key in a set.");

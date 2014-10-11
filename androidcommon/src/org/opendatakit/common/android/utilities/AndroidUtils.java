@@ -22,7 +22,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.os.Bundle;
-import android.util.Log;
 
 /**
  * Utilities for converting a Bundle to and from a JSON serialization for
@@ -42,7 +41,7 @@ public class AndroidUtils {
   private AndroidUtils() {
   };
 
-  public static JSONObject convertFromBundle(Bundle b) throws JSONException {
+  public static JSONObject convertFromBundle(String appName, Bundle b) throws JSONException {
     JSONObject jo = new JSONObject();
     Set<String> keys = b.keySet();
     for (String key : keys) {
@@ -108,16 +107,16 @@ public class AndroidUtils {
         } else if (t.equals(Bundle.class) || Bundle.class.isAssignableFrom(t)) {
           Bundle[] a = (Bundle[]) o;
           for (int i = 0; i < a.length; ++i) {
-            ja.put((a[i] == null) ? JSONObject.NULL : convertFromBundle(a[i]));
+            ja.put((a[i] == null) ? JSONObject.NULL : convertFromBundle(appName, a[i]));
           }
           jo.put(key, ja);
         } else if (t.equals(byte.class)) {
-       	  Log.w(tag, "byte array returned -- ignoring");
+       	  WebLogger.getLogger(appName).w(tag, "byte array returned -- ignoring");
         } else {
           throw new JSONException("unrecognized class");
         }
       } else if (o instanceof Bundle) {
-        jo.put(key, convertFromBundle((Bundle) o));
+        jo.put(key, convertFromBundle(appName, (Bundle) o));
       } else if (o instanceof String) {
         jo.put(key, b.getString(key));
       } else if (o instanceof Boolean) {

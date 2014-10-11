@@ -26,8 +26,7 @@ import java.util.TreeMap;
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.common.android.utilities.NameUtil;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
-
-import android.util.Log;
+import org.opendatakit.common.android.utilities.WebLogger;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -178,14 +177,15 @@ public class ColumnDefinition implements Comparable<ColumnDefinition> {
    * Construct the rich ColumnDefinition objects for a table from the underlying
    * information in the list of Column objects.
    * 
+   * @param appName
    * @param tableId
    * @param columns
    * @return
    */
   @SuppressWarnings("unchecked")
-  public static final ArrayList<ColumnDefinition> buildColumnDefinitions(String tableId, List<Column> columns) {
+  public static final ArrayList<ColumnDefinition> buildColumnDefinitions(String appName, String tableId, List<Column> columns) {
 
-    Log.d(TAG, "[buildColumnDefinitions] tableId: " + tableId + " size: " + columns.size() + " first column: " + 
+    WebLogger.getLogger(appName).d(TAG, "[buildColumnDefinitions] tableId: " + tableId + " size: " + columns.size() + " first column: " + 
         (columns.isEmpty() ? "<none>" : columns.get(0).getElementKey()));
     
     Map<String, ColumnDefinition> colDefs = new HashMap<String, ColumnDefinition>();
@@ -205,13 +205,13 @@ public class ColumnDefinition implements Comparable<ColumnDefinition> {
         try {
           chi = ODKFileUtils.mapper.readValue(children, ArrayList.class);
         } catch (JsonParseException e) {
-          e.printStackTrace();
+          WebLogger.getLogger(appName).printStackTrace(e);
           throw new IllegalArgumentException("Invalid list of children: " + children);
         } catch (JsonMappingException e) {
-          e.printStackTrace();
+          WebLogger.getLogger(appName).printStackTrace(e);
           throw new IllegalArgumentException("Invalid list of children: " + children);
         } catch (IOException e) {
-          e.printStackTrace();
+          WebLogger.getLogger(appName).printStackTrace(e);
           throw new IllegalArgumentException("Invalid list of children: " + children);
         }
         cc.children = chi;

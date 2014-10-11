@@ -38,7 +38,6 @@ import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.util.Log;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -1130,7 +1129,7 @@ public class ODKDatabaseUtils {
    * Create a user defined database table metadata - table definiton and KVS
    * values
    */
-  private void createDBTableWithColumns(SQLiteDatabase db, String tableId,
+  private void createDBTableWithColumns(SQLiteDatabase db, String appName, String tableId,
       List<ColumnDefinition> orderedDefs) {
     if (tableId == null || tableId.length() <= 0) {
       throw new IllegalArgumentException(t + ": application name and table name must be specified");
@@ -1205,7 +1204,7 @@ public class ODKDatabaseUtils {
       tableDefCol.append("\"").append(def.getElementKey()).append("\"");
     }
     
-    Log.i(t, "Column order for table " + tableId + " is " + tableDefCol.toString());
+    WebLogger.getLogger(appName).i(t, "Column order for table " + tableId + " is " + tableDefCol.toString());
     String colOrderVal = "[" + tableDefCol.toString() + "]";
     cvTableVal.put(KeyValueStoreColumns.VALUE, colOrderVal);
 
@@ -1300,21 +1299,22 @@ public class ODKDatabaseUtils {
    * If the tableId is present, then this is a no-op.
    * 
    * @param db
+   * @param appName
    * @param tableId
    * @param columns
    * @return the ArrayList<ColumnDefinition> of the user columns in the table.
    */
-  public ArrayList<ColumnDefinition> createOrOpenDBTableWithColumns(SQLiteDatabase db, String tableId,
+  public ArrayList<ColumnDefinition> createOrOpenDBTableWithColumns(SQLiteDatabase db, String appName, String tableId,
       List<Column> columns) {
     boolean dbWithinTransaction = db.inTransaction();
     boolean success = false;
-    ArrayList<ColumnDefinition> orderedDefs = ColumnDefinition.buildColumnDefinitions(tableId, columns);
+    ArrayList<ColumnDefinition> orderedDefs = ColumnDefinition.buildColumnDefinitions(appName, tableId, columns);
     try {
       if ( !dbWithinTransaction ) {
         db.beginTransaction();
       }
       if ( !hasTableId(db, tableId) ) {
-        createDBTableWithColumns(db, tableId, orderedDefs);
+        createDBTableWithColumns(db, appName, tableId, orderedDefs);
       }
       
       if ( !dbWithinTransaction ) {
@@ -1336,11 +1336,13 @@ public class ODKDatabaseUtils {
           }
           if (colNames != null && colNames.length() > 0) {
             colNames.deleteCharAt(colNames.length() - 1);
-            Log.e(t, "createOrOpenDBTableWithColumns: Error while adding table " + tableId
+            WebLogger.getLogger(appName).e(t, 
+                "createOrOpenDBTableWithColumns: Error while adding table " + tableId
                 + " with columns:" + colNames.toString());
           }
         } else {
-          Log.e(t, "createOrOpenDBTableWithColumns: Error while adding table " + tableId
+          WebLogger.getLogger(appName).e(t, 
+              "createOrOpenDBTableWithColumns: Error while adding table " + tableId
               + " with columns: null");
         }
       }
@@ -1623,8 +1625,8 @@ public class ODKDatabaseUtils {
         FileUtils.deleteDirectory(instanceFolder);
       } catch (IOException e) {
         // TODO Auto-generated catch block
-        e.printStackTrace();
-        Log.e(t, "Unable to delete this directory: " + instanceFolder.getAbsolutePath());
+        WebLogger.getLogger(appName).e(t, "Unable to delete this directory: " + instanceFolder.getAbsolutePath());
+        WebLogger.getLogger(appName).printStackTrace(e);
       }
     } else if (syncState == SyncState.synced || syncState == SyncState.changed) {
       String[] whereArgs = { rowId };

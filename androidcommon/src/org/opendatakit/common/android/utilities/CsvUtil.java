@@ -53,7 +53,6 @@ import org.opendatakit.common.android.provider.KeyValueStoreColumns;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
-import android.util.Log;
 
 /**
  * Various utilities for importing/exporting tables from/to CSV.
@@ -115,7 +114,7 @@ public class CsvUtil {
     // then we are including all the metadata columns.
     ArrayList<String> columns = new ArrayList<String>();
 
-    Log.i(TAG, "exportSeparable: tableId: " + tableId + " fileQualifier: "
+    WebLogger.getLogger(appName).i(TAG, "exportSeparable: tableId: " + tableId + " fileQualifier: "
         + ((fileQualifier == null) ? "<null>" : fileQualifier));
 
     // put the user-relevant metadata columns in leftmost columns
@@ -225,7 +224,7 @@ public class CsvUtil {
    */
   private boolean writePropertiesCsv(SQLiteDatabase db, String tableId,
       ArrayList<ColumnDefinition> orderedDefns, File definitionCsv, File propertiesCsv) {
-    Log.i(TAG, "writePropertiesCsv: tableId: " + tableId);
+    WebLogger.getLogger(appName).i(TAG, "writePropertiesCsv: tableId: " + tableId);
 
     // writing metadata
     FileOutputStream out;
@@ -375,7 +374,7 @@ public class CsvUtil {
   public void updateTablePropertiesFromCsv(ImportListener importListener, String tableId)
       throws IOException {
 
-    Log.i(TAG, "updateTablePropertiesFromCsv: tableId: " + tableId);
+    WebLogger.getLogger(appName).i(TAG, "updateTablePropertiesFromCsv: tableId: " + tableId);
 
     SQLiteDatabase db = null;
     try {
@@ -447,7 +446,7 @@ public class CsvUtil {
         } catch (IOException e) {
         }
 
-        ArrayList<ColumnDefinition> colDefns = ColumnDefinition.buildColumnDefinitions(tableId, columns);
+        ArrayList<ColumnDefinition> colDefns = ColumnDefinition.buildColumnDefinitions(appName, tableId, columns);
         Map<String, List<KeyValueStoreEntry>> colEntries = new TreeMap<String, List<KeyValueStoreEntry>>();
 
         file = new File(ODKFileUtils.getTablePropertiesCsvFile(appName, tableId));
@@ -523,7 +522,7 @@ public class CsvUtil {
         }
 
         if (ODKDatabaseUtils.get().hasTableId(db, tableId)) {
-          ArrayList<ColumnDefinition> existingDefns = TableUtil.get().getColumnDefinitions(db, tableId);
+          ArrayList<ColumnDefinition> existingDefns = TableUtil.get().getColumnDefinitions(db, appName, tableId);
 
           // confirm that the column definitions are unchanged...
           if (existingDefns.size() != colDefns.size()) {
@@ -656,7 +655,7 @@ public class CsvUtil {
 
           try {
             db.beginTransaction();
-            ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, tableId, columns);
+            ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, appName, tableId, columns);
 
             ODKDatabaseUtils.get().replaceDBTableMetadata(db, tableId, kvsEntries, false);
 
@@ -732,9 +731,9 @@ public class CsvUtil {
         }
       }
 
-      ArrayList<ColumnDefinition> orderedDefns = TableUtil.get().getColumnDefinitions(db, tableId);
+      ArrayList<ColumnDefinition> orderedDefns = TableUtil.get().getColumnDefinitions(db, appName, tableId);
 
-      Log.i(TAG, "importSeparable: tableId: " + tableId + " fileQualifier: "
+      WebLogger.getLogger(appName).i(TAG, "importSeparable: tableId: " + tableId + " fileQualifier: "
           + ((fileQualifier == null) ? "<null>" : fileQualifier));
 
       // reading data

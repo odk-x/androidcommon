@@ -22,7 +22,6 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
-import android.util.Log;
 
 /**
  * Used to return device properties to JavaRosa
@@ -44,8 +43,6 @@ public class PropertyManager {
 
     String getUriFragmentNewInstanceFile(String uriDeviceId, String extension);
   };
-
-  private String t = "PropertyManager";
 
   private HashMap<String, String> mProperties;
 
@@ -86,7 +83,6 @@ public class PropertyManager {
    * @param context
    */
   public PropertyManager(Context context) {
-    Log.i(t, "calling constructor");
 
     mProperties = new HashMap<String, String>();
     TelephonyManager mTelephonyManager = (TelephonyManager) context

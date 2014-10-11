@@ -22,10 +22,8 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 
@@ -38,36 +36,18 @@ import org.opendatakit.httpclientandroidlib.Header;
 import org.opendatakit.httpclientandroidlib.HttpEntity;
 import org.opendatakit.httpclientandroidlib.HttpRequest;
 import org.opendatakit.httpclientandroidlib.HttpResponse;
-import org.opendatakit.httpclientandroidlib.auth.AuthScope;
-import org.opendatakit.httpclientandroidlib.auth.Credentials;
-import org.opendatakit.httpclientandroidlib.auth.UsernamePasswordCredentials;
-import org.opendatakit.httpclientandroidlib.client.CookieStore;
-import org.opendatakit.httpclientandroidlib.client.CredentialsProvider;
 import org.opendatakit.httpclientandroidlib.client.HttpClient;
 import org.opendatakit.httpclientandroidlib.client.methods.HttpGet;
 import org.opendatakit.httpclientandroidlib.client.methods.HttpHead;
 import org.opendatakit.httpclientandroidlib.client.methods.HttpPost;
-import org.opendatakit.httpclientandroidlib.client.params.AuthPolicy;
-import org.opendatakit.httpclientandroidlib.client.params.ClientPNames;
-import org.opendatakit.httpclientandroidlib.client.params.HttpClientParams;
-import org.opendatakit.httpclientandroidlib.client.protocol.ClientContext;
-import org.opendatakit.httpclientandroidlib.conn.ClientConnectionManager;
-import org.opendatakit.httpclientandroidlib.impl.client.BasicCookieStore;
-import org.opendatakit.httpclientandroidlib.impl.client.DefaultHttpClient;
-import org.opendatakit.httpclientandroidlib.params.BasicHttpParams;
-import org.opendatakit.httpclientandroidlib.params.HttpConnectionParams;
-import org.opendatakit.httpclientandroidlib.params.HttpParams;
-import org.opendatakit.httpclientandroidlib.protocol.BasicHttpContext;
 import org.opendatakit.httpclientandroidlib.protocol.HttpContext;
 import org.xmlpull.v1.XmlPullParser;
 
 import android.annotation.SuppressLint;
 import android.text.format.DateFormat;
-import android.util.Log;
 
 /**
- * Common utility methods for managing the credentials associated with the
- * request context and constructing http context, client and request with the
+ * Common utility methods for managing constructing requests with the
  * proper parameters and OpenRosa headers.
  *
  * @author mitchellsundt@gmail.com
@@ -120,13 +100,10 @@ public final class WebUtils {
   
   static {
     // register a state-reset manipulator for 'webUtils' field.
-    StaticStateManipulator.get().register(75, new IStaticFieldManipulator() {
+    StaticStateManipulator.get().register(50, new IStaticFieldManipulator() {
 
       @Override
       public void reset() {
-        WebUtils utils = webUtils;
-        webUtils = null;
-        utils.httpConnectionManager.shutdown();
         webUtils = new WebUtils();
       }
       
@@ -146,13 +123,6 @@ public final class WebUtils {
     webUtils = utils;
   }
   
-  // share all session cookies across all sessions...
-  private CookieStore cookieStore = new BasicCookieStore();
-  // retain credentials for 7 minutes...
-  private CredentialsProvider credsProvider = new AgingCredentialsProvider(7 * 60 * 1000);
-
-  private ClientConnectionManager httpConnectionManager = null;
-
   protected WebUtils() {
   };
 
@@ -334,99 +304,6 @@ public final class WebUtils {
     return asGMTrfc1123.format(d);
   }
 
-  /**
-   * Construct the list of scopes (port + authProtocol) for a given host.
-   * @param host
-   * @return
-   */
-  public List<AuthScope> buildAuthScopes(String host) {
-    List<AuthScope> asList = new ArrayList<AuthScope>();
-
-    AuthScope a;
-    // allow digest auth on any port...
-    a = new AuthScope(host, -1, null, AuthPolicy.DIGEST);
-    asList.add(a);
-    // and allow basic auth on the standard TLS/SSL ports...
-    a = new AuthScope(host, 443, null, AuthPolicy.BASIC);
-    asList.add(a);
-    a = new AuthScope(host, 8443, null, AuthPolicy.BASIC);
-    asList.add(a);
-
-    return asList;
-  }
-
-  public void clearAllCredentials() {
-    HttpContext localContext = getHttpContext();
-    CredentialsProvider credsProvider = (CredentialsProvider) localContext
-        .getAttribute(ClientContext.CREDS_PROVIDER);
-    Log.i(t, "clearAllCredentials");
-    credsProvider.clear();
-  }
-
-  public boolean hasCredentials(String userEmail, String host) {
-    HttpContext localContext = getHttpContext();
-    CredentialsProvider credsProvider = (CredentialsProvider) localContext
-        .getAttribute(ClientContext.CREDS_PROVIDER);
-
-    List<AuthScope> asList = buildAuthScopes(host);
-    boolean hasCreds = true;
-    for (AuthScope a : asList) {
-      Credentials c = credsProvider.getCredentials(a);
-      if (c == null) {
-        hasCreds = false;
-        continue;
-      }
-    }
-    return hasCreds;
-  }
-
-  /**
-   * Remove all credentials for accessing the specified host.
-   *
-   * @param host
-   */
-  private void clearHostCredentials(String host) {
-    HttpContext localContext = getHttpContext();
-    CredentialsProvider credsProvider = (CredentialsProvider) localContext
-        .getAttribute(ClientContext.CREDS_PROVIDER);
-    Log.i(t, "clearHostCredentials: " + host);
-    List<AuthScope> asList = buildAuthScopes(host);
-    for (AuthScope a : asList) {
-      credsProvider.setCredentials(a, null);
-    }
-  }
-
-  /**
-   * Remove all credentials for accessing the specified host and, if the
-   * username is not null or blank then add a (username, password) credential
-   * for accessing this host.
-   *
-   * @param username
-   * @param password
-   * @param host
-   */
-  public void addCredentials(String username, String password, String host) {
-    HttpContext localContext = getHttpContext();
-    // to ensure that this is the only authentication available for this
-    // host...
-    clearHostCredentials(host);
-    if (username != null && username.trim().length() != 0) {
-      Log.i(t, "adding credential for host: " + host + " username:" + username);
-      Credentials c = new UsernamePasswordCredentials(username, password);
-      addCredentials(localContext, c, host);
-    }
-  }
-
-  private void addCredentials(HttpContext localContext, Credentials c, String host) {
-    CredentialsProvider credsProvider = (CredentialsProvider) localContext
-        .getAttribute(ClientContext.CREDS_PROVIDER);
-
-    List<AuthScope> asList = buildAuthScopes(host);
-    for (AuthScope a : asList) {
-      credsProvider.setCredentials(a, c);
-    }
-  }
-
   private void setOpenRosaHeaders(HttpRequest req) {
     req.setHeader(OPEN_ROSA_VERSION_HEADER, OPEN_ROSA_VERSION);
     g.setTime(new Date());
@@ -469,71 +346,6 @@ public final class WebUtils {
   }
 
   /**
-   * Shared HttpContext so a user doesn't have to re-enter login information
-   *
-   * @return
-   */
-  public synchronized HttpContext getHttpContext() {
-
-    // context holds authentication state machine, so it cannot be
-    // shared across independent activities.
-    HttpContext localContext = new BasicHttpContext();
-
-    localContext.setAttribute(ClientContext.COOKIE_STORE, cookieStore);
-    localContext.setAttribute(ClientContext.CREDS_PROVIDER, credsProvider);
-
-    return localContext;
-  }
-
-  /**
-   * Create an httpClient with connection timeouts and other parameters set.
-   * Save and reuse the connection manager across invocations (this is what
-   * requires synchronized access).
-   *
-   * @param timeout
-   * @return HttpClient properly configured.
-   */
-  public synchronized HttpClient createHttpClient(int timeout) {
-    return createHttpClient(timeout, 1);
-  }
-
-  public synchronized HttpClient createHttpClient(int timeout, int maxRedirects) {
-    // configure connection
-    HttpParams params = new BasicHttpParams();
-    HttpConnectionParams.setConnectionTimeout(params, timeout);
-    HttpConnectionParams.setSoTimeout(params, 2 * timeout);
-    // support redirecting to handle http: => https: transition
-    HttpClientParams.setRedirecting(params, true);
-    // support authenticating
-    HttpClientParams.setAuthenticating(params, true);
-    // if possible, bias toward digest auth (may not be in 4.0 beta 2)
-    List<String> authPref = new ArrayList<String>();
-    authPref.add(AuthPolicy.DIGEST);
-    authPref.add(AuthPolicy.BASIC);
-    // does this work in Google's 4.0 beta 2 snapshot?
-    params.setParameter("http.auth-target.scheme-pref", authPref);
-
-    // setup client
-    HttpClient httpclient;
-
-    // reuse the connection manager across all clients this ODK Survey
-    // creates.
-    if (httpConnectionManager == null) {
-      // let Apache stack create a connection manager.
-      httpclient = new DefaultHttpClient(params);
-      httpConnectionManager = httpclient.getConnectionManager();
-    } else {
-      // reuse the connection manager we already got.
-      httpclient = new DefaultHttpClient(httpConnectionManager, params);
-    }
-
-    httpclient.getParams().setParameter(ClientPNames.MAX_REDIRECTS, maxRedirects);
-    httpclient.getParams().setParameter(ClientPNames.ALLOW_CIRCULAR_REDIRECTS, true);
-
-    return httpclient;
-  }
-
-  /**
    * Utility to ensure that the entity stream of a response is drained of bytes.
    *
    * @param response
@@ -567,7 +379,7 @@ public final class WebUtils {
    * @param httpclient
    * @return
    */
-  public DocumentFetchResult getXmlDocument(String urlString, HttpContext localContext,
+  public DocumentFetchResult getXmlDocument(String appName, String urlString, HttpContext localContext,
       HttpClient httpclient, String auth) {
     URI u = null;
     try {
@@ -599,7 +411,7 @@ public final class WebUtils {
 
       if (entity == null) {
         String error = "No entity body returned from: " + u.toString();
-        Log.e(t, error);
+        WebLogger.getLogger(appName).e(t, error);
         return new DocumentFetchResult(error, 0);
       }
 
@@ -611,7 +423,7 @@ public final class WebUtils {
             + " returned from: "
             + u.toString()
             + " is not text/xml.  This is often caused a network proxy.  Do you need to login to your network?";
-        Log.e(t, error);
+        WebLogger.getLogger(appName).e(t, error);
         return new DocumentFetchResult(error, 0);
       }
 
@@ -655,9 +467,9 @@ public final class WebUtils {
           }
         }
       } catch (Exception e) {
-        e.printStackTrace();
         String error = "Parsing failed with " + e.getMessage() + "while accessing " + u.toString();
-        Log.e(t, error);
+        WebLogger.getLogger(appName).e(t, error);
+        WebLogger.getLogger(appName).printStackTrace(e);
         return new DocumentFetchResult(error, 0);
       }
 
@@ -680,13 +492,13 @@ public final class WebUtils {
           b.append(h.getValue());
         }
         if (!versionMatch) {
-          Log.w(t, WebUtils.OPEN_ROSA_VERSION_HEADER + " unrecognized version(s): " + b.toString());
+          WebLogger.getLogger(appName).w(t, WebUtils.OPEN_ROSA_VERSION_HEADER + " unrecognized version(s): " + b.toString());
         }
       }
       return new DocumentFetchResult(doc, isOR);
     } catch (Exception e) {
-      clearHttpConnectionManager();
-      e.printStackTrace();
+      ClientConnectionManagerFactory.get(appName).clearHttpConnectionManager();
+      WebLogger.getLogger(appName).printStackTrace(e);
       String cause;
       if (e.getCause() != null) {
         cause = e.getCause().getMessage();
@@ -695,18 +507,8 @@ public final class WebUtils {
       }
       String error = "Error: " + cause + " while accessing " + u.toString();
 
-      Log.w(t, error);
+      WebLogger.getLogger(appName).w(t, error);
       return new DocumentFetchResult(error, 0);
     }
-  }
-
-  public void clearHttpConnectionManager() {
-    // If we get an unexpected exception, the safest thing is to close
-    // all connections
-    // so that if there is garbage on the connection we ensure it is
-    // removed. This
-    // is especially important if the connection times out.
-    httpConnectionManager.shutdown();
-    httpConnectionManager = null;
   }
 }

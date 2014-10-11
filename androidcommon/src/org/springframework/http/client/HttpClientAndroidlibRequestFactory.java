@@ -19,7 +19,7 @@ package org.springframework.http.client;
 import java.io.IOException;
 import java.net.URI;
 
-import org.opendatakit.common.android.utilities.WebUtils;
+import org.opendatakit.common.android.utilities.ClientConnectionManagerFactory;
 import org.opendatakit.httpclientandroidlib.client.HttpClient;
 import org.opendatakit.httpclientandroidlib.client.methods.HttpDelete;
 import org.opendatakit.httpclientandroidlib.client.methods.HttpGet;
@@ -29,6 +29,7 @@ import org.opendatakit.httpclientandroidlib.client.methods.HttpPost;
 import org.opendatakit.httpclientandroidlib.client.methods.HttpPut;
 import org.opendatakit.httpclientandroidlib.client.methods.HttpTrace;
 import org.opendatakit.httpclientandroidlib.client.methods.HttpUriRequest;
+import org.opendatakit.httpclientandroidlib.conn.ClientConnectionManager;
 import org.opendatakit.httpclientandroidlib.params.CoreConnectionPNames;
 import org.opendatakit.httpclientandroidlib.params.HttpParams;
 import org.opendatakit.httpclientandroidlib.params.HttpProtocolParams;
@@ -57,17 +58,22 @@ public class HttpClientAndroidlibRequestFactory implements ClientHttpRequestFact
 
 	private static final int DEFAULT_READ_TIMEOUT_MILLISECONDS = (60 * 1000);
 
+	private String appName;
 	private HttpClient httpClient;
 
 	/**
-	 * Create a new instance of the HttpComponentsClientHttpRequestFactory with the given {@link HttpClient} instance.
-	 * @param httpClient the HttpClient instance to use for this factory
+	 * Create a new instance of the HttpComponentsClientHttpRequestFactory
+	 * with the given timeout and redirect limits.
+    * 
+	 * @param appName the AppName selects the connection manager.
+	 * @param timeout
+	 * @param maxRedirects
 	 */
-	public HttpClientAndroidlibRequestFactory(HttpClient httpClient) {
-		Assert.notNull(httpClient, "HttpClient must not be null");
-		this.httpClient = httpClient;
+	public HttpClientAndroidlibRequestFactory(String appName, int timeout, int maxRedirects) {
+     Assert.notNull(appName, "appName must not be null");
+	  this.appName = appName;
+	  this.httpClient = ClientConnectionManagerFactory.get(appName).createHttpClient(timeout, maxRedirects);
 	}
-
 
 	/**
 	 * Return the {@code HttpClient} used by this factory.
@@ -150,14 +156,14 @@ public class HttpClientAndroidlibRequestFactory implements ClientHttpRequestFact
 	 * @return the http context
 	 */
 	protected HttpContext createHttpContext(HttpMethod httpMethod, URI uri) {
-		return WebUtils.get().getHttpContext();
+		return ClientConnectionManagerFactory.get(appName).getHttpContext();
 	}
 
 	/**
 	 * Shutdown hook that closes the underlying {@link ClientConnectionManager}'s connection pool, if any.
 	 */
 	public void destroy() {
-		getHttpClient().getConnectionManager().shutdown();
+	  ClientConnectionManagerFactory.get(appName).clearHttpConnectionManager();
 	}
 
 }

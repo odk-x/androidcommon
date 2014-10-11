@@ -35,7 +35,7 @@ public abstract class TablesProviderImpl extends ContentProvider {
         return false;
       }
     } catch (Exception e) {
-      Log.e(t, "External storage not available -- purging dbHelpers");
+      Log.e(t, "External storage not available");
       return false;
     }
 
