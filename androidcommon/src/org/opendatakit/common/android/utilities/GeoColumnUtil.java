@@ -21,10 +21,23 @@ import java.util.List;
 import org.opendatakit.common.android.data.ColumnDefinition;
 import org.opendatakit.common.android.data.ElementDataType;
 import org.opendatakit.common.android.data.ElementType;
+import org.opendatakit.common.android.utilities.StaticStateManipulator.IStaticFieldManipulator;
 
 public class GeoColumnUtil {
 
   private static GeoColumnUtil geoColumnUtil = new GeoColumnUtil();
+  
+  static {
+    // register a state-reset manipulator for 'geoColumnUtil' field.
+    StaticStateManipulator.get().register(50, new IStaticFieldManipulator() {
+
+      @Override
+      public void reset() {
+        geoColumnUtil = new GeoColumnUtil();
+      }
+      
+    });
+  }
 
   public static GeoColumnUtil get() {
     return geoColumnUtil;

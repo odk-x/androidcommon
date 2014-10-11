@@ -33,6 +33,7 @@ import org.apache.commons.io.Charsets;
 import org.apache.commons.lang3.CharEncoding;
 import org.kxml2.io.KXmlParser;
 import org.kxml2.kdom.Document;
+import org.opendatakit.common.android.utilities.StaticStateManipulator.IStaticFieldManipulator;
 import org.opendatakit.httpclientandroidlib.Header;
 import org.opendatakit.httpclientandroidlib.HttpEntity;
 import org.opendatakit.httpclientandroidlib.HttpRequest;
@@ -72,23 +73,16 @@ import android.util.Log;
  * @author mitchellsundt@gmail.com
  */
 public final class WebUtils {
-  public static final String t = "WebUtils";
-
-  public static final String OPEN_ROSA_VERSION_HEADER = "X-OpenRosa-Version";
-  public static final String OPEN_ROSA_VERSION = "1.0";
-  private static final String DATE_HEADER = "Date";
+  private static final String t = "WebUtils";
 
   public static final String HTTP_CONTENT_TYPE_TEXT_XML = "text/xml";
   public static final int CONNECTION_TIMEOUT = 45000;
 
-  private static final GregorianCalendar g = new GregorianCalendar(TimeZone.getTimeZone("GMT"));
+  public static final String OPEN_ROSA_VERSION_HEADER = "X-OpenRosa-Version";
+  public static final String OPEN_ROSA_VERSION = "1.0";
 
-  // share all session cookies across all sessions...
-  private static CookieStore cookieStore = new BasicCookieStore();
-  // retain credentials for 7 minutes...
-  private static CredentialsProvider credsProvider = new AgingCredentialsProvider(7 * 60 * 1000);
+  private static final String DATE_HEADER = "Date";
 
-  private static ClientConnectionManager httpConnectionManager = null;
   /**
    * Date format pattern used to parse HTTP date headers in RFC 1123 format.
    * copied from apache.commons.lang.DateUtils
@@ -120,11 +114,50 @@ public final class WebUtils {
   private static final String PATTERN_GOOGLE_DOCS = "MM/dd/yyyy HH:mm:ss.SSS";
   private static final String PATTERN_GOOGLE_DOCS_DATE_ONLY = "MM/dd/yyyy";
 
-  private WebUtils() {
+  private static final GregorianCalendar g = new GregorianCalendar(TimeZone.getTimeZone("GMT"));
+
+  private static WebUtils webUtils = new WebUtils();
+  
+  static {
+    // register a state-reset manipulator for 'webUtils' field.
+    StaticStateManipulator.get().register(75, new IStaticFieldManipulator() {
+
+      @Override
+      public void reset() {
+        WebUtils utils = webUtils;
+        webUtils = null;
+        utils.httpConnectionManager.shutdown();
+        webUtils = new WebUtils();
+      }
+      
+    });
+  }
+
+  public static WebUtils get() { 
+    return webUtils;
+  }
+  
+  /**
+   * For mocking -- supply a mocked object.
+   * 
+   * @param utils
+   */
+  public static void set(WebUtils utils) {
+    webUtils = utils;
+  }
+  
+  // share all session cookies across all sessions...
+  private CookieStore cookieStore = new BasicCookieStore();
+  // retain credentials for 7 minutes...
+  private CredentialsProvider credsProvider = new AgingCredentialsProvider(7 * 60 * 1000);
+
+  private ClientConnectionManager httpConnectionManager = null;
+
+  protected WebUtils() {
   };
 
   @SuppressLint("SimpleDateFormat")
-  private static final Date parseDateSubset( String value, String[] parsePatterns, Locale l, TimeZone tz) {
+  private Date parseDateSubset( String value, String[] parsePatterns, Locale l, TimeZone tz) {
     // borrowed from apache.commons.lang.DateUtils...
     Date d = null;
     SimpleDateFormat parser = null;
@@ -156,7 +189,7 @@ public final class WebUtils {
    * @param value
    * @return
    */
-  public static final Date parseDate(String value) {
+  public Date parseDate(String value) {
     if ( value == null || value.length() == 0 ) return null;
 
     String[] javaRosaPattern = new String[] {
@@ -214,7 +247,7 @@ public final class WebUtils {
   }
 
   @SuppressLint("SimpleDateFormat")
-  public static final String asSubmissionDateTimeString(Date d) {
+  public String asSubmissionDateTimeString(Date d) {
     if (d == null)
       return null;
     SimpleDateFormat asJavarosaDateTime = new SimpleDateFormat(PATTERN_ISO8601_JAVAROSA);
@@ -223,7 +256,7 @@ public final class WebUtils {
   }
 
   @SuppressLint("SimpleDateFormat")
-  public static final String asSubmissionDateOnlyString(Date d) {
+  public String asSubmissionDateOnlyString(Date d) {
     if (d == null)
       return null;
     SimpleDateFormat asJavarosaDate = new SimpleDateFormat(PATTERN_DATE_ONLY_JAVAROSA);
@@ -232,7 +265,7 @@ public final class WebUtils {
   }
 
   @SuppressLint("SimpleDateFormat")
-  public static final String asSubmissionTimeOnlyString(Date d) {
+  public String asSubmissionTimeOnlyString(Date d) {
     if (d == null)
       return null;
     SimpleDateFormat asJavarosaTime = new SimpleDateFormat(PATTERN_TIME_ONLY_JAVAROSA);
@@ -247,7 +280,7 @@ public final class WebUtils {
    * @return
    */
   @SuppressLint("SimpleDateFormat")
-  public static final String googleDocsDateTime(Date d) {
+  public String googleDocsDateTime(Date d) {
     if (d == null)
       return null;
     SimpleDateFormat asGoogleDoc = new SimpleDateFormat(PATTERN_GOOGLE_DOCS);
@@ -262,7 +295,7 @@ public final class WebUtils {
    * @return
    */
   @SuppressLint("SimpleDateFormat")
-  public static final String googleDocsDateOnly(Date d) {
+  public String googleDocsDateOnly(Date d) {
     if (d == null)
       return null;
     SimpleDateFormat asGoogleDocDateOnly = new SimpleDateFormat(PATTERN_GOOGLE_DOCS_DATE_ONLY);
@@ -277,7 +310,7 @@ public final class WebUtils {
    * @return
    */
   @SuppressLint("SimpleDateFormat")
-  public static final String iso8601Date(Date d) {
+  public String iso8601Date(Date d) {
     if (d == null)
       return null;
     // SDF is not thread-safe
@@ -292,7 +325,7 @@ public final class WebUtils {
    * @return
    */
   @SuppressLint("SimpleDateFormat")
-  public static final String rfc1123Date(Date d) {
+  public String rfc1123Date(Date d) {
     if (d == null)
       return null;
     // SDF is not thread-safe
@@ -306,7 +339,7 @@ public final class WebUtils {
    * @param host
    * @return
    */
-  public static final List<AuthScope> buildAuthScopes(String host) {
+  public List<AuthScope> buildAuthScopes(String host) {
     List<AuthScope> asList = new ArrayList<AuthScope>();
 
     AuthScope a;
@@ -322,7 +355,7 @@ public final class WebUtils {
     return asList;
   }
 
-  public static final void clearAllCredentials() {
+  public void clearAllCredentials() {
     HttpContext localContext = getHttpContext();
     CredentialsProvider credsProvider = (CredentialsProvider) localContext
         .getAttribute(ClientContext.CREDS_PROVIDER);
@@ -330,7 +363,7 @@ public final class WebUtils {
     credsProvider.clear();
   }
 
-  public static final boolean hasCredentials(String userEmail, String host) {
+  public boolean hasCredentials(String userEmail, String host) {
     HttpContext localContext = getHttpContext();
     CredentialsProvider credsProvider = (CredentialsProvider) localContext
         .getAttribute(ClientContext.CREDS_PROVIDER);
@@ -352,7 +385,7 @@ public final class WebUtils {
    *
    * @param host
    */
-  private static final void clearHostCredentials(String host) {
+  private void clearHostCredentials(String host) {
     HttpContext localContext = getHttpContext();
     CredentialsProvider credsProvider = (CredentialsProvider) localContext
         .getAttribute(ClientContext.CREDS_PROVIDER);
@@ -372,7 +405,7 @@ public final class WebUtils {
    * @param password
    * @param host
    */
-  public static final void addCredentials(String username, String password, String host) {
+  public void addCredentials(String username, String password, String host) {
     HttpContext localContext = getHttpContext();
     // to ensure that this is the only authentication available for this
     // host...
@@ -384,7 +417,7 @@ public final class WebUtils {
     }
   }
 
-  private static final void addCredentials(HttpContext localContext, Credentials c, String host) {
+  private void addCredentials(HttpContext localContext, Credentials c, String host) {
     CredentialsProvider credsProvider = (CredentialsProvider) localContext
         .getAttribute(ClientContext.CREDS_PROVIDER);
 
@@ -394,23 +427,23 @@ public final class WebUtils {
     }
   }
 
-  private static final void setOpenRosaHeaders(HttpRequest req) {
+  private void setOpenRosaHeaders(HttpRequest req) {
     req.setHeader(OPEN_ROSA_VERSION_HEADER, OPEN_ROSA_VERSION);
     g.setTime(new Date());
     req.setHeader(DATE_HEADER, DateFormat.format("E, dd MMM yyyy hh:mm:ss zz", g).toString());
   }
 
-  public static final HttpHead createOpenRosaHttpHead(URI uri) {
+  public HttpHead createOpenRosaHttpHead(URI uri) {
     HttpHead req = new HttpHead(uri);
     setOpenRosaHeaders(req);
     return req;
   }
 
-  public static final HttpGet createOpenRosaHttpGet(URI uri) {
+  public HttpGet createOpenRosaHttpGet(URI uri) {
     return createOpenRosaHttpGet(uri, "");
   }
 
-  public static final HttpGet createOpenRosaHttpGet(URI uri, String auth) {
+  public HttpGet createOpenRosaHttpGet(URI uri, String auth) {
     HttpGet req = new HttpGet();
     setOpenRosaHeaders(req);
     setGoogleHeaders(req, auth);
@@ -418,17 +451,17 @@ public final class WebUtils {
     return req;
   }
 
-  public static final void setGoogleHeaders(HttpRequest req, String auth) {
+  public void setGoogleHeaders(HttpRequest req, String auth) {
     if ((auth != null) && (auth.length() > 0)) {
       req.setHeader("Authorization", "GoogleLogin auth=" + auth);
     }
   }
 
-  public static final HttpPost createOpenRosaHttpPost(URI uri) {
+  public HttpPost createOpenRosaHttpPost(URI uri) {
     return createOpenRosaHttpPost(uri, "");
   }
 
-  public static final HttpPost createOpenRosaHttpPost(URI uri, String auth) {
+  public HttpPost createOpenRosaHttpPost(URI uri, String auth) {
     HttpPost req = new HttpPost(uri);
     setOpenRosaHeaders(req);
     setGoogleHeaders(req, auth);
@@ -440,7 +473,7 @@ public final class WebUtils {
    *
    * @return
    */
-  public static synchronized HttpContext getHttpContext() {
+  public synchronized HttpContext getHttpContext() {
 
     // context holds authentication state machine, so it cannot be
     // shared across independent activities.
@@ -460,11 +493,11 @@ public final class WebUtils {
    * @param timeout
    * @return HttpClient properly configured.
    */
-  public static final synchronized HttpClient createHttpClient(int timeout) {
+  public synchronized HttpClient createHttpClient(int timeout) {
     return createHttpClient(timeout, 1);
   }
 
-  public static final synchronized HttpClient createHttpClient(int timeout, int maxRedirects) {
+  public synchronized HttpClient createHttpClient(int timeout, int maxRedirects) {
     // configure connection
     HttpParams params = new BasicHttpParams();
     HttpConnectionParams.setConnectionTimeout(params, timeout);
@@ -505,7 +538,7 @@ public final class WebUtils {
    *
    * @param response
    */
-  public static final void discardEntityBytes(HttpResponse response) {
+  public void discardEntityBytes(HttpResponse response) {
     // may be a server that does not handle
     HttpEntity entity = response.getEntity();
     if (entity != null) {
@@ -534,7 +567,7 @@ public final class WebUtils {
    * @param httpclient
    * @return
    */
-  public static DocumentFetchResult getXmlDocument(String urlString, HttpContext localContext,
+  public DocumentFetchResult getXmlDocument(String urlString, HttpContext localContext,
       HttpClient httpclient, String auth) {
     URI u = null;
     try {
@@ -548,7 +581,7 @@ public final class WebUtils {
     }
 
     // set up request...
-    HttpGet req = WebUtils.createOpenRosaHttpGet(u, auth);
+    HttpGet req = createOpenRosaHttpGet(u, auth);
 
     HttpResponse response = null;
     try {
@@ -558,7 +591,7 @@ public final class WebUtils {
       HttpEntity entity = response.getEntity();
 
       if (statusCode != 200) {
-        WebUtils.discardEntityBytes(response);
+        discardEntityBytes(response);
         String webError = response.getStatusLine().getReasonPhrase() + " (" + statusCode + ")";
 
         return new DocumentFetchResult(u.toString() + " responded with: " + webError, statusCode);
@@ -572,7 +605,7 @@ public final class WebUtils {
 
       if (!entity.getContentType().getValue().toLowerCase(Locale.ENGLISH)
           .contains(WebUtils.HTTP_CONTENT_TYPE_TEXT_XML)) {
-        WebUtils.discardEntityBytes(response);
+        discardEntityBytes(response);
         String error = "ContentType: "
             + entity.getContentType().getValue()
             + " returned from: "
@@ -667,7 +700,7 @@ public final class WebUtils {
     }
   }
 
-  public static void clearHttpConnectionManager() {
+  public void clearHttpConnectionManager() {
     // If we get an unexpected exception, the safest thing is to close
     // all connections
     // so that if there is garbage on the connection we ensure it is

@@ -23,10 +23,23 @@ import java.util.Set;
 
 import org.opendatakit.common.android.data.ColumnDefinition;
 import org.opendatakit.common.android.data.ElementDataType;
+import org.opendatakit.common.android.utilities.StaticStateManipulator.IStaticFieldManipulator;
 
 public class RowPathColumnUtil {
 
   private static RowPathColumnUtil rowPathColumnUtil = new RowPathColumnUtil();
+  
+  static {
+    // register a state-reset manipulator for 'rowPathColumnUtil' field.
+    StaticStateManipulator.get().register(50, new IStaticFieldManipulator() {
+
+      @Override
+      public void reset() {
+        rowPathColumnUtil = new RowPathColumnUtil();
+      }
+      
+    });
+  }
 
   public static RowPathColumnUtil get() {
     return rowPathColumnUtil;

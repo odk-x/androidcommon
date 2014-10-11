@@ -24,12 +24,9 @@ import org.opendatakit.common.android.data.ColumnDefinition;
 import org.opendatakit.common.android.data.ElementDataType;
 import org.opendatakit.common.android.data.KeyValueStoreEntry;
 import org.opendatakit.common.android.data.TableViewType;
-import org.opendatakit.common.android.utilities.NameUtil;
-import org.opendatakit.common.android.utilities.ODKDataUtils;
-import org.opendatakit.common.android.utilities.ODKDatabaseUtils;
-import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.KeyValueStoreHelper.AspectHelper;
 import org.opendatakit.common.android.utilities.LocalKeyValueStoreConstants.Tables;
+import org.opendatakit.common.android.utilities.StaticStateManipulator.IStaticFieldManipulator;
 
 import android.database.sqlite.SQLiteDatabase;
 
@@ -51,6 +48,18 @@ public class TableUtil {
 
   private static TableUtil tableUtil = new TableUtil();
   
+  static {
+    // register a state-reset manipulator for 'tableUtil' field.
+    StaticStateManipulator.get().register(50, new IStaticFieldManipulator() {
+
+      @Override
+      public void reset() {
+        tableUtil = new TableUtil();
+      }
+      
+    });
+  }
+
   public static TableUtil get() {
     return tableUtil;
   }

@@ -23,7 +23,7 @@ import fi.iki.elonen.SimpleWebServer;
 
 public class UrlUtils {
 
-  private static String SCHEME_HTTP = "http";
+  private static final String SCHEME_HTTP = "http";
 
   public static Uri getWebViewContentUri(Context c) {
     return Uri.parse(SCHEME_HTTP + "://" + SimpleWebServer.HOSTNAME + ":"

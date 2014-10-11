@@ -30,6 +30,7 @@ import org.opendatakit.common.android.utilities.ODKDataUtils;
 import org.opendatakit.common.android.utilities.ODKDatabaseUtils;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.KeyValueStoreHelper.AspectHelper;
+import org.opendatakit.common.android.utilities.StaticStateManipulator.IStaticFieldManipulator;
 
 import android.database.sqlite.SQLiteDatabase;
 
@@ -40,6 +41,18 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 public class ColumnUtil {
   
   private static ColumnUtil columnUtil = new ColumnUtil();
+ 
+  static {
+    // register a state-reset manipulator for 'columnUtil' field.
+    StaticStateManipulator.get().register(50, new IStaticFieldManipulator() {
+
+      @Override
+      public void reset() {
+        columnUtil = new ColumnUtil();
+      }
+      
+    });
+  }
   
   public static ColumnUtil get() {
     return columnUtil;

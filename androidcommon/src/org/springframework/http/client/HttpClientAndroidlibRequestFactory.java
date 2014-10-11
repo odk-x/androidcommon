@@ -150,7 +150,7 @@ public class HttpClientAndroidlibRequestFactory implements ClientHttpRequestFact
 	 * @return the http context
 	 */
 	protected HttpContext createHttpContext(HttpMethod httpMethod, URI uri) {
-		return WebUtils.getHttpContext();
+		return WebUtils.get().getHttpContext();
 	}
 
 	/**

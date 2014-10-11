@@ -32,6 +32,7 @@ import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.InstanceColumns;
 import org.opendatakit.common.android.provider.KeyValueStoreColumns;
 import org.opendatakit.common.android.provider.TableDefinitionsColumns;
+import org.opendatakit.common.android.utilities.StaticStateManipulator.IStaticFieldManipulator;
 
 import android.annotation.SuppressLint;
 import android.content.ContentValues;
@@ -103,6 +104,18 @@ public class ODKDatabaseUtils {
   
   private static ODKDatabaseUtils databaseUtil = new ODKDatabaseUtils();
   
+  static {
+    // register a state-reset manipulator for 'databaseUtil' field.
+    StaticStateManipulator.get().register(50, new IStaticFieldManipulator() {
+
+      @Override
+      public void reset() {
+        databaseUtil = new ODKDatabaseUtils();
+      }
+      
+    });
+  }
+
   public static ODKDatabaseUtils get() {
     return databaseUtil;
   }
@@ -127,20 +140,43 @@ public class ODKDatabaseUtils {
     return ADMIN_COLUMNS;
   }
 
+  /**
+   * Return an unmodifiable list of the admin columns that should be exported to 
+   * a CSV file. This list excludes the SYNC_STATE and CONFLICT_TYPE columns.
+   * 
+   * @return
+   */
   public List<String> getExportColumns() {
     return EXPORT_COLUMNS;
   }
 
-  /*
-   * Perform raw query against current database
+  /**
+   * Perform a raw query with bind parameters.
+   * 
+   * @param db
+   * @param sql
+   * @param selectionArgs
+   * @return
    */
   public Cursor rawQuery(SQLiteDatabase db, String sql, String[] selectionArgs) {
     Cursor c = db.rawQuery(sql, selectionArgs);
     return c;
   }
 
-  /*
-   * Query the current database with given parameters
+  /**
+   * Perform a query with the given parameters.
+   * 
+   * @param db
+   * @param distinct - true if want each row to be distinct (collapse duplicates)
+   * @param table
+   * @param columns
+   * @param selection
+   * @param selectionArgs
+   * @param groupBy
+   * @param having
+   * @param orderBy
+   * @param limit
+   * @return
    */
   public Cursor query(SQLiteDatabase db, boolean distinct, String table,
       String[] columns, String selection, String[] selectionArgs, String groupBy, String having,
@@ -154,12 +190,25 @@ public class ODKDatabaseUtils {
    * Get a {@link UserTable} for this table based on the given where clause.
    * All columns from the table are returned.
    * <p>
-   * It performs SELECT * FROM table whereClause.
+   * SELECT * FROM table WHERE whereClause 
+   * GROUP BY groupBy[]s HAVING havingClause 
+   * ORDER BY orderbyElement orderByDirection
    * <p>
+   * If any of the clause parts are omitted (null), then the appropriate 
+   * simplified SQL statement is constructed.
+   * 
+   * @param db
+   * @param appName
+   * @param tableId
+   * @param columnDefns
    * @param whereClause the whereClause for the selection, beginning with
    * "WHERE". Must include "?" instead of actual values, which are instead
    * passed in the selectionArgs.
-   * @param selectionArgs the selection arguments for the where clause.
+   * @param selectionArgs an array of string values for bind parameters
+   * @param groupBy an array of elementKeys
+   * @param having
+   * @param orderByElementKey elementKey to order the results by
+   * @param orderByDirection either "ASC" or "DESC"
    * @return
    */
   public UserTable rawSqlQuery(SQLiteDatabase db, String appName, String tableId, 
@@ -207,6 +256,19 @@ public class ODKDatabaseUtils {
     }
   }
   
+  /**
+   * Return the row(s) for the given tableId and rowId. If the row
+   * has checkpoints or conflicts, the returned UserTable will have
+   * more than one Row returned. Otherwise, it will contain a single
+   * row. 
+   * 
+   * @param db
+   * @param appName
+   * @param tableId
+   * @param orderedDefns
+   * @param rowId
+   * @return
+   */
   public UserTable getDataInExistingDBTableWithId(SQLiteDatabase db, 
       String appName, String tableId, 
       ArrayList<ColumnDefinition> orderedDefns, String rowId ) {
@@ -217,8 +279,17 @@ public class ODKDatabaseUtils {
     
     return table;
   }
-  /*
-   * Query the current database for all columns
+  
+  
+  /**
+   * Return all the columns in the given table, including any metadata columns.
+   * This does a direct query against the database and is suitable for accessing
+   * non-managed tables. It does not access any metadata and therefore will not
+   * report non-unit-of-retention (grouping) columns.
+   *  
+   * @param db
+   * @param tableId
+   * @return
    */
   public String[] getAllColumnNames(SQLiteDatabase db, String tableId) {
     Cursor cursor = db.rawQuery("SELECT * FROM " + tableId + " LIMIT 1", null);
@@ -227,11 +298,14 @@ public class ODKDatabaseUtils {
     return colNames;
   }
 
-  /*
-   * Query the current database for all user defined columns
+  /**
+   * Retrieve the list of user-defined columns for a tableId using
+   * the metadata for that table. Returns the unit-of-retention and 
+   * non-unit-of-retention (grouping) columns.
    * 
-   * Returns both the grouping columns and the actual persisted
-   * columns.
+   * @param db
+   * @param tableId
+   * @return
    */
   public ArrayList<Column> getUserDefinedColumns(
       SQLiteDatabase db, String tableId) {
@@ -294,6 +368,19 @@ public class ODKDatabaseUtils {
     return false;
   }
   
+  /**
+   * Return the health of a data table. The health can be one of
+   * <ul>
+   * <li>TABLE_HEALTH_IS_CLEAN = 0</li>
+   * <li>TABLE_HEALTH_HAS_CONFLICTS = 1</li>
+   * <li>TABLE_HEALTH_HAS_CHECKPOINTS = 2</li>
+   * <li>TABLE_HEALTH_HAS_CHECKPOINTS_AND_CONFLICTS = 3</li>
+   * <ul>
+   * 
+   * @param db
+   * @param tableId
+   * @return
+   */
   public int getTableHealth(SQLiteDatabase db, String tableId) {
     StringBuilder b = new StringBuilder();
     b.append("SELECT SUM(case when _savepoint_type is null then 1 else 0 end) as checkpoints,")
@@ -325,6 +412,12 @@ public class ODKDatabaseUtils {
     }
   }
 
+  /**
+   * Return all the tableIds in the database.
+   * 
+   * @param db
+   * @return an ArrayList<String> of tableIds
+   */
   public ArrayList<String> getAllTableIds(SQLiteDatabase db) {
     ArrayList<String> tableIds = new ArrayList<String>();
     Cursor c = null;
@@ -352,7 +445,15 @@ public class ODKDatabaseUtils {
     return tableIds;
   }
   
-  public void deleteTableAndData(SQLiteDatabase db, final String appName, final String tableId) {
+  /**
+   * Drop the given tableId and remove all the files (both configuration and data attachments) 
+   * associated with that table.
+   * 
+   * @param db
+   * @param appName
+   * @param tableId
+   */
+  public void deleteDBTableAndAllData(SQLiteDatabase db, final String appName, final String tableId) {
     boolean dbWithinTransaction = db.inTransaction();
     try {
       String whereClause = TableDefinitionsColumns.TABLE_ID + " = ?";
@@ -442,52 +543,14 @@ public class ODKDatabaseUtils {
     }
   }
 
-  /*
-   * Get user defined table creation SQL statement
+  /**
+   * Update the schema and data-modification ETags of a given tableId.
+   * 
+   * @param db
+   * @param tableId
+   * @param schemaETag
+   * @param lastDataETag
    */
-  private String getUserDefinedTableCreationStatement(String tableId) {
-    /*
-     * Resulting string should be the following String createTableCmd =
-     * "CREATE TABLE IF NOT EXISTS " + tableId + " (" + DataTableColumns.ID +
-     * " TEXT NOT NULL, " + DataTableColumns.ROW_ETAG + " TEXT NULL, " +
-     * DataTableColumns.SYNC_STATE + " TEXT NOT NULL, " +
-     * DataTableColumns.CONFLICT_TYPE + " INTEGER NULL," +
-     * DataTableColumns.FILTER_TYPE + " TEXT NULL," +
-     * DataTableColumns.FILTER_VALUE + " TEXT NULL," + DataTableColumns.FORM_ID
-     * + " TEXT NULL," + DataTableColumns.LOCALE + " TEXT NULL," +
-     * DataTableColumns.SAVEPOINT_TYPE + " TEXT NULL," +
-     * DataTableColumns.SAVEPOINT_TIMESTAMP + " TEXT NOT NULL," +
-     * DataTableColumns.SAVEPOINT_CREATOR + " TEXT NULL";
-     */
-
-    String createTableCmd = "CREATE TABLE IF NOT EXISTS " + tableId + " (";
-
-    List<String> cols = getAdminColumns();
-
-    String endSeq = ", ";
-    for (int i = 0 ; i < cols.size(); ++i) {
-      if (i == cols.size() - 1) {
-        endSeq = "";
-      }
-      String colName = cols.get(i);
-      if (colName.equals(DataTableColumns.ID) || colName.equals(DataTableColumns.SYNC_STATE)
-          || colName.equals(DataTableColumns.SAVEPOINT_TIMESTAMP)) {
-        createTableCmd = createTableCmd + colName + " TEXT NOT NULL" + endSeq;
-      } else if (colName.equals(DataTableColumns.ROW_ETAG)
-          || colName.equals(DataTableColumns.FILTER_TYPE)
-          || colName.equals(DataTableColumns.FILTER_VALUE)
-          || colName.equals(DataTableColumns.FORM_ID) || colName.equals(DataTableColumns.LOCALE)
-          || colName.equals(DataTableColumns.SAVEPOINT_TYPE)
-          || colName.equals(DataTableColumns.SAVEPOINT_CREATOR)) {
-        createTableCmd = createTableCmd + colName + " TEXT NULL" + endSeq;
-      } else if (colName.equals(DataTableColumns.CONFLICT_TYPE)) {
-        createTableCmd = createTableCmd + colName + " INTEGER NULL" + endSeq;
-      }
-    }
-
-    return createTableCmd;
-  }
-
   public void updateDBTableETags(SQLiteDatabase db, String tableId, 
         String schemaETag, String lastDataETag ) {
     if (tableId == null || tableId.length() <= 0) {
@@ -514,6 +577,13 @@ public class ODKDatabaseUtils {
     }
   }
 
+  /**
+   * Update the timestamp of the last entirely-successful synchronization
+   * attempt of this table.
+   * 
+   * @param db
+   * @param tableId
+   */
   public void updateDBTableLastSyncTime(SQLiteDatabase db, String tableId ) {
     if (tableId == null || tableId.length() <= 0) {
       throw new IllegalArgumentException(t + ": application name and table name must be specified");
@@ -539,6 +609,16 @@ public class ODKDatabaseUtils {
     }
   }
 
+  /**
+   * Get the table definition entry for a tableId. 
+   * This specifies the schema ETag, the data-modification ETag, and 
+   * the date-time of the last successful sync of the table to the
+   * server.
+   * 
+   * @param db
+   * @param tableId
+   * @return
+   */
   public TableDefinitionEntry getTableDefinitionEntry(SQLiteDatabase db, String tableId) {
 
     TableDefinitionEntry e = null;
@@ -573,6 +653,12 @@ public class ODKDatabaseUtils {
     return e;
   }
   
+  /**
+   * Insert or update a single table-level metadata KVS entry.
+   * 
+   * @param db
+   * @param entry
+   */
   public void replaceDBTableMetadata(SQLiteDatabase db, KeyValueStoreEntry entry) {
     ContentValues values = new ContentValues();
     values.put(KeyValueStoreColumns.TABLE_ID, entry.tableId);
@@ -597,6 +683,17 @@ public class ODKDatabaseUtils {
     }
   }
   
+  /**
+   * Insert or update a list of table-level metadata KVS entries. If clear is 
+   * true, then delete the existing set of values for this tableId before
+   * inserting the new values.
+   * 
+   * @param db
+   * @param tableId
+   * @param metadata a List<KeyValueStoreEntry>
+   * @param clear if true then delete the existing set of values
+   *  for this tableId before inserting the new ones.
+   */
   public void replaceDBTableMetadata(SQLiteDatabase db, String tableId, List<KeyValueStoreEntry> metadata, boolean clear) {
     
     boolean dbWithinTransaction = db.inTransaction();
@@ -638,8 +735,9 @@ public class ODKDatabaseUtils {
   }
 
   /**
-   * The deletion filter includes all non-null arguments. If all arguments (except the db) 
-   * are null, then all properties are removed.
+   * The deletion filter includes all non-null arguments. 
+   * If all arguments (except the db) are null, then all 
+   * properties are removed.
    * 
    * @param db
    * @param tableId
@@ -647,8 +745,8 @@ public class ODKDatabaseUtils {
    * @param aspect
    * @param key
    */
-  public void 
-    deleteDBTableMetadata(SQLiteDatabase db, String tableId, String partition, String aspect, String key) {
+  public void deleteDBTableMetadata(SQLiteDatabase db, 
+      String tableId, String partition, String aspect, String key) {
 
     StringBuilder b = new StringBuilder();
     ArrayList<String> selArgs = new ArrayList<String>();
@@ -770,6 +868,14 @@ public class ODKDatabaseUtils {
     return entries;
   }
 
+  /**
+   * Clean up the KVS row data types. This simplifies the migration 
+   * process by enforcing the proper data types regardless of what
+   * the values are in the imported CSV files.
+   * 
+   * @param db
+   * @param tableId
+   */
   public void enforceTypesDBTableMetadata(SQLiteDatabase db, String tableId) {
     
     boolean dbWithinTransaction = db.inTransaction();
@@ -973,46 +1079,51 @@ public class ODKDatabaseUtils {
   }
   
   /*
-   * Create a user defined database table with a transaction
+   * Build the start of a create table statement -- specifies all the 
+   * metadata columns. Caller must then add all the user-defined column
+   * definitions and closing parentheses.
    */
-  public ArrayList<ColumnDefinition> createOrOpenDBTableWithColumns(SQLiteDatabase db, String tableId,
-      List<Column> columns) {
-    boolean dbWithinTransaction = db.inTransaction();
-    boolean success = false;
-    ArrayList<ColumnDefinition> orderedDefs = ColumnDefinition.buildColumnDefinitions(tableId, columns);
-    try {
-      if ( !dbWithinTransaction ) {
-        db.beginTransaction();
-      }
-      createDBTableWithColumns(db, tableId, orderedDefs);
-      if ( !dbWithinTransaction ) {
-        db.setTransactionSuccessful();
-      }
-      success = true;
-      return orderedDefs;
-    } finally {
-      if ( !dbWithinTransaction ) {
-        db.endTransaction();
-      }
-      if (success == false) {
+  private String getUserDefinedTableCreationStatement(String tableId) {
+    /*
+     * Resulting string should be the following String createTableCmd =
+     * "CREATE TABLE IF NOT EXISTS " + tableId + " (" + DataTableColumns.ID +
+     * " TEXT NOT NULL, " + DataTableColumns.ROW_ETAG + " TEXT NULL, " +
+     * DataTableColumns.SYNC_STATE + " TEXT NOT NULL, " +
+     * DataTableColumns.CONFLICT_TYPE + " INTEGER NULL," +
+     * DataTableColumns.FILTER_TYPE + " TEXT NULL," +
+     * DataTableColumns.FILTER_VALUE + " TEXT NULL," + DataTableColumns.FORM_ID
+     * + " TEXT NULL," + DataTableColumns.LOCALE + " TEXT NULL," +
+     * DataTableColumns.SAVEPOINT_TYPE + " TEXT NULL," +
+     * DataTableColumns.SAVEPOINT_TIMESTAMP + " TEXT NOT NULL," +
+     * DataTableColumns.SAVEPOINT_CREATOR + " TEXT NULL";
+     */
 
-        // Get the names of the columns
-        StringBuilder colNames = new StringBuilder();
-        if (columns != null) {
-          for (Column column : columns) {
-            colNames.append(" ").append(column.getElementKey()).append(",");
-          }
-          if (colNames != null && colNames.length() > 0) {
-            colNames.deleteCharAt(colNames.length() - 1);
-            Log.e(t, "createOrOpenDBTableWithColumns: Error while adding table " + tableId
-                + " with columns:" + colNames.toString());
-          }
-        } else {
-          Log.e(t, "createOrOpenDBTableWithColumns: Error while adding table " + tableId
-              + " with columns: null");
-        }
+    String createTableCmd = "CREATE TABLE IF NOT EXISTS " + tableId + " (";
+
+    List<String> cols = getAdminColumns();
+
+    String endSeq = ", ";
+    for (int i = 0 ; i < cols.size(); ++i) {
+      if (i == cols.size() - 1) {
+        endSeq = "";
       }
-    }
+      String colName = cols.get(i);
+      if (colName.equals(DataTableColumns.ID) || colName.equals(DataTableColumns.SYNC_STATE)
+          || colName.equals(DataTableColumns.SAVEPOINT_TIMESTAMP)) {
+        createTableCmd = createTableCmd + colName + " TEXT NOT NULL" + endSeq;
+      } else if (colName.equals(DataTableColumns.ROW_ETAG)
+          || colName.equals(DataTableColumns.FILTER_TYPE)
+          || colName.equals(DataTableColumns.FILTER_VALUE)
+          || colName.equals(DataTableColumns.FORM_ID) || colName.equals(DataTableColumns.LOCALE)
+          || colName.equals(DataTableColumns.SAVEPOINT_TYPE)
+          || colName.equals(DataTableColumns.SAVEPOINT_CREATOR)) {
+        createTableCmd = createTableCmd + colName + " TEXT NULL" + endSeq;
+      } else if (colName.equals(DataTableColumns.CONFLICT_TYPE)) {
+        createTableCmd = createTableCmd + colName + " INTEGER NULL" + endSeq;
+      }
+      }
+
+    return createTableCmd;
   }
 
   /*
@@ -1182,15 +1293,76 @@ public class ODKDatabaseUtils {
   }
 
   /**
-   * Called when the schema on the server has changed w.r.t. the schema on
+   * If the tableId is not recorded in the TableDefinition metadata table, 
+   * then create the tableId with the indicated columns. This will synthesize
+   * reasonable metadata KVS entries for table.
+   * 
+   * If the tableId is present, then this is a no-op.
+   * 
+   * @param db
+   * @param tableId
+   * @param columns
+   * @return the ArrayList<ColumnDefinition> of the user columns in the table.
+   */
+  public ArrayList<ColumnDefinition> createOrOpenDBTableWithColumns(SQLiteDatabase db, String tableId,
+      List<Column> columns) {
+    boolean dbWithinTransaction = db.inTransaction();
+    boolean success = false;
+    ArrayList<ColumnDefinition> orderedDefs = ColumnDefinition.buildColumnDefinitions(tableId, columns);
+    try {
+      if ( !dbWithinTransaction ) {
+        db.beginTransaction();
+      }
+      if ( !hasTableId(db, tableId) ) {
+        createDBTableWithColumns(db, tableId, orderedDefs);
+      }
+      
+      if ( !dbWithinTransaction ) {
+        db.setTransactionSuccessful();
+      }
+      success = true;
+      return orderedDefs;
+    } finally {
+      if ( !dbWithinTransaction ) {
+        db.endTransaction();
+      }
+      if (success == false) {
+
+        // Get the names of the columns
+        StringBuilder colNames = new StringBuilder();
+        if (columns != null) {
+          for (Column column : columns) {
+            colNames.append(" ").append(column.getElementKey()).append(",");
+          }
+          if (colNames != null && colNames.length() > 0) {
+            colNames.deleteCharAt(colNames.length() - 1);
+            Log.e(t, "createOrOpenDBTableWithColumns: Error while adding table " + tableId
+                + " with columns:" + colNames.toString());
+          }
+        } else {
+          Log.e(t, "createOrOpenDBTableWithColumns: Error while adding table " + tableId
+              + " with columns: null");
+        }
+      }
+    }
+  }
+
+
+  /**
+   * Call this when the schema on the server has changed w.r.t. the schema on
    * the device. In this case, we do not know whether the rows on the device
    * match those on the server.
    *
-   * Reset all 'in_conflict' rows to their original local state (changed or deleted).
-   * Leave all 'deleted' rows in 'deleted' state.
-   * Leave all 'changed' rows in 'changed' state.
-   * Reset all 'synced' rows to 'new_row' to ensure they are sync'd to the server.
-   * Reset all 'synced_pending_files' rows to 'new_row' to ensure they are sync'd to the server.
+   * <ul>
+   * <li>Reset all 'in_conflict' rows to their original local state (changed or deleted).</li>
+   * <li>Leave all 'deleted' rows in 'deleted' state.</li>
+   * <li>Leave all 'changed' rows in 'changed' state.</li>
+   * <li>Reset all 'synced' rows to 'new_row' to ensure they are sync'd to the server.</li>
+   * <li>Reset all 'synced_pending_files' rows to 'new_row' to ensure they are sync'd to the server.</li>
+   * </ul>
+   * 
+   * @param db
+   * @param tableId
    */
   public void changeDataRowsToNewRowState(SQLiteDatabase db, String tableId) {
 
@@ -1266,7 +1438,14 @@ public class ODKDatabaseUtils {
     }
   }
 
-  public void deleteServerConflictRows(SQLiteDatabase db, String tableId, String rowId) {
+  /**
+   * Deletes the server conflict row (if any) for this rowId in this tableId.
+   * 
+   * @param db
+   * @param tableId
+   * @param rowId
+   */
+  public void deleteServerConflictRowWithId(SQLiteDatabase db, String tableId, String rowId) {
     // delete the old server-values in_conflict row if it exists
     String whereClause = String.format("%s = ? AND %s = ? AND %s IN " + "( ?, ? )",
         DataTableColumns.ID, DataTableColumns.SYNC_STATE, DataTableColumns.CONFLICT_TYPE);
@@ -1293,12 +1472,13 @@ public class ODKDatabaseUtils {
   }
 
   /**
-   * Changes the conflictType for the given row from null (not in conflict) to the specified one
+   * Change the conflictType for the given row from null (not in conflict) to the specified one.
    * 
    * @param db
    * @param tableId
    * @param rowId
-   * @param conflictType
+   * @param conflictType expected to be one of ConflictType.LOCAL_DELETED_OLD_VALUES (0) or 
+   * ConflictType.LOCAL_UPDATED_UPDATED_VALUES (1)
    */
   public void placeRowIntoConflict(SQLiteDatabase db, String tableId, String rowId, int conflictType) {
 
@@ -1329,11 +1509,15 @@ public class ODKDatabaseUtils {
   }
 
   /**
-   * Changes the conflictType for the given row from the specified one to null
+   * Changes the conflictType for the given row from the specified one to null and set the 
+   * sync state of this row to the indicated value.  In general, you should first update
+   * the local conflict record with its new values, then call deleteServerConflictRowWithId(...)
+   * and then call this method.
    * 
    * @param db
    * @param tableId
    * @param rowId
+   * @param syncState
    * @param conflictType
    */
   public void restoreRowFromConflict(SQLiteDatabase db, String tableId, String rowId, SyncState syncState, int conflictType) {
@@ -1364,6 +1548,10 @@ public class ODKDatabaseUtils {
   }
   
   /**
+   * 
+   * @param db
+   * @param appName
+   * @param tableId
    * @param rowId
    * @return the sync state of the row (see {@link SyncState}), or null if
    *         the row does not exist.
@@ -1388,7 +1576,25 @@ public class ODKDatabaseUtils {
      }
   }
 
-  public void deleteDataInDBTableWithId(SQLiteDatabase db, String appName, String tableId, String rowId) {
+  /**
+   * Delete the specified rowId in this tableId. Deletion respects sync semantics. 
+   * If the row is in the SyncState.new_row state, then the row and its associated
+   * file attachments are immediately deleted. Otherwise, the row is placed into
+   * the SyncState.deleted state and will be retained until the device can delete
+   * the record on the server.
+   * <p>
+   * If you need to immediately delete a record that would otherwise sync to the server, 
+   * call updateRowETagAndSyncState(...) to set the row to SyncState.new_row, and 
+   * then call this method and it will be immediately deleted (in this case, unless the
+   * record on the server was already deleted, it will remain and not be deleted during
+   * any subsequent synchronizations).
+   * 
+   * @param db
+   * @param appName
+   * @param tableId
+   * @param rowId
+   */
+  public void deleteDataInExistingDBTableWithId(SQLiteDatabase db, String appName, String tableId, String rowId) {
     SyncState syncState = getSyncState(db, appName, tableId, rowId);
        
     boolean dbWithinTransaction = db.inTransaction();
@@ -1443,7 +1649,10 @@ public class ODKDatabaseUtils {
     }
   }
   
-  public void rawDeleteDataInDBTable(SQLiteDatabase db, String tableId, String whereClause, String[] whereArgs) {
+  /*
+   * Internal method to execute a delete statement with the given where clause 
+   */
+  private void rawDeleteDataInDBTable(SQLiteDatabase db, String tableId, String whereClause, String[] whereArgs) {
     boolean dbWithinTransaction = db.inTransaction();
     try {
       if ( !dbWithinTransaction ) {
@@ -1462,12 +1671,33 @@ public class ODKDatabaseUtils {
     }
   }
 
-  public void deleteCheckpointDataInDBTableWithId(SQLiteDatabase db, String tableId, String rowId) {
+  /**
+   * Delete any checkpoint rows for the given rowId in the tableId. Checkpoint rows are
+   * created by ODK Survey to hold intermediate values during the filling-in of the form. 
+   * They act as restore points in the Survey, should the application die. 
+   * 
+   * @param db
+   * @param appName
+   * @param tableId
+   * @param rowId
+   */
+  public void deleteCheckpointRowsWithId(SQLiteDatabase db, String appName, String tableId, String rowId) {
     rawDeleteDataInDBTable(db, tableId, 
         DataTableColumns.ID + "=? AND " + DataTableColumns.SAVEPOINT_TYPE + " IS NULL",
         new String[] { rowId });
   }
   
+  /**
+   * Update all rows for the given rowId to SavepointType 'INCOMPLETE' and remove all
+   * but the most recent row. When used with a rowId that has checkpoints, this updates
+   * to the most recent checkpoint and removes any earlier checkpoints, incomplete or 
+   * complete savepoints. Otherwise, it has the general effect of resetting
+   * the rowId to an INCOMPLETE state.
+   *  
+   * @param db
+   * @param tableId
+   * @param rowId
+   */
   public void saveAsIncompleteMostRecentCheckpointDataInDBTableWithId(SQLiteDatabase db, String tableId, String rowId) {
     boolean dbWithinTransaction = db.inTransaction();
     try {
@@ -1495,25 +1725,46 @@ public class ODKDatabaseUtils {
     }
   }
   
-  /*
-   * Write data into a user defined database table
+  /**
+   * Update the given rowId with the values in the cvValues. If certain metadata 
+   * values are not specified in the cvValues, then suitable default values may 
+   * be supplied for them. Furthermore, if the cvValues do not specify certain 
+   * metadata fields, then an exception may be thrown if there are more than one
+   * row matching this rowId. 
+   *  
+   * @param db
+   * @param tableId
+   * @param orderedColumns
+   * @param cvValues
+   * @param rowId
    */
   public void updateDataInExistingDBTableWithId(SQLiteDatabase db, String tableId,
-      ArrayList<ColumnDefinition> orderedColumns, ContentValues cvValues, String uuid) {
+      ArrayList<ColumnDefinition> orderedColumns, ContentValues cvValues, String rowId) {
 
     if (cvValues.size() <= 0) {
       throw new IllegalArgumentException(t + ": No values to add into table " + tableId);
     }
 
     ContentValues cvDataTableVal = new ContentValues();
-    cvDataTableVal.put(DataTableColumns.ID, uuid);
+    cvDataTableVal.put(DataTableColumns.ID, rowId);
     cvDataTableVal.putAll(cvValues);
 
-    upsertDataAndMetadataIntoExistingDBTable(db, tableId, orderedColumns, cvDataTableVal, true);
+    upsertDataIntoExistingDBTable(db, tableId, orderedColumns, cvDataTableVal, true);
   }
   
-  /*
-   * Write data into a user defined database table
+  /**
+   * Insert the given rowId with the values in the cvValues. If certain metadata 
+   * values are not specified in the cvValues, then suitable default values may 
+   * be supplied for them. 
+   * 
+   * If a row with this rowId and certain matching metadata fields is present, then
+   * an exception is thrown. 
+   * 
+   * @param db
+   * @param tableId
+   * @param orderedColumns
+   * @param cvValues
+   * @param uuid
    */
   public void insertDataIntoExistingDBTableWithId(SQLiteDatabase db, String tableId,
       ArrayList<ColumnDefinition> orderedColumns, ContentValues cvValues, String uuid) {
@@ -1526,7 +1777,7 @@ public class ODKDatabaseUtils {
     cvDataTableVal.put(DataTableColumns.ID, uuid);
     cvDataTableVal.putAll(cvValues);
 
-    upsertDataAndMetadataIntoExistingDBTable(db, tableId, orderedColumns, cvDataTableVal, false);
+    upsertDataIntoExistingDBTable(db, tableId, orderedColumns, cvDataTableVal, false);
   }
 
   /*
@@ -1534,7 +1785,7 @@ public class ODKDatabaseUtils {
    * 
    * TODO: This is broken w.r.t. updates of partial fields
    */
-  private void upsertDataAndMetadataIntoExistingDBTable(SQLiteDatabase db,
+  private void upsertDataIntoExistingDBTable(SQLiteDatabase db,
       String tableId, ArrayList<ColumnDefinition> orderedColumns, ContentValues cvValues,
       boolean shouldUpdate) {
     String rowId = null;
@@ -1905,6 +2156,13 @@ public class ODKDatabaseUtils {
     }
   }
 
+  /**
+   * Retrieve the data type of the [i] field in the Cursor.
+   * 
+   * @param c
+   * @param i
+   * @return
+   */
   public static final Class<?> getIndexDataType(Cursor c, int i) {
     switch (c.getType(i)) {
     case Cursor.FIELD_TYPE_STRING:

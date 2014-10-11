@@ -19,6 +19,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.opendatakit.common.android.utilities.ODKFileUtils;
+import org.opendatakit.common.android.utilities.StaticStateManipulator;
+import org.opendatakit.common.android.utilities.StaticStateManipulator.IStaticFieldManipulator;
 import org.opendatakit.common.android.utilities.WebLogger;
 
 import android.content.Context;
@@ -28,6 +30,18 @@ public class DatabaseFactory {
   
   private static DatabaseFactory databaseFactory = new DatabaseFactory();
   
+  static {
+    // register a state-reset manipulator for 'databaseFactory' field.
+    StaticStateManipulator.get().register(50, new IStaticFieldManipulator() {
+
+      @Override
+      public void reset() {
+        databaseFactory = new DatabaseFactory();
+      }
+      
+    });
+  }
+
   public static DatabaseFactory get() {
     return databaseFactory;
   }

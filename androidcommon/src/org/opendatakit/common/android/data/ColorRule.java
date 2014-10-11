@@ -20,8 +20,6 @@ import java.util.UUID;
 
 import org.opendatakit.common.android.data.UserTable.Row;
 
-import android.util.Log;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
@@ -92,7 +90,6 @@ public class ColorRule {
       } else if (inputString.equals("") || inputString.equals(" ")) {
         return NO_OP;
       } else {
-        Log.e(TAG, "unrecognized rule operator: " + inputString);
         throw new IllegalArgumentException("unrecognized rule operator: " + inputString);
       }
     }
@@ -291,14 +288,14 @@ public class ColorRule {
     try {
       // Get the value we're testing against.
       String testValue = row.getRawDataOrMetadataByElementKey(mElementKey);
+      
+      // nulls are never matched (mValue is never null)
       if (testValue == null) {
-        testValue = "";
+        return false;
       }
+      
       int compVal;
       if ((type == ElementDataType.number || type == ElementDataType.integer)) {
-        if (testValue.equals("")) {
-          return false;
-        }
         double doubleValue = Double.parseDouble(testValue);
         double doubleRule = Double.parseDouble(mValue);
         compVal = (Double.valueOf(doubleValue)).compareTo(Double.valueOf(doubleRule));
@@ -317,16 +314,13 @@ public class ColorRule {
       case GREATER_THAN:
         return (compVal > 0);
       default:
-        Log.e(TAG, "unrecongized op passed to checkMatch: " + mOperator);
-        throw new IllegalArgumentException("unrecognized op passed " + "to checkMatch: "
+        throw new IllegalArgumentException("unrecognized op passed to checkMatch: "
             + mOperator);
       }
     } catch (NumberFormatException e) {
-      // Here we should maybe throw an exception that a rule is offending,
-      // and then catch and delete it in the decider.
+      // this should never happen
       e.printStackTrace();
-      Log.e(TAG, "was an error parsing value to a number, removing the " + "offending rule");
+      throw new IllegalArgumentException("error parsing value as number, removing the offending rule");
     }
-    return false;
   }
 }

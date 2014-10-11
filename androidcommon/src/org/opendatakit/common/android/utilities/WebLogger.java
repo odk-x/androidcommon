@@ -15,11 +15,14 @@
 package org.opendatakit.common.android.utilities;
 
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -27,6 +30,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import org.apache.commons.lang3.CharEncoding;
+import org.opendatakit.common.android.utilities.StaticStateManipulator.IStaticFieldManipulator;
 
 import android.util.Log;
 
@@ -38,8 +42,8 @@ import android.util.Log;
  * @author mitchellsundt@gmail.com
  */
 public class WebLogger {
-  private static long MILLISECONDS_DAY = 86400000L;
-  private static long FLUSH_INTERVAL = 12000L; // 5 times a minute
+  private static final long MILLISECONDS_DAY = 86400000L;
+  private static final long FLUSH_INTERVAL = 12000L; // 5 times a minute
 
   private static final int ASSERT = 1;
   private static final int VERBOSE = 2;
@@ -54,6 +58,21 @@ public class WebLogger {
 
   private static long lastStaleScan = 0L;
   private static Map<String, WebLogger> loggers = new HashMap<String, WebLogger>();
+  
+  static {
+    // register a state-reset manipulator for 'loggers' field.
+    StaticStateManipulator.get().register(99, new IStaticFieldManipulator() {
+
+      @Override
+      public void reset() {
+        for ( WebLogger l : loggers.values() ) {
+          l.close();
+        }
+        loggers.clear();
+      }
+      
+    });
+  }
 
   /**
    * Instance variables
@@ -114,6 +133,19 @@ public class WebLogger {
     this.appName = appName;
   }
 
+  private synchronized void close() {
+    if ( logFile != null ) {
+      OutputStreamWriter writer = logFile;
+      logFile = null;
+      try {
+        writer.flush();
+        writer.close();
+      } catch ( IOException e ) {
+        Log.e("WebLogger", "Unable to flush and close " + appName + " WebLogger");
+      }
+    }
+  }
+  
   private synchronized void log(String logMsg) throws IOException {
     String curDateStamp = (new SimpleDateFormat("yyyy-MM-dd_HH", Locale.ENGLISH)).format(new Date());
     if  ( logFile == null ||
@@ -256,6 +288,24 @@ public class WebLogger {
 
   public void e(String t, String logMsg) {
     log(ERROR, t, logMsg);
+  }
+  
+  public void printStackTrace(Exception e) {
+    e.printStackTrace();
+    ByteArrayOutputStream ba = new ByteArrayOutputStream();
+    PrintStream w;
+    try {
+      w = new PrintStream(ba, false, "UTF-8");
+      e.printStackTrace(w);
+      w.flush();
+      w.close();
+      log(ba.toString("UTF-8"));
+    } catch (UnsupportedEncodingException e1) {
+      // error if it ever occurs
+      throw new IllegalStateException("unable to specify UTF-8 Charset!");
+    } catch (IOException e1) {
+      e1.printStackTrace();
+    }
   }
 
   public void s(String t, String logMsg) {

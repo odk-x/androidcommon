@@ -56,7 +56,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
   private static final String DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN = DataTableColumns.SAVEPOINT_TIMESTAMP;
   private static final String DATA_TABLE_SAVEPOINT_TYPE_COLUMN = DataTableColumns.SAVEPOINT_TYPE;
 
-  private static HashMap<String, String> sInstancesProjectionMap;
+  private static final HashMap<String, String> sInstancesProjectionMap;
 
   public abstract String getInstanceAuthority();
 

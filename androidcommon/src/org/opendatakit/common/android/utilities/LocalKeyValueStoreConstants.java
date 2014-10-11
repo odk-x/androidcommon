@@ -20,7 +20,7 @@ package org.opendatakit.common.android.utilities;
  * @author sudar.sam@gmail.com
  *
  */
-public class LocalKeyValueStoreConstants {
+public final class LocalKeyValueStoreConstants {
   
   public static class Graph {
     public static final String PARTITION = "GraphDisplayActivity";
@@ -29,7 +29,7 @@ public class LocalKeyValueStoreConstants {
     public static final String KEY_GRAPH_TYPE = "graphtype";
   }
   
-  public static class Map {
+  public static final class Map {
     public static final String PARTITION = "TableMapFragment";
     /** The key to grab which column is being used for latitude. */
     public static final String KEY_MAP_LAT_COL = "keyMapLatCol";
@@ -39,7 +39,7 @@ public class LocalKeyValueStoreConstants {
     public static final String KEY_FILENAME = "keyFilename";
   }
   
-  public static class Spreadsheet {
+  public static final class Spreadsheet {
     public static final String KEY_COLUMN_WIDTH =
         "SpreadsheetView.columnWidth";
     public static final String PARTITION = "SpreadsheetView";
