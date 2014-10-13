@@ -106,6 +106,9 @@ public class StaticStateManipulator {
    *     <li>50 -- TableUtil</li>
    *     <li>50 -- WebUtils</li>
    *     <li>75 -- ClientConnectionManagerFactory</li>
+   *     <li>75 -- ODKWebChromeClient (Survey)</li>
+   *     <li>90 -- ElementTypeManipulatorFactory (Tables)</li>
+   *     <li>90 -- PropertiesSingleton (Survey)</li>
    *     <li>99 -- WebLogger (live OutputStreamWriter objects)</li>
    *     </ul>
    * @param fm a manipulator that can perform the reset.

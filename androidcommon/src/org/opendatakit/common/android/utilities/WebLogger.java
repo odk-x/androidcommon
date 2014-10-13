@@ -290,7 +290,7 @@ public class WebLogger {
     log(ERROR, t, logMsg);
   }
   
-  public void printStackTrace(Exception e) {
+  public void printStackTrace(Throwable e) {
     e.printStackTrace();
     ByteArrayOutputStream ba = new ByteArrayOutputStream();
     PrintStream w;
