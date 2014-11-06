@@ -1008,7 +1008,7 @@ public class ODKDatabaseUtils {
     cvTableVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_TABLE);
     cvTableVal.put(KeyValueStoreColumns.ASPECT, KeyValueStoreConstants.ASPECT_DEFAULT);
     cvTableVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.TABLE_COL_ORDER);
-    cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
+    cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "array");
     cvTableVal.put(KeyValueStoreColumns.VALUE, "[]");
     cvTableValKVS.add(cvTableVal);
 
@@ -1035,7 +1035,7 @@ public class ODKDatabaseUtils {
     cvTableVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_TABLE);
     cvTableVal.put(KeyValueStoreColumns.ASPECT, KeyValueStoreConstants.ASPECT_DEFAULT);
     cvTableVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.TABLE_GROUP_BY_COLS);
-    cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
+    cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "array");
     cvTableVal.put(KeyValueStoreColumns.VALUE, "[]");
     cvTableValKVS.add(cvTableVal);
 
@@ -1203,7 +1203,7 @@ public class ODKDatabaseUtils {
     cvTableVal.put(KeyValueStoreColumns.PARTITION, KeyValueStoreConstants.PARTITION_TABLE);
     cvTableVal.put(KeyValueStoreColumns.ASPECT, KeyValueStoreConstants.ASPECT_DEFAULT);
     cvTableVal.put(KeyValueStoreColumns.KEY, KeyValueStoreConstants.TABLE_COL_ORDER);
-    cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "object");
+    cvTableVal.put(KeyValueStoreColumns.VALUE_TYPE, "array");
     
     StringBuilder tableDefCol = new StringBuilder();
 
