@@ -680,6 +680,7 @@ public class ODKDatabaseUtils {
     values.put(KeyValueStoreColumns.ASPECT, entry.aspect);
     values.put(KeyValueStoreColumns.VALUE_TYPE, entry.type);
     values.put(KeyValueStoreColumns.VALUE, entry.value);
+    values.put(KeyValueStoreColumns.KEY, entry.key);
     
     boolean dbWithinTransaction = db.inTransaction();
     try {
