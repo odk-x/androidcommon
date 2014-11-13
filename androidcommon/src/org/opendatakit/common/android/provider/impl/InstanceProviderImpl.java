@@ -44,6 +44,7 @@ import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
+import android.util.Log;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -53,13 +54,13 @@ import com.fasterxml.jackson.databind.JsonMappingException;
  */
 public abstract class InstanceProviderImpl extends ContentProvider {
 
-  // private static final String t = "InstancesProviderImpl";
+  private static final String t = "InstancesProviderImpl";
 
   private static final String DATA_TABLE_ID_COLUMN = DataTableColumns.ID;
   private static final String DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN = DataTableColumns.SAVEPOINT_TIMESTAMP;
   private static final String DATA_TABLE_SAVEPOINT_TYPE_COLUMN = DataTableColumns.SAVEPOINT_TYPE;
 
-  private static HashMap<String, String> sInstancesProjectionMap;
+  private static final HashMap<String, String> sInstancesProjectionMap;
 
   public abstract String getInstanceAuthority();
 
@@ -75,6 +76,20 @@ public abstract class InstanceProviderImpl extends ContentProvider {
 
   @Override
   public boolean onCreate() {
+    
+    try {
+      ODKFileUtils.verifyExternalStorageAvailability();
+      File f = new File(ODKFileUtils.getOdkFolder());
+      if (!f.exists()) {
+        f.mkdir();
+      } else if (!f.isDirectory()) {
+        Log.e(t, f.getAbsolutePath() + " is not a directory!");
+        return false;
+      }
+    } catch (Exception e) {
+      Log.e(t, "External storage not available");
+      return false;
+    }
 
     return true;
   }
@@ -188,8 +203,10 @@ public abstract class InstanceProviderImpl extends ContentProvider {
 
       db.setTransactionSuccessful();
     } finally {
-      db.endTransaction();
-      db.close();
+      if ( db != null ) {
+        db.endTransaction();
+        db.close();
+      }
     }
 
     ////////////////////////////////////////////////////////////////
@@ -200,28 +217,41 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     b.setLength(0);
     // @formatter:off
     b.append("SELECT ");
-    b.append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
-        .append(InstanceColumns._ID).append(",")
-     .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
-        .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
-     .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(".")
-        .append(InstanceColumns.SUBMISSION_INSTANCE_ID).append(",");
+    b.append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME)
+      .append(".").append(InstanceColumns._ID)
+        .append(" as ").append(InstanceColumns._ID).append(",")
+     .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME)
+       .append(".").append(InstanceColumns.DATA_INSTANCE_ID)
+        .append(" as ").append(InstanceColumns.DATA_INSTANCE_ID).append(",")
+     .append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME)
+       .append(".").append(InstanceColumns.SUBMISSION_INSTANCE_ID)
+        .append(" as ").append(InstanceColumns.SUBMISSION_INSTANCE_ID).append(",");
     // add the dataTable metadata except for _ID (which conflicts with InstanceColumns._ID)
-    b.append(dbTableName).append(".").append(DataTableColumns.ROW_ETAG).append(",")
-     .append(dbTableName).append(".").append(DataTableColumns.SYNC_STATE).append(",")
-     .append(dbTableName).append(".").append(DataTableColumns.CONFLICT_TYPE).append(",")
-     .append(dbTableName).append(".").append(DataTableColumns.FILTER_TYPE).append(",")
-     .append(dbTableName).append(".").append(DataTableColumns.FILTER_VALUE).append(",")
-     .append(dbTableName).append(".").append(DataTableColumns.FORM_ID).append(",")
-     .append(dbTableName).append(".").append(DataTableColumns.LOCALE).append(",")
-     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_TYPE).append(",")
-     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_TIMESTAMP).append(",")
-     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_CREATOR).append(",");
+    b.append(dbTableName).append(".").append(DataTableColumns.ROW_ETAG)
+         .append(" as ").append(DataTableColumns.ROW_ETAG).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SYNC_STATE)
+         .append(" as ").append(DataTableColumns.SYNC_STATE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.CONFLICT_TYPE)
+         .append(" as ").append(DataTableColumns.CONFLICT_TYPE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.FILTER_TYPE)
+         .append(" as ").append(DataTableColumns.FILTER_TYPE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.FILTER_VALUE)
+         .append(" as ").append(DataTableColumns.FILTER_VALUE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.FORM_ID)
+         .append(" as ").append(DataTableColumns.FORM_ID).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.LOCALE)
+         .append(" as ").append(DataTableColumns.LOCALE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_TYPE)
+         .append(" as ").append(DataTableColumns.SAVEPOINT_TYPE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_TIMESTAMP)
+         .append(" as ").append(DataTableColumns.SAVEPOINT_TIMESTAMP).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_CREATOR)
+         .append(" as ").append(DataTableColumns.SAVEPOINT_CREATOR).append(",");
     // add the user-specified data fields in this dataTable
     for ( ColumnDefinition cd : defns.values() ) {
       if ( cd.isUnitOfRetention() ) {
-        b.append(dbTableName).append(".")
-         .append(cd.elementKey).append(",");
+        b.append(dbTableName).append(".").append(cd.elementKey)
+            .append(" as ").append(cd.elementKey).append(",");
       }
     }
     // b.append(dbTableName).append(".").append(InstanceColumns._ID).append(",");
@@ -244,7 +274,7 @@ public abstract class InstanceProviderImpl extends ContentProvider {
         .append(" ELSE ").append(InstanceColumns.DISPLAY_SUBTEXT).append(" END as ")
         .append(InstanceColumns.DISPLAY_SUBTEXT).append(",");
     if ( instanceName == null ) {
-      b.append( "datetime(").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append("/1000000, 'unixepoch', 'localtime')");
+      b.append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN);
     } else {
       b.append(instanceName);
     }
@@ -252,8 +282,9 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     b.append(" FROM ");
     b.append("( SELECT * FROM ").append(dbTableName).append(" AS T WHERE T.")
      .append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append("=(SELECT MAX(V.")
-     .append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(") FROM ").append(dbTableName).append(" AS V WHERE V.")
-     .append(DATA_TABLE_ID_COLUMN).append("=T.").append(DATA_TABLE_ID_COLUMN)
+     .append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(") FROM ")
+       .append(dbTableName).append(" AS V WHERE V.")
+       .append(DATA_TABLE_ID_COLUMN).append("=T.").append(DATA_TABLE_ID_COLUMN)
      .append(" AND V.").append(DATA_TABLE_SAVEPOINT_TYPE_COLUMN).append(" IS NOT NULL").append(")")
      .append(") as ").append(dbTableName);
     b.append(" JOIN ").append(DataModelDatabaseHelper.UPLOADS_TABLE_NAME).append(" ON ")
@@ -296,12 +327,22 @@ public abstract class InstanceProviderImpl extends ContentProvider {
 
     fullQuery = b.toString();
 
-    db = dbh.getReadableDatabase();
-    c = db.rawQuery(fullQuery, filterArgs);
-    // Tell the cursor what uri to watch, so it knows when its source data
-    // changes
-    c.setNotificationUri(getContext().getContentResolver(), uri);
-    return c;
+    db = null;
+    boolean success = false;
+    try {
+      db = dbh.getReadableDatabase();
+      c = db.rawQuery(fullQuery, filterArgs);
+      // Tell the cursor what uri to watch, so it knows when its source data
+      // changes
+      c.setNotificationUri(getContext().getContentResolver(), uri);
+      success = true;
+      return c;
+    } finally {
+      if ( db != null && !success ) {
+        // leave database open for cursor...
+        db.close();
+      }
+    }
   }
 
   @Override
@@ -432,8 +473,10 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       }
       db.setTransactionSuccessful();
     } finally {
-      db.endTransaction();
-      db.close();
+      if ( db != null ) {
+        db.endTransaction();
+        db.close();
+      }
     }
     getContext().getContentResolver().notifyChange(uri, null);
     return idStructs.size();
@@ -519,8 +562,10 @@ public abstract class InstanceProviderImpl extends ContentProvider {
       }
       db.setTransactionSuccessful();
     } finally {
-      db.endTransaction();
-      db.close();
+      if ( db != null ) {
+        db.endTransaction();
+        db.close();
+      }
     }
     getContext().getContentResolver().notifyChange(uri, null);
     return count;
