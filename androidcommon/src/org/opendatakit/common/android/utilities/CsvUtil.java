@@ -114,8 +114,10 @@ public class CsvUtil {
     // then we are including all the metadata columns.
     ArrayList<String> columns = new ArrayList<String>();
 
-    WebLogger.getLogger(appName).i(TAG, "exportSeparable: tableId: " + tableId + " fileQualifier: "
-        + ((fileQualifier == null) ? "<null>" : fileQualifier));
+    WebLogger.getLogger(appName).i(
+        TAG,
+        "exportSeparable: tableId: " + tableId + " fileQualifier: "
+            + ((fileQualifier == null) ? "<null>" : fileQualifier));
 
     // put the user-relevant metadata columns in leftmost columns
     columns.add(DataTableColumns.ID);
@@ -124,6 +126,13 @@ public class CsvUtil {
     columns.add(DataTableColumns.SAVEPOINT_TYPE);
     columns.add(DataTableColumns.SAVEPOINT_TIMESTAMP);
     columns.add(DataTableColumns.SAVEPOINT_CREATOR);
+
+    // add the data columns
+    for (ColumnDefinition cd : orderedDefns) {
+      if (cd.isUnitOfRetention()) {
+        columns.add(cd.getElementKey());
+      }
+    }
 
     // And now add all remaining export columns
     for (String colName : ODKDatabaseUtils.get().getExportColumns()) {
@@ -280,8 +289,8 @@ public class CsvUtil {
        * Since the md5Hash of the file identifies identical properties, ensure
        * that the list of KVS entries is in alphabetical order.
        */
-      List<KeyValueStoreEntry> kvsEntries = ODKDatabaseUtils.get().getDBTableMetadata(db, tableId, null,
-          null, null);
+      List<KeyValueStoreEntry> kvsEntries = ODKDatabaseUtils.get().getDBTableMetadata(db, tableId,
+          null, null, null);
       Collections.sort(kvsEntries, new Comparator<KeyValueStoreEntry>() {
 
         @Override
@@ -446,7 +455,8 @@ public class CsvUtil {
         } catch (IOException e) {
         }
 
-        ArrayList<ColumnDefinition> colDefns = ColumnDefinition.buildColumnDefinitions(appName, tableId, columns);
+        ArrayList<ColumnDefinition> colDefns = ColumnDefinition.buildColumnDefinitions(appName,
+            tableId, columns);
         Map<String, List<KeyValueStoreEntry>> colEntries = new TreeMap<String, List<KeyValueStoreEntry>>();
 
         file = new File(ODKFileUtils.getTablePropertiesCsvFile(appName, tableId));
@@ -492,7 +502,7 @@ public class CsvUtil {
             }
             try {
               ColumnDefinition.find(colDefns, column);
-            } catch ( IllegalArgumentException e) {
+            } catch (IllegalArgumentException e) {
               throw new IllegalStateException("Reference to non-existent column: " + column
                   + " of tableId: " + tableId);
             }
@@ -522,7 +532,8 @@ public class CsvUtil {
         }
 
         if (ODKDatabaseUtils.get().hasTableId(db, tableId)) {
-          ArrayList<ColumnDefinition> existingDefns = TableUtil.get().getColumnDefinitions(db, appName, tableId);
+          ArrayList<ColumnDefinition> existingDefns = TableUtil.get().getColumnDefinitions(db,
+              appName, tableId);
 
           // confirm that the column definitions are unchanged...
           if (existingDefns.size() != colDefns.size()) {
@@ -530,10 +541,10 @@ public class CsvUtil {
                 "Unexpectedly found tableId with different column definitions that already exists!");
           }
           for (ColumnDefinition ci : colDefns) {
-            ColumnDefinition existingDefn; 
+            ColumnDefinition existingDefn;
             try {
               existingDefn = ColumnDefinition.find(existingDefns, ci.getElementKey());
-            } catch ( IllegalArgumentException e) {
+            } catch (IllegalArgumentException e) {
               throw new IllegalStateException("Unexpectedly failed to match elementKey: "
                   + ci.getElementKey());
             }
@@ -584,7 +595,7 @@ public class CsvUtil {
                   break;
                 }
               }
-              
+
               if (entry != null && (entry.value == null || entry.value.trim().length() == 0)) {
                 kvsList.remove(entry);
                 entry = null;
@@ -624,12 +635,12 @@ public class CsvUtil {
                 break;
               }
             }
-            
+
             if (entry != null && (entry.value == null || entry.value.trim().length() == 0)) {
               kvsList.remove(entry);
               entry = null;
             }
-            
+
             if (entry == null) {
               entry = new KeyValueStoreEntry();
               entry.tableId = tableId;
@@ -675,14 +686,14 @@ public class CsvUtil {
         } catch (IOException e) {
         }
       }
-      
-      // And update the inserted properties so that 
+
+      // And update the inserted properties so that
       // the known entries have their expected types.
       try {
         db.beginTransaction();
-        
+
         ODKDatabaseUtils.get().enforceTypesDBTableMetadata(db, tableId);
-        
+
         db.setTransactionSuccessful();
       } finally {
         db.endTransaction();
@@ -731,10 +742,13 @@ public class CsvUtil {
         }
       }
 
-      ArrayList<ColumnDefinition> orderedDefns = TableUtil.get().getColumnDefinitions(db, appName, tableId);
+      ArrayList<ColumnDefinition> orderedDefns = TableUtil.get().getColumnDefinitions(db, appName,
+          tableId);
 
-      WebLogger.getLogger(appName).i(TAG, "importSeparable: tableId: " + tableId + " fileQualifier: "
-          + ((fileQualifier == null) ? "<null>" : fileQualifier));
+      WebLogger.getLogger(appName).i(
+          TAG,
+          "importSeparable: tableId: " + tableId + " fileQualifier: "
+              + ((fileQualifier == null) ? "<null>" : fileQualifier));
 
       // reading data
       InputStreamReader input = null;
@@ -855,9 +869,9 @@ public class CsvUtil {
             try {
               ColumnDefinition.find(orderedDefns, column);
               valueMap.put(column, tmp);
-            } catch ( IllegalArgumentException e) {
-              // this is OK -- 
-              // the csv contains an extra column 
+            } catch (IllegalArgumentException e) {
+              // this is OK --
+              // the csv contains an extra column
             }
           }
 
@@ -865,8 +879,8 @@ public class CsvUtil {
           // uncommitted edits. For now, we just add our csv import to those,
           // rather
           // than resolve the problems.
-          UserTable table = ODKDatabaseUtils.get().getDataInExistingDBTableWithId(db, appName, tableId,
-              orderedDefns, v_id);
+          UserTable table = ODKDatabaseUtils.get().getDataInExistingDBTableWithId(db, appName,
+              tableId, orderedDefns, v_id);
           if (table.getNumberOfRows() > 1) {
             throw new IllegalStateException(
                 "There are either checkpoint or conflict rows in the destination table");
@@ -918,8 +932,8 @@ public class CsvUtil {
 
             if (syncState == SyncState.new_row) {
               // we do the actual update here
-              ODKDatabaseUtils.get().updateDataInExistingDBTableWithId(db, tableId, orderedDefns, cv,
-                  v_id);
+              ODKDatabaseUtils.get().updateDataInExistingDBTableWithId(db, tableId, orderedDefns,
+                  cv, v_id);
             }
             // otherwise, do NOT update the row.
 
@@ -947,8 +961,8 @@ public class CsvUtil {
 
             cv.put(DataTableColumns.ID, v_id);
 
-            ODKDatabaseUtils.get().insertDataIntoExistingDBTableWithId(db, tableId, orderedDefns, cv,
-                v_id);
+            ODKDatabaseUtils.get().insertDataIntoExistingDBTableWithId(db, tableId, orderedDefns,
+                cv, v_id);
           }
         }
         cr.close();
