@@ -204,51 +204,63 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     b.setLength(0);
     // @formatter:off
     b.append("SELECT ");
-    b.append(DatabaseConstants.UPLOADS_TABLE_NAME).append(".")
-        .append(InstanceColumns._ID).append(",")
-     .append(DatabaseConstants.UPLOADS_TABLE_NAME).append(".")
-        .append(InstanceColumns.DATA_INSTANCE_ID).append(",")
-     .append(DatabaseConstants.UPLOADS_TABLE_NAME).append(".")
-        .append(InstanceColumns.SUBMISSION_INSTANCE_ID).append(",");
+    b.append(DatabaseConstants.UPLOADS_TABLE_NAME)
+       .append(".").append(InstanceColumns._ID)
+         .append(" as ").append(InstanceColumns._ID).append(",")
+     .append(DatabaseConstants.UPLOADS_TABLE_NAME)
+       .append(".").append(InstanceColumns.DATA_INSTANCE_ID)
+         .append(" as ").append(InstanceColumns.DATA_INSTANCE_ID).append(",")
+     .append(DatabaseConstants.UPLOADS_TABLE_NAME)
+       .append(".").append(InstanceColumns.SUBMISSION_INSTANCE_ID)
+         .append(" as ").append(InstanceColumns.SUBMISSION_INSTANCE_ID).append(",");
     // add the dataTable metadata except for _ID (which conflicts with InstanceColumns._ID)
-    b.append(dbTableName).append(".").append(DataTableColumns.ROW_ETAG).append(",")
-     .append(dbTableName).append(".").append(DataTableColumns.SYNC_STATE).append(",")
-     .append(dbTableName).append(".").append(DataTableColumns.CONFLICT_TYPE).append(",")
-     .append(dbTableName).append(".").append(DataTableColumns.FILTER_TYPE).append(",")
-     .append(dbTableName).append(".").append(DataTableColumns.FILTER_VALUE).append(",")
-     .append(dbTableName).append(".").append(DataTableColumns.FORM_ID).append(",")
-     .append(dbTableName).append(".").append(DataTableColumns.LOCALE).append(",")
-     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_TYPE).append(",")
-     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_TIMESTAMP).append(",")
-     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_CREATOR).append(",");
+    b.append(dbTableName).append(".").append(DataTableColumns.ROW_ETAG)
+         .append(" as ").append(DataTableColumns.ROW_ETAG).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SYNC_STATE)
+         .append(" as ").append(DataTableColumns.SYNC_STATE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.CONFLICT_TYPE)
+         .append(" as ").append(DataTableColumns.CONFLICT_TYPE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.FILTER_TYPE)
+         .append(" as ").append(DataTableColumns.FILTER_TYPE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.FILTER_VALUE)
+         .append(" as ").append(DataTableColumns.FILTER_VALUE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.FORM_ID)
+         .append(" as ").append(DataTableColumns.FORM_ID).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.LOCALE)
+         .append(" as ").append(DataTableColumns.LOCALE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_TYPE)
+         .append(" as ").append(DataTableColumns.SAVEPOINT_TYPE).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_TIMESTAMP)
+         .append(" as ").append(DataTableColumns.SAVEPOINT_TIMESTAMP).append(",")
+     .append(dbTableName).append(".").append(DataTableColumns.SAVEPOINT_CREATOR)
+         .append(" as ").append(DataTableColumns.SAVEPOINT_CREATOR).append(",");
     // add the user-specified data fields in this dataTable
     for ( ColumnDefinition cd : orderedDefns ) {
       if ( cd.isUnitOfRetention() ) {
-        b.append(dbTableName).append(".")
-         .append(cd.getElementKey()).append(",");
+        b.append(dbTableName).append(".").append(cd.getElementKey())
+            .append(" as ").append(cd.getElementKey()).append(",");
       }
     }
-    // b.append(dbTableName).append(".").append(InstanceColumns._ID).append(",");
     b.append("CASE WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
         .append(" WHEN ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP)
         .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
         .append(" > ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" THEN null")
         .append(" ELSE ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" END as ")
-        .append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(",");
+            .append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(",");
     b.append("CASE WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
         .append(" WHEN ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP)
         .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
         .append(" > ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" THEN null")
         .append(" ELSE ").append(InstanceColumns.XML_PUBLISH_STATUS).append(" END as ")
-        .append(InstanceColumns.XML_PUBLISH_STATUS).append(",");
+            .append(InstanceColumns.XML_PUBLISH_STATUS).append(",");
     b.append("CASE WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(" IS NULL THEN null")
         .append(" WHEN ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP)
         .append(" IS NULL THEN null").append(" WHEN ").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN)
         .append(" > ").append(InstanceColumns.XML_PUBLISH_TIMESTAMP).append(" THEN null")
         .append(" ELSE ").append(InstanceColumns.DISPLAY_SUBTEXT).append(" END as ")
-        .append(InstanceColumns.DISPLAY_SUBTEXT).append(",");
+            .append(InstanceColumns.DISPLAY_SUBTEXT).append(",");
     if ( instanceName == null ) {
-      b.append( "datetime(").append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append("/1000000, 'unixepoch', 'localtime')");
+      b.append(DataTableColumns.SAVEPOINT_TIMESTAMP);
     } else {
       b.append(instanceName);
     }
@@ -256,8 +268,9 @@ public abstract class InstanceProviderImpl extends ContentProvider {
     b.append(" FROM ");
     b.append("( SELECT * FROM ").append(dbTableName).append(" AS T WHERE T.")
      .append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append("=(SELECT MAX(V.")
-     .append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(") FROM ").append(dbTableName).append(" AS V WHERE V.")
-     .append(DATA_TABLE_ID_COLUMN).append("=T.").append(DATA_TABLE_ID_COLUMN)
+     .append(DATA_TABLE_SAVEPOINT_TIMESTAMP_COLUMN).append(") FROM ")
+       .append(dbTableName).append(" AS V WHERE V.")
+       .append(DATA_TABLE_ID_COLUMN).append("=T.").append(DATA_TABLE_ID_COLUMN)
      .append(" AND V.").append(DATA_TABLE_SAVEPOINT_TYPE_COLUMN).append(" IS NOT NULL").append(")")
      .append(") as ").append(dbTableName);
     b.append(" JOIN ").append(DatabaseConstants.UPLOADS_TABLE_NAME).append(" ON ")
