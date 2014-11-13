@@ -74,23 +74,23 @@ public final class FormsColumns implements BaseColumns {
    */
   public static String getTableCreateSql(String tableName) {
     //@formatter:off
-	      return "CREATE TABLE IF NOT EXISTS " + tableName + " ("
-	            + _ID + " integer not null primary key, " // for Google...
-	            + FORM_ID + " text not null unique, "  // real PK
-	            + DISPLAY_NAME + " text not null, "
-	            + DISPLAY_SUBTEXT + " text not null, "
-	            + DESCRIPTION + " text, "
-	            + TABLE_ID + " text null, " // null if framework
-	            + FORM_VERSION + " text, "
-	            + APP_RELATIVE_FORM_FILE_PATH + " text null, "
-	            + APP_RELATIVE_FORM_MEDIA_PATH + " text not null, "
-	            + FORM_PATH + " text not null, "
-	            + MD5_HASH + " text not null, "
-	            + JSON_MD5_HASH + " text not null, "
-	            + DATE + " integer not null, " // milliseconds
-	            + DEFAULT_FORM_LOCALE + " text null, "
-	            + INSTANCE_NAME + " text null )";
-       //@formatter:on
+    return "CREATE TABLE IF NOT EXISTS " + tableName + " ("
+           + _ID + " integer not null primary key, " // for Google...
+           + FORM_ID + " text not null unique, "  // real PK
+           + DISPLAY_NAME + " text not null, "
+           + DISPLAY_SUBTEXT + " text not null, "
+           + DESCRIPTION + " text, "
+           + TABLE_ID + " text null, " // null if framework
+           + FORM_VERSION + " text, "
+           + APP_RELATIVE_FORM_FILE_PATH + " text null, "
+           + APP_RELATIVE_FORM_MEDIA_PATH + " text not null, "
+           + FORM_PATH + " text not null, "
+           + MD5_HASH + " text not null, "
+           + JSON_MD5_HASH + " text not null, "
+           + DATE + " integer not null, " // milliseconds
+           + DEFAULT_FORM_LOCALE + " text null, "
+           + INSTANCE_NAME + " text null )";
+    //@formatter:on
   }
 
   public static String extractAppNameFromFormsUri(Uri uri) {

@@ -70,11 +70,11 @@ public final class SurveyConfigurationColumns implements BaseColumns {
    */
   public static String getTableCreateSql(String tableName) {
     //@formatter:off
-       return "CREATE TABLE IF NOT EXISTS " + tableName + " ("
-           + _ID + " integer primary key, "
-           + KEY + " text, "
-           + VALUE + " text)";
-     //@formatter:on
+    return "CREATE TABLE IF NOT EXISTS " + tableName + " ("
+        + _ID + " integer primary key, "
+        + KEY + " text, "
+        + VALUE + " text)";
+    //@formatter:on
   }
 
 }

@@ -34,9 +34,15 @@ public class KeyValueStoreColumns implements BaseColumns {
    * @return well-formed SQL create-table statement.
    */
   public static String getTableCreateSql(String tableName) {
-    return "CREATE TABLE IF NOT EXISTS " + tableName + " (" + TABLE_ID + " TEXT NOT NULL, "
-        + PARTITION + " TEXT NOT NULL, " + ASPECT + " TEXT NOT NULL, " + KEY + " TEXT NOT NULL, "
-        + VALUE_TYPE + " TEXT NOT NULL, " + VALUE + " TEXT NOT NULL, " + "PRIMARY KEY ( "
-        + TABLE_ID + ", " + PARTITION + ", " + ASPECT + ", " + KEY + ") )";
+    //@formatter:off
+    return "CREATE TABLE IF NOT EXISTS " + tableName + " ("
+        + TABLE_ID + " TEXT NOT NULL, "
+        + PARTITION + " TEXT NOT NULL, "
+        + ASPECT + " TEXT NOT NULL, "
+        + KEY + " TEXT NOT NULL, "
+        + VALUE_TYPE + " TEXT NOT NULL, "
+        + VALUE + " TEXT NOT NULL, "
+        + "PRIMARY KEY ( " + TABLE_ID + ", " + PARTITION + ", " + ASPECT + ", " + KEY + ") )";
+    //@formatter:on
   }
 }

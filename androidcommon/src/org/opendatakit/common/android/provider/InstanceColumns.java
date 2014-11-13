@@ -55,15 +55,15 @@ public final class InstanceColumns implements BaseColumns {
    */
   public static String getTableCreateSql(String tableName) {
     //@formatter:off
-       return "CREATE TABLE IF NOT EXISTS " + tableName + " ("
-           + _ID + " integer primary key, "
-           + DATA_INSTANCE_ID + " text, "
-           + DATA_TABLE_TABLE_ID + " text, "
-           + SUBMISSION_INSTANCE_ID + " text, "
-           + XML_PUBLISH_TIMESTAMP + " text, "
-           + XML_PUBLISH_STATUS + " text, "
-           + DISPLAY_SUBTEXT + " text)";
-     //@formatter:on
+    return "CREATE TABLE IF NOT EXISTS " + tableName + " ("
+        + _ID + " integer primary key, "
+        + DATA_INSTANCE_ID + " text, "
+        + DATA_TABLE_TABLE_ID + " text, "
+        + SUBMISSION_INSTANCE_ID + " text, "
+        + XML_PUBLISH_TIMESTAMP + " text, "
+        + XML_PUBLISH_STATUS + " text, "
+        + DISPLAY_SUBTEXT + " text)";
+    //@formatter:on
   }
 
 }

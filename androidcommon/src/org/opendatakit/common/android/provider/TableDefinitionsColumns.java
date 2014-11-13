@@ -31,14 +31,13 @@ public class TableDefinitionsColumns implements BaseColumns {
   }
 
   public static String getTableCreateSql(String tableName) {
-    //@formatter:off
+    // @formatter:off
     String create = "CREATE TABLE IF NOT EXISTS " + tableName + "("
-				+ TABLE_ID + " TEXT NOT NULL PRIMARY KEY, "
-				+ SCHEMA_ETAG + " TEXT NULL,"
-            + LAST_DATA_ETAG + " TEXT NULL,"
-				// TODO last sync time should probably become an int?
-				+ LAST_SYNC_TIME + " TEXT NOT NULL )";
-    //@formatter:on
+      + TABLE_ID + " TEXT NOT NULL PRIMARY KEY, " 
+      + SCHEMA_ETAG + " TEXT NULL,"
+      + LAST_DATA_ETAG + " TEXT NULL,"
+      + LAST_SYNC_TIME + " TEXT NOT NULL )";
+    // @formatter:on
     return create;
   }
 
