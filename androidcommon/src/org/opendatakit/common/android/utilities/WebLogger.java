@@ -87,6 +87,25 @@ public class WebLogger {
   // the last time we flushed our output stream
   private long lastFlush = 0L;
 
+  private static class ThreadLogger extends ThreadLocal<String> {
+
+    @Override
+    protected String initialValue() {
+      return null;
+    }
+    
+  }
+  
+  private static ThreadLogger contextLogger = new ThreadLogger();
+
+  public static WebLogger getContextLogger() {
+    String appNameOfThread = contextLogger.get();
+    if ( appNameOfThread != null ) {
+      return getLogger(appNameOfThread);
+    }
+    return null;
+  }
+  
   public synchronized static WebLogger getLogger(String appName) {
     WebLogger logger = loggers.get(appName);
     if (logger == null) {
@@ -94,6 +113,8 @@ public class WebLogger {
       loggers.put(appName, logger);
     }
 
+    contextLogger.set(appName);
+    
     long now = System.currentTimeMillis();
     if (lastStaleScan + MILLISECONDS_DAY < now) {
       try {
@@ -213,7 +234,7 @@ public class WebLogger {
     }
   }
 
-  private void log(int severity, String t, String logMsg) {
+  public void log(int severity, String t, String logMsg) {
     try {
       // do logcat logging...
       if ( severity == ERROR ) {

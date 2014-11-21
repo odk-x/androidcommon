@@ -477,6 +477,8 @@ public class ODKDatabaseUtils {
    * @param tableId
    */
   public void deleteDBTableAndAllData(SQLiteDatabase db, final String appName, final String tableId) {
+    
+    SyncETagsUtils seu = new SyncETagsUtils();
     boolean dbWithinTransaction = db.inTransaction();
     try {
       String whereClause = TableDefinitionsColumns.TABLE_ID + " = ?";
@@ -489,6 +491,9 @@ public class ODKDatabaseUtils {
       // Drop the table used for the formId
       db.execSQL("DROP TABLE IF EXISTS \"" + tableId + "\";");
 
+      // Delete the server sync ETags associated with this table
+      seu.deleteAllSyncETags(db, tableId);
+      
       // Delete the table definition for the tableId
       int count = db.delete(DatabaseConstants.TABLE_DEFS_TABLE_NAME, whereClause, whereArgs);
 

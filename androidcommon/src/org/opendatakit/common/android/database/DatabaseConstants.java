@@ -61,4 +61,11 @@ public class DatabaseConstants {
 
   public static final String FORMS_TABLE_NAME = "_formDefs";
 
+  /**
+   * For ODK Sync (only)
+   * 
+   * Tracks the ETag values for manifests and files.
+   */
+  
+  public static final String SYNC_ETAGS_TABLE_NAME = "_sync_etags";
 }

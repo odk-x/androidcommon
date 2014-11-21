@@ -18,6 +18,7 @@ import org.opendatakit.common.android.provider.ColumnDefinitionsColumns;
 import org.opendatakit.common.android.provider.FormsColumns;
 import org.opendatakit.common.android.provider.InstanceColumns;
 import org.opendatakit.common.android.provider.KeyValueStoreColumns;
+import org.opendatakit.common.android.provider.SyncETagColumns;
 import org.opendatakit.common.android.provider.TableDefinitionsColumns;
 
 import android.database.sqlite.SQLiteDatabase;
@@ -44,6 +45,7 @@ class DataModelDatabaseHelper extends WebKitDatabaseInfoHelper {
     db.execSQL(KeyValueStoreColumns.getTableCreateSql(DatabaseConstants.KEY_VALUE_STORE_ACTIVE_TABLE_NAME));
     db.execSQL(KeyValueStoreColumns.getTableCreateSql(DatabaseConstants.KEY_VALULE_STORE_SYNC_TABLE_NAME));
     db.execSQL(TableDefinitionsColumns.getTableCreateSql(DatabaseConstants.TABLE_DEFS_TABLE_NAME));
+    db.execSQL(SyncETagColumns.getTableCreateSql(DatabaseConstants.SYNC_ETAGS_TABLE_NAME));
   }
 
   @Override
