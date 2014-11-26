@@ -95,12 +95,12 @@ public class OdkSyncServiceProxy implements ServiceConnection {
     }
   }
 
-  public boolean synchronizeFromServer(String appName) throws RemoteException {
+  public boolean synchronizeFromServer(String appName, boolean deferInstanceAttachments) throws RemoteException {
     if (appName == null)
       throw new IllegalArgumentException("App Name cannot be null");
 
     try {
-      return sensorSvcProxy.synchronize(appName);
+      return sensorSvcProxy.synchronize(appName, deferInstanceAttachments);
     } catch (RemoteException rex) {
       rex.printStackTrace();
       throw rex;

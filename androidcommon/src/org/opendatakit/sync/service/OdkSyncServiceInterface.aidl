@@ -22,7 +22,7 @@ interface OdkSyncServiceInterface {
 
 	SyncStatus getSyncStatus(in String appName);
 	
-	boolean synchronize(in String appName);
+	boolean synchronize(in String appName, in boolean deferInstanceAttachments);
 	
 	boolean push(in String appName);
 	
