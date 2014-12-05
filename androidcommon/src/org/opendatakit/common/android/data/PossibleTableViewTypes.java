@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.opendatakit.aggregate.odktables.rest.ElementDataType;
+import org.opendatakit.aggregate.odktables.rest.ElementType;
 import org.opendatakit.common.android.utilities.GeoColumnUtil;
 import org.opendatakit.common.android.utilities.TableUtil;
 

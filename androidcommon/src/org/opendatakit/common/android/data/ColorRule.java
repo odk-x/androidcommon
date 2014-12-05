@@ -18,6 +18,7 @@ package org.opendatakit.common.android.data;
 import java.util.TreeMap;
 import java.util.UUID;
 
+import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.common.android.data.UserTable.Row;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;

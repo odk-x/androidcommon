@@ -18,10 +18,10 @@ package org.opendatakit.common.android.utilities;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.common.android.data.ColumnDefinition;
-import org.opendatakit.common.android.data.ElementDataType;
 import org.opendatakit.common.android.data.KeyValueStoreEntry;
 import org.opendatakit.common.android.data.TableViewType;
 import org.opendatakit.common.android.utilities.KeyValueStoreHelper.AspectHelper;

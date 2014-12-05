@@ -6,12 +6,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import org.opendatakit.aggregate.odktables.rest.ElementDataType;
+import org.opendatakit.aggregate.odktables.rest.ElementType;
 import org.opendatakit.aggregate.odktables.rest.SyncState;
 import org.opendatakit.aggregate.odktables.rest.TableConstants;
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.common.android.data.ColumnDefinition;
-import org.opendatakit.common.android.data.ElementDataType;
-import org.opendatakit.common.android.data.ElementType;
 import org.opendatakit.common.android.database.DatabaseConstants;
 import org.opendatakit.common.android.provider.ColumnDefinitionsColumns;
 import org.opendatakit.common.android.provider.DataTableColumns;

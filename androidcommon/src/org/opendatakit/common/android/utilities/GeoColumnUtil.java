@@ -18,9 +18,9 @@ package org.opendatakit.common.android.utilities;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.opendatakit.aggregate.odktables.rest.ElementDataType;
+import org.opendatakit.aggregate.odktables.rest.ElementType;
 import org.opendatakit.common.android.data.ColumnDefinition;
-import org.opendatakit.common.android.data.ElementDataType;
-import org.opendatakit.common.android.data.ElementType;
 import org.opendatakit.common.android.utilities.StaticStateManipulator.IStaticFieldManipulator;
 
 public class GeoColumnUtil {

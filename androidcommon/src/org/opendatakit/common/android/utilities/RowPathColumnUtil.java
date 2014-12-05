@@ -21,8 +21,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.common.android.data.ColumnDefinition;
-import org.opendatakit.common.android.data.ElementDataType;
 import org.opendatakit.common.android.utilities.StaticStateManipulator.IStaticFieldManipulator;
 
 public class RowPathColumnUtil {
