@@ -122,6 +122,54 @@ public class SyncETagsUtils {
     }
     
   }
+
+  /**
+   * Remove all ETags for anything other than the given server. 
+   * Invoked when we change the target sync server...
+   * 
+   * @param db
+   * @param tableId
+   */
+  public void deleteAllSyncETagsUnderServerUri(SQLiteDatabase db, URI serverUriPrefix) {
+
+    if ( serverUriPrefix == null ) {
+      throw new IllegalArgumentException("must specify a serverUriPrefix");
+    }
+    String urlString = serverUriPrefix.toString();
+    
+    ArrayList<String> bindArgs = new ArrayList<String>();
+    StringBuilder b = new StringBuilder();
+    //@formatter:off
+    b.append("DELETE FROM ")
+     .append("\"").append(DatabaseConstants.SYNC_ETAGS_TABLE_NAME).append("\" WHERE ")
+     .append(SyncETagColumns.URL).append(" IS NOT NULL");
+    // delete anything not beginning with this prefix...
+    // ...long enough
+    b.append(" AND length(").append(SyncETagColumns.URL).append(") >= ?");
+    bindArgs.add(Integer.toString(urlString.length()));
+    // ...shares prefix
+    b.append(" AND substr(").append(SyncETagColumns.URL).append(",1,?) = ?");
+    bindArgs.add(Integer.toString(urlString.length()));
+    bindArgs.add(urlString);
+    //@formatter:on
+
+    boolean inTransaction = db.inTransaction();
+    
+    try {
+      if ( !inTransaction ) {
+        db.beginTransaction();
+      }
+      db.execSQL(b.toString(), bindArgs.toArray(new String[bindArgs.size()]));
+      if ( !inTransaction ) {
+        db.setTransactionSuccessful();
+      }
+    } finally {
+      if ( !inTransaction ) {
+        db.endTransaction();
+      }
+    }
+    
+  }
   
   public String getManifestSyncETag(Context context, String appName, URI url, String tableId) {
 
