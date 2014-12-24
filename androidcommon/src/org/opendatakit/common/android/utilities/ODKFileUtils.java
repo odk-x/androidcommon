@@ -550,7 +550,7 @@ public class ODKFileUtils {
     if (instanceId == null || instanceId.length() == 0) {
       throw new IllegalArgumentException("getInstanceFolder: instanceId is null or the empty string!");
     } else {
-      String instanceFolder = instanceId.replaceAll("[\\p{Punct}\\p{Space}]", "_");
+      String instanceFolder = instanceId.replaceAll("(\\p{P}|\\p{Z})", "_");
 
       path = getTablesFolder(appName, tableId) + File.separator + INSTANCES_FOLDER_NAME + File.separator + instanceFolder;
     }
