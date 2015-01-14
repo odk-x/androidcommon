@@ -118,6 +118,9 @@ public class WebLogger {
     long now = System.currentTimeMillis();
     if (lastStaleScan + MILLISECONDS_DAY < now) {
       try {
+        // ensure we have the directories created...
+        ODKFileUtils.verifyExternalStorageAvailability();
+        ODKFileUtils.assertDirectoryStructure(appName);
         // scan for stale logs...
         String loggingPath = ODKFileUtils.getLoggingFolder(appName);
         final long distantPast = now - 30L * MILLISECONDS_DAY; // thirty days
@@ -186,6 +189,9 @@ public class WebLogger {
         }
       }
 
+      // ensure we have the directories created...
+      ODKFileUtils.verifyExternalStorageAvailability();
+      ODKFileUtils.assertDirectoryStructure(appName);
       String loggingPath = ODKFileUtils.getLoggingFolder(appName);
       File loggingDirectory = new File(loggingPath);
       if (!loggingDirectory.exists()) {
