@@ -14,6 +14,7 @@
 <string name="accept_location">Record Location</string>
 <string name="activity_not_found">No activity found to handle: %s</string>
 <string name="app_name">ODK Survey</string>
+<string name="app_userLabel">OpenDataKit</string>
 <string name="cancel">Cancel</string>
 <string name="cancel_location">Cancel</string>
 <string name="change_language">Change Language</string>
