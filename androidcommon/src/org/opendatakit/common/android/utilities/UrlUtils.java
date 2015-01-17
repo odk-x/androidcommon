@@ -29,6 +29,40 @@ public class UrlUtils {
     return Uri.parse(SCHEME_HTTP + "://" + SimpleWebServer.HOSTNAME + ":"
         + Integer.toString(SimpleWebServer.PORT) + "/");
   }
+  
+  /**
+   * Return the file name from a URI segment. The URI segment is expected to
+   * be a valid segment as might follow a hostname. This method returns the
+   * file name from that segment without hash or query parameters.
+   * <p>
+   * For example, <code>my/file/path.html#foo=2</code> would return
+   * <code>my/file/path.html</code>.
+   * <p>
+   * Similarly, <code>a/different/file.html?foo=bar</code> would return
+   * <code>a/different/file.html</code>.
+   * @param segment
+   * @return
+   */
+  public static String getFileNameFromUriSegment(String segment) {
+    int hashIndex = segment.indexOf('#');
+    int qIndex = segment.indexOf('?');
+    
+    if (hashIndex == -1 && qIndex == -1) {
+      // no hash or query param
+      return segment;
+    } else if (hashIndex == -1 && qIndex != -1) {
+      // only a query parameter
+      return segment.substring(0, qIndex);
+    } else if (hashIndex != -1 && qIndex == -1) {
+      // only a hash
+      return segment.substring(0, hashIndex);
+    } else {
+      // both hash and query param
+      int firstSpecialIndex = Math.min(hashIndex, qIndex);
+      return segment.substring(0, firstSpecialIndex);
+    }
+
+  }
 
   /**
    * Handles properly encoding a path segment of a URL for use over the wire.
