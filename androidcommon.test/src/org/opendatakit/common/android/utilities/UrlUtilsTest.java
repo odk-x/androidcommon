@@ -23,9 +23,52 @@ public class UrlUtilsTest extends AndroidTestCase {
     this.assertRetrieveFileNameHelper("pretty/little/liar", segment);
   }
   
-  public void hashAndQueryParams() {
+  public void testHashAndQueryParams() {
     String segment = "test/test/test.html#foo?bar=3&baz=55";
     this.assertRetrieveFileNameHelper("test/test/test.html", segment);
+  }
+  
+  public void testGetIndexOfParamsNoParams() {
+    String segment = "test/test/test.html";
+    this.assertGetIndexHelper(segment, -1);
+  }
+  
+  public void testGetIndexOfParamsHash() {
+    String segment = "test/test.html#foo";
+    int expected = 14;
+    this.assertGetIndexHelper(segment, expected);
+  }
+  
+  public void testGetIndexOfQueryHash() {
+    String segment = "this/is/a/file/that/i/like.html?foo=bar";
+    int expected = 31;
+    this.assertGetIndexHelper(segment, expected);
+  }
+  
+  public void testGetIndexOfBoth() {
+    String segment = "foo/bar.html#foo?bar=baz";
+    int expected = 12;
+    this.assertGetIndexHelper(segment, expected);
+  }
+  
+  public void testGetParamsNone() {
+    String segment = "this/test/file/path/.html";
+    this.assertGetParamsHelper(segment, "");
+  }
+  
+  public void testGetParamsHash() {
+    String segment = "test/file#foo";
+    this.assertGetParamsHelper(segment, "#foo");
+  }
+  
+  public void testGetParamsQuery() {
+    String segment = "pretty/little/liar?foo&bar=3";
+    this.assertGetParamsHelper(segment, "?foo&bar=3");
+  }
+  
+  public void testGetParamsBoth() {
+    String segment = "test/test/test.html#foo?bar=3&baz=55";
+    this.assertGetParamsHelper(segment, "#foo?bar=3&baz=55");
   }
   
   /**
@@ -37,6 +80,16 @@ public class UrlUtilsTest extends AndroidTestCase {
   protected void assertRetrieveFileNameHelper(String expected, String start) {
     String result = UrlUtils.getFileNameFromUriSegment(start);
     assertEquals(expected, result);
+  }
+  
+  protected void assertGetIndexHelper(String segment, int expected) {
+    int actual = UrlUtils.getIndexOfParameters(segment);
+    assertEquals(expected, actual);
+  }
+  
+  protected void assertGetParamsHelper(String segment, String expected) {
+    String actual = UrlUtils.getParametersFromSegment(segment);
+    assertEquals(expected, actual);
   }
 
 }

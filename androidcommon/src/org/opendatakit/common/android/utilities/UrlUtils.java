@@ -44,24 +44,68 @@ public class UrlUtils {
    * @return
    */
   public static String getFileNameFromUriSegment(String segment) {
+    int parameterIndex = getIndexOfParameters(segment);
+    if (parameterIndex == -1) {
+      return segment;
+    } else {
+      return segment.substring(0, parameterIndex);
+    }
+  }
+  
+  /**
+   * Get the index into segment where the query parameters start in the
+   * segment. For example, <code>my/file/path.html#foo</code> would return the
+   * index of '#'. Similarly, <code>a/different/file.html?foo=bar</code> would
+   * return the index of '?'. If both '#' and '?' are present, it will return
+   * the index of the first.
+   * <p>
+   * Returns -1 if neither is present.
+   * @param segment
+   * @return
+   */
+  static int getIndexOfParameters(String segment) {
     int hashIndex = segment.indexOf('#');
     int qIndex = segment.indexOf('?');
     
+    int notPresentFlag = -1;
+    
     if (hashIndex == -1 && qIndex == -1) {
       // no hash or query param
-      return segment;
+      return notPresentFlag;
     } else if (hashIndex == -1 && qIndex != -1) {
       // only a query parameter
-      return segment.substring(0, qIndex);
+      return qIndex;
     } else if (hashIndex != -1 && qIndex == -1) {
       // only a hash
-      return segment.substring(0, hashIndex);
+      return hashIndex;
     } else {
       // both hash and query param
       int firstSpecialIndex = Math.min(hashIndex, qIndex);
-      return segment.substring(0, firstSpecialIndex);
+      return firstSpecialIndex;
     }
-
+  }
+  
+  /**
+   * Return the parameters from a URL segment. For example,
+   * <code>my/file/path.html#foo</code> would return "#foo".
+   * Similarly, <code>a/different/file.html?foo=bar</code> would
+   * return "?foo=bar".
+   * <p>
+   * Returns "" if there are no parameters.
+   * @param segment
+   * @return
+   */
+  public static String getParametersFromSegment(String segment) {
+    int parameterIndex = getIndexOfParameters(segment);
+    
+    String notPresentFlag = "";
+    
+    if (parameterIndex == -1) {
+      return notPresentFlag;
+    } else {
+      return segment.substring(parameterIndex);
+    }
+    
   }
 
   /**
