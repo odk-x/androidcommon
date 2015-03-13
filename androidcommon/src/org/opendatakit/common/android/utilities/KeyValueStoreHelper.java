@@ -21,12 +21,13 @@ import java.util.List;
 
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
-import org.opendatakit.common.android.data.KeyValueStoreEntry;
+import org.opendatakit.common.android.application.CommonApplication;
 import org.opendatakit.common.android.database.DatabaseConstants;
-import org.opendatakit.common.android.database.DatabaseFactory;
+import org.opendatakit.database.service.KeyValueStoreEntry;
+import org.opendatakit.database.service.OdkDbHandle;
+import org.opendatakit.database.service.OdkDbInterface;
 
-import android.content.Context;
-import android.database.sqlite.SQLiteDatabase;
+import android.os.RemoteException;
 
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonParseException;
@@ -57,38 +58,24 @@ public class KeyValueStoreHelper implements KeyValueHelper {
   private final String partition;
   private final String tableId;
   private final String appName;
-  private final Context context;
-  
-  private final SQLiteDatabase db;
+  private final CommonApplication context;
+  private final OdkDbHandle dbHandle;
 
-  public KeyValueStoreHelper(Context context, String appName, String tableId, String partition) {
+  public KeyValueStoreHelper(CommonApplication context, String appName, OdkDbHandle dbHandle, String tableId, String partition) {
+    if ( dbHandle == null ) {
+      throw new IllegalArgumentException("Unexpected null value for dbHandle");
+    }
     this.context = context;
     this.appName = appName;
     this.tableId = tableId;
     this.partition = partition;
-    this.db = null;
+    this.dbHandle = dbHandle;
   }
 
-  public KeyValueStoreHelper(SQLiteDatabase db, String tableId, String partition) {
-    this.context = null;
-    this.appName = null;
-    this.tableId = tableId;
-    this.partition = partition;
-    this.db = db;
+  private OdkDbInterface getDatabase() {
+    return context.getDatabase();
   }
-
-  private SQLiteDatabase acquireDatabase() {
-    if ( this.db != null ) {
-      return db;
-    }
-    return DatabaseFactory.get().getDatabase(context, appName);
-  }
-
-  private void releaseDatabase(SQLiteDatabase db) {
-    if ( this.db != db ) {
-      db.close();
-    }
-  }
+  
   /**
    * Get the accessor for the partition specified by this object as well as
    * the given aspect.
@@ -116,11 +103,11 @@ public class KeyValueStoreHelper implements KeyValueHelper {
   }
   
   @Override
-  public Integer getInteger(String key) {
+  public Integer getInteger(String key) throws RemoteException {
     return getInteger(KeyValueStoreConstants.ASPECT_DEFAULT, key);
   }
 
-  private Integer getInteger(String aspect, String key) {
+  private Integer getInteger(String aspect, String key) throws RemoteException {
     KeyValueStoreEntry entry = getEntry(aspect, key);
     if (entry == null) {
       return null;
@@ -134,11 +121,11 @@ public class KeyValueStoreHelper implements KeyValueHelper {
   }
 
   @Override
-  public <T> ArrayList<T> getArray(String key, Class<T> clazz) {
+  public <T> ArrayList<T> getArray(String key, Class<T> clazz) throws RemoteException {
     return getArray(KeyValueStoreConstants.ASPECT_DEFAULT, key, clazz);
   }
 
-  private <T> ArrayList<T> getArray(String aspect, String key, Class<T> clazz) {
+  private <T> ArrayList<T> getArray(String aspect, String key, Class<T> clazz) throws RemoteException {
     CollectionType javaType =
         ODKFileUtils.mapper.getTypeFactory().constructCollectionType(ArrayList.class, clazz);
     KeyValueStoreEntry entry = getEntry(aspect, key);
@@ -169,11 +156,11 @@ public class KeyValueStoreHelper implements KeyValueHelper {
   }
 
   @Override
-  public String getString(String key) {
+  public String getString(String key) throws RemoteException {
     return getString(KeyValueStoreConstants.ASPECT_DEFAULT, key);
   }
 
-  private String getString(String aspect, String key) {
+  private String getString(String aspect, String key) throws RemoteException {
     KeyValueStoreEntry entry = getEntry(aspect, key);
     if (entry == null) {
       return null;
@@ -187,11 +174,11 @@ public class KeyValueStoreHelper implements KeyValueHelper {
   }
 
   @Override
-  public String getObject(String key) {
+  public String getObject(String key) throws RemoteException {
     return getObject(KeyValueStoreConstants.ASPECT_DEFAULT, key);
   }
 
-  private String getObject(String aspect, String key) {
+  private String getObject(String aspect, String key) throws RemoteException {
     KeyValueStoreEntry entry = getEntry(aspect, key);
     if (entry == null) {
       return null;
@@ -207,11 +194,11 @@ public class KeyValueStoreHelper implements KeyValueHelper {
   }
 
   @Override
-  public Boolean getBoolean(String key) {
+  public Boolean getBoolean(String key) throws RemoteException {
     return getBoolean(KeyValueStoreConstants.ASPECT_DEFAULT, key);
   }
 
-  private Boolean getBoolean(String aspect, String key) {
+  private Boolean getBoolean(String aspect, String key) throws RemoteException {
     KeyValueStoreEntry entry = getEntry(aspect, key);
     if (entry == null) {
       return null;
@@ -225,11 +212,11 @@ public class KeyValueStoreHelper implements KeyValueHelper {
   }
 
   @Override
-  public Double getNumber(String key) {
+  public Double getNumber(String key) throws RemoteException {
     return getNumber(KeyValueStoreConstants.ASPECT_DEFAULT, key);
   }
 
-  private Double getNumber(String aspect, String key) {
+  private Double getNumber(String aspect, String key) throws RemoteException {
     KeyValueStoreEntry entry = getEntry(aspect, key);
     if (entry == null) {
       return null;
@@ -243,70 +230,55 @@ public class KeyValueStoreHelper implements KeyValueHelper {
   }
 
   @Override
-  public void setInteger(String key, Integer value) {
+  public void setInteger(String key, Integer value) throws RemoteException {
     setIntegerEntry(KeyValueStoreConstants.ASPECT_DEFAULT, key, value);
   }
 
-  private void setIntegerEntry(String aspect, String key, Integer value) {
-    SQLiteDatabase db = this.acquireDatabase();
-    try {
-      KeyValueStoreEntry entry = new KeyValueStoreEntry();
-      entry.tableId = this.getTableId();
-      entry.partition = this.getPartition();
-      entry.aspect = aspect;
-      entry.key = key;
-      entry.type = ElementDataType.integer.name();
-      entry.value = Integer.toString(value);
-      ODKDatabaseUtils.get().replaceDBTableMetadata(db, entry);
-    } finally {
-      releaseDatabase(db);
-    }
+  private void setIntegerEntry(String aspect, String key, Integer value) throws RemoteException {
+    KeyValueStoreEntry entry = new KeyValueStoreEntry();
+    entry.tableId = this.getTableId();
+    entry.partition = this.getPartition();
+    entry.aspect = aspect;
+    entry.key = key;
+    entry.type = ElementDataType.integer.name();
+    entry.value = Integer.toString(value);
+    getDatabase().replaceDBTableMetadata(appName, dbHandle, entry);
   }
 
   @Override
-  public void setNumber(String key, Double value) {
+  public void setNumber(String key, Double value) throws RemoteException {
     setNumberEntry(KeyValueStoreConstants.ASPECT_DEFAULT, key, value);
   }
 
-  private void setNumberEntry(String aspect, String key, Double value) {
-    SQLiteDatabase db = this.acquireDatabase();
-    try {
-      KeyValueStoreEntry entry = new KeyValueStoreEntry();
-      entry.tableId = this.getTableId();
-      entry.partition = this.getPartition();
-      entry.aspect = aspect;
-      entry.key = key;
-      entry.type = ElementDataType.number.name();
-      entry.value = Double.toString(value);
-      ODKDatabaseUtils.get().replaceDBTableMetadata(db, entry);
-    } finally {
-      releaseDatabase(db);
-    }
+  private void setNumberEntry(String aspect, String key, Double value) throws RemoteException {
+    KeyValueStoreEntry entry = new KeyValueStoreEntry();
+    entry.tableId = this.getTableId();
+    entry.partition = this.getPartition();
+    entry.aspect = aspect;
+    entry.key = key;
+    entry.type = ElementDataType.number.name();
+    entry.value = Double.toString(value);
+    getDatabase().replaceDBTableMetadata(appName, dbHandle, entry);
   }
 
   @Override
-  public void setObject(String key, String jsonOfObject) {
+  public void setObject(String key, String jsonOfObject) throws RemoteException {
     setObjectEntry(KeyValueStoreConstants.ASPECT_DEFAULT, key, jsonOfObject);
   }
 
-  private void setObjectEntry(String aspect, String key, String jsonOfObject) {
-    SQLiteDatabase db = this.acquireDatabase();
-    try {
-      KeyValueStoreEntry entry = new KeyValueStoreEntry();
-      entry.tableId = this.getTableId();
-      entry.partition = this.getPartition();
-      entry.aspect = aspect;
-      entry.key = key;
-      entry.type = ElementDataType.object.name();
-      entry.value = jsonOfObject;
-      ODKDatabaseUtils.get().replaceDBTableMetadata(db, entry);
-    } finally {
-      releaseDatabase(db);
-    }
+  private void setObjectEntry(String aspect, String key, String jsonOfObject) throws RemoteException {
+    KeyValueStoreEntry entry = new KeyValueStoreEntry();
+    entry.tableId = this.getTableId();
+    entry.partition = this.getPartition();
+    entry.aspect = aspect;
+    entry.key = key;
+    entry.type = ElementDataType.object.name();
+    entry.value = jsonOfObject;
+    getDatabase().replaceDBTableMetadata(appName, dbHandle, entry);
   }
 
   @Override
-  public void setBoolean(String key, Boolean value) {
+  public void setBoolean(String key, Boolean value) throws RemoteException {
     setBooleanEntry(KeyValueStoreConstants.ASPECT_DEFAULT, key, value);
   }
 
@@ -315,25 +287,21 @@ public class KeyValueStoreHelper implements KeyValueHelper {
    * @param aspect
    * @param key
    * @param value
+   * @throws RemoteException 
    */
-  private void setBooleanEntry(String aspect, String key, Boolean value) {
-    SQLiteDatabase db = this.acquireDatabase();
-    try {
-      KeyValueStoreEntry entry = new KeyValueStoreEntry();
-      entry.tableId = this.getTableId();
-      entry.partition = this.getPartition();
-      entry.aspect = aspect;
-      entry.key = key;
-      entry.type = ElementDataType.bool.name();
-      entry.value = Integer.toString(DataHelper.boolToInt(value));
-      ODKDatabaseUtils.get().replaceDBTableMetadata(db, entry);
-    } finally {
-      releaseDatabase(db);
-    }
+  private void setBooleanEntry(String aspect, String key, Boolean value) throws RemoteException {
+    KeyValueStoreEntry entry = new KeyValueStoreEntry();
+    entry.tableId = this.getTableId();
+    entry.partition = this.getPartition();
+    entry.aspect = aspect;
+    entry.key = key;
+    entry.type = ElementDataType.bool.name();
+    entry.value = Integer.toString(DataHelper.boolToInt(value));
+    getDatabase().replaceDBTableMetadata(appName, dbHandle, entry);
   }
 
   @Override
-  public void setString(String key, String value) {
+  public void setString(String key, String value) throws RemoteException {
     setStringEntry(KeyValueStoreConstants.ASPECT_DEFAULT, key, value);
   }
 
@@ -342,21 +310,17 @@ public class KeyValueStoreHelper implements KeyValueHelper {
    * @param aspect
    * @param key
    * @param value
+   * @throws RemoteException 
    */
-  private void setStringEntry(String aspect, String key, String value) {
-    SQLiteDatabase db = this.acquireDatabase();
-    try {
-      KeyValueStoreEntry entry = new KeyValueStoreEntry();
-      entry.tableId = this.getTableId();
-      entry.partition = this.getPartition();
-      entry.aspect = aspect;
-      entry.key = key;
-      entry.type = ElementDataType.string.name();
-      entry.value = value;
-      ODKDatabaseUtils.get().replaceDBTableMetadata(db, entry);
-    } finally {
-      releaseDatabase(db);
-    }
+  private void setStringEntry(String aspect, String key, String value) throws RemoteException {
+    KeyValueStoreEntry entry = new KeyValueStoreEntry();
+    entry.tableId = this.getTableId();
+    entry.partition = this.getPartition();
+    entry.aspect = aspect;
+    entry.key = key;
+    entry.type = ElementDataType.string.name();
+    entry.value = value;
+    getDatabase().replaceDBTableMetadata(appName, dbHandle, entry);
   }
 
   /**
@@ -365,8 +329,9 @@ public class KeyValueStoreHelper implements KeyValueHelper {
    * @param db
    * @param key
    * @param value
+   * @throws RemoteException 
    */
-  public void setString(SQLiteDatabase db, String key, String value) {
+  public void setString(OdkDbHandle db, String key, String value) throws RemoteException {
 	  setStringEntry(db, KeyValueStoreConstants.ASPECT_DEFAULT, key, value);
   }
 
@@ -377,8 +342,9 @@ public class KeyValueStoreHelper implements KeyValueHelper {
    * @param aspect
    * @param key
    * @param value
+   * @throws RemoteException 
    */
-  public void setStringEntry(SQLiteDatabase db, String aspect, String key, String value) {
+  public void setStringEntry(OdkDbHandle db, String aspect, String key, String value) throws RemoteException {
     KeyValueStoreEntry entry = new KeyValueStoreEntry();
     entry.tableId = this.getTableId();
     entry.partition = this.getPartition();
@@ -386,11 +352,11 @@ public class KeyValueStoreHelper implements KeyValueHelper {
     entry.key = key;
     entry.type = ElementDataType.string.name();
     entry.value = value;
-    ODKDatabaseUtils.get().replaceDBTableMetadata(db, entry);
+    getDatabase().replaceDBTableMetadata(appName, db, entry);
   }
 
   @Override
-  public <T> void setArray(String key, ArrayList<T> value) {
+  public <T> void setArray(String key, ArrayList<T> value) throws RemoteException {
     setArrayEntry(KeyValueStoreConstants.ASPECT_DEFAULT, key, value);
   }
 
@@ -399,9 +365,10 @@ public class KeyValueStoreHelper implements KeyValueHelper {
    * @param aspect
    * @param key
    * @param value
+   * @throws RemoteException 
    */
   private <T> void setArrayEntry(String aspect, String key,
-      ArrayList<T> value) {
+      ArrayList<T> value) throws RemoteException {
     String entryValue = null;
     try {
       if (value != null && value.size() > 0) {
@@ -424,23 +391,18 @@ public class KeyValueStoreHelper implements KeyValueHelper {
       WebLogger.getLogger(appName).e(TAG, "problem parsing list to json, not updating key");
       return;
     }
-    SQLiteDatabase db = this.acquireDatabase();
-    try {
-      KeyValueStoreEntry entry = new KeyValueStoreEntry();
-      entry.tableId = this.getTableId();
-      entry.partition = this.getPartition();
-      entry.aspect = aspect;
-      entry.key = key;
-      entry.type = ElementDataType.array.name();
-      entry.value = entryValue;
-      ODKDatabaseUtils.get().replaceDBTableMetadata(db, entry);
-    } finally {
-      releaseDatabase(db);
-    }
+    KeyValueStoreEntry entry = new KeyValueStoreEntry();
+    entry.tableId = this.getTableId();
+    entry.partition = this.getPartition();
+    entry.aspect = aspect;
+    entry.key = key;
+    entry.type = ElementDataType.array.name();
+    entry.value = entryValue;
+    getDatabase().replaceDBTableMetadata(appName, dbHandle, entry);
   }
 
   @Override
-  public void removeKey(String key) {
+  public void removeKey(String key) throws RemoteException {
     removeEntry(KeyValueStoreConstants.ASPECT_DEFAULT, key);
   }
 
@@ -449,18 +411,14 @@ public class KeyValueStoreHelper implements KeyValueHelper {
    * @param aspect
    * @param key
    * @return
+   * @throws RemoteException 
    */
-  private void removeEntry(String aspect, String key) {
-    SQLiteDatabase db = this.acquireDatabase();
-    try {
-      ODKDatabaseUtils.get().deleteDBTableMetadata(db, this.getTableId(), this.getPartition(), aspect, key);
-    } finally {
-      releaseDatabase(db);
-    }
+  private void removeEntry(String aspect, String key) throws RemoteException {
+    getDatabase().deleteDBTableMetadata(appName, dbHandle, this.getTableId(), this.getPartition(), aspect, key);
   }
 
   @Override
-  public KeyValueStoreEntry getEntry(String key) {
+  public KeyValueStoreEntry getEntry(String key) throws RemoteException {
     return getEntry(KeyValueStoreConstants.ASPECT_DEFAULT, key);
   }
 
@@ -473,27 +431,22 @@ public class KeyValueStoreHelper implements KeyValueHelper {
    * @param aspect
    * @param key
    * @return
+   * @throws RemoteException 
    */
-  private KeyValueStoreEntry getEntry(String aspect, String key) {
-    SQLiteDatabase db = null;
-    try {
-      db = this.acquireDatabase();
-      List<KeyValueStoreEntry> entries =
-          ODKDatabaseUtils.get().getDBTableMetadata(db, this.getTableId(), this.getPartition(), aspect, key);
-      // Do some sanity checking. There should only ever be one entry per key.
-      if (entries.size() > 1) {
-        WebLogger.getLogger(appName).e(TAG, "request for key: " + key + " in KVS " +
-            DatabaseConstants.KEY_VALUE_STORE_ACTIVE_TABLE_NAME +
-            " for table: " + this.getTableId() + " returned " + entries.size() +
-            "entries. It should return at most 1, as it is a key in a set.");
-      }
-      if (entries.size() == 0) {
-        return null;
-      } else {
-        return entries.get(0);
-      }
-    } finally {
-      releaseDatabase(db);
+  private KeyValueStoreEntry getEntry(String aspect, String key) throws RemoteException {
+    List<KeyValueStoreEntry> entries =
+        getDatabase().getDBTableMetadata(appName, dbHandle, this.getTableId(), this.getPartition(), aspect, key);
+    // Do some sanity checking. There should only ever be one entry per key.
+    if (entries.size() > 1) {
+      WebLogger.getLogger(appName).e(TAG, "request for key: " + key + " in KVS " +
+          DatabaseConstants.KEY_VALUE_STORE_ACTIVE_TABLE_NAME +
+          " for table: " + this.getTableId() + " returned " + entries.size() +
+          "entries. It should return at most 1, as it is a key in a set.");
+    }
+    if (entries.size() == 0) {
+      return null;
+    } else {
+      return entries.get(0);
     }
   }
 
@@ -517,86 +470,82 @@ public class KeyValueStoreHelper implements KeyValueHelper {
     }
 
     @Override
-    public Integer getInteger(String key) {
+    public Integer getInteger(String key) throws RemoteException {
       return KeyValueStoreHelper.this.getInteger(aspect, key);
     }
 
     @Override
-    public <T> ArrayList<T> getArray(String key, Class<T> clazz) {
+    public <T> ArrayList<T> getArray(String key, Class<T> clazz) throws RemoteException {
       return KeyValueStoreHelper.this.getArray(aspect, key, clazz);
     }
 
     @Override
-    public String getString(String key) {
+    public String getString(String key) throws RemoteException {
       return KeyValueStoreHelper.this.getString(aspect, key);
     }
 
     @Override
-    public String getObject(String key) {
+    public String getObject(String key) throws RemoteException {
       return KeyValueStoreHelper.this.getObject(aspect, key);
     }
 
     @Override
-    public Boolean getBoolean(String key) {
+    public Boolean getBoolean(String key) throws RemoteException {
       return KeyValueStoreHelper.this.getBoolean(aspect, key);
     }
 
     @Override
-    public Double getNumber(String key) {
+    public Double getNumber(String key) throws RemoteException {
       return KeyValueStoreHelper.this.getNumber(aspect, key);
     }
 
     @Override
-    public void setInteger(String key, Integer value) {
+    public void setInteger(String key, Integer value) throws RemoteException {
       KeyValueStoreHelper.this.setIntegerEntry(aspect, key, value);
     }
 
     @Override
-    public void setNumber(String key, Double value) {
+    public void setNumber(String key, Double value) throws RemoteException {
       KeyValueStoreHelper.this.setNumberEntry(aspect, key, value);
     }
 
     @Override
-    public void setObject(String key, String jsonOfObject) {
+    public void setObject(String key, String jsonOfObject) throws RemoteException {
       KeyValueStoreHelper.this.setObjectEntry(aspect, key, jsonOfObject);
     }
 
     @Override
-    public void setBoolean(String key, Boolean value) {
+    public void setBoolean(String key, Boolean value) throws RemoteException {
       KeyValueStoreHelper.this.setBooleanEntry(aspect, key, value);
     }
 
     @Override
-    public void setString(String key, String value) {
+    public void setString(String key, String value) throws RemoteException {
       KeyValueStoreHelper.this.setStringEntry(aspect, key, value);
     }
 
     @Override
-    public <T> void setArray(String key, ArrayList<T> value) {
+    public <T> void setArray(String key, ArrayList<T> value) throws RemoteException {
       KeyValueStoreHelper.this.setArrayEntry(aspect, key, value);
     }
 
     @Override
-    public void removeKey(String key) {
+    public void removeKey(String key) throws RemoteException {
       KeyValueStoreHelper.this.removeEntry(aspect, key);
     }
 
     @Override
-    public KeyValueStoreEntry getEntry(String key) {
+    public KeyValueStoreEntry getEntry(String key) throws RemoteException {
       return KeyValueStoreHelper.this.getEntry(aspect, key);
     }
 
     /**
      * Delete all the entries in the given aspect.
      * @return
+     * @throws RemoteException 
      */
-    public void deleteAllEntriesInThisAspect() {
-      SQLiteDatabase db = KeyValueStoreHelper.this.acquireDatabase();
-      try {
-        ODKDatabaseUtils.get().deleteDBTableMetadata(db, KeyValueStoreHelper.this.getTableId(), partition, aspect, null);
-      } finally {
-        releaseDatabase(db);
-      }
+    public void deleteAllEntriesInThisAspect() throws RemoteException {
+      getDatabase().deleteDBTableMetadata(appName, dbHandle, KeyValueStoreHelper.this.getTableId(), partition, aspect, null);
     }
 
   }

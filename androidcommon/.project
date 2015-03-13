@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>Android Common</name>
-	<comment>Functionality shared between ODK Tables and ODK Survey</comment>
+	<name>opendatakit.androidcommon</name>
+	<comment>Functionality shared across all Application APKs (e.g., Survey, Tables, Sync, Scan)</comment>
 	<projects>
+		<project>opendatakit.androidlibrary</project>
+		<project>opendatakit.playservices</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

@@ -22,13 +22,15 @@ import java.util.Map;
 
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
+import org.opendatakit.common.android.application.CommonApplication;
 import org.opendatakit.common.android.data.ColumnDefinition;
 import org.opendatakit.common.android.data.JoinColumn;
-import org.opendatakit.common.android.data.KeyValueStoreEntry;
 import org.opendatakit.common.android.utilities.KeyValueStoreHelper.AspectHelper;
 import org.opendatakit.common.android.utilities.StaticStateManipulator.IStaticFieldManipulator;
+import org.opendatakit.database.service.KeyValueStoreEntry;
+import org.opendatakit.database.service.OdkDbHandle;
 
-import android.database.sqlite.SQLiteDatabase;
+import android.os.RemoteException;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -79,9 +81,9 @@ public class ColumnUtil {
     return hackPath;
   }
 
-  public String getLocalizedDisplayName(SQLiteDatabase db, String tableId, String elementKey) {
+  public String getLocalizedDisplayName(CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey) throws RemoteException {
     
-    KeyValueStoreHelper kvsh = new KeyValueStoreHelper(db, tableId, KeyValueStoreConstants.PARTITION_COLUMN);
+    KeyValueStoreHelper kvsh = new KeyValueStoreHelper(ctxt, appName, db, tableId, KeyValueStoreConstants.PARTITION_COLUMN);
     AspectHelper ah = kvsh.getAspectHelper(elementKey);
     String displayName = null;
     String jsonDisplayName = ah.getObject(KeyValueStoreConstants.COLUMN_DISPLAY_NAME);
@@ -94,9 +96,9 @@ public class ColumnUtil {
     return displayName;
   }
 
-  public String getRawDisplayName(SQLiteDatabase db, String tableId, String elementKey) {
+  public String getRawDisplayName(CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey) throws RemoteException {
     
-    KeyValueStoreHelper kvsh = new KeyValueStoreHelper(db, tableId, KeyValueStoreConstants.PARTITION_COLUMN);
+    KeyValueStoreHelper kvsh = new KeyValueStoreHelper(ctxt, appName, db, tableId, KeyValueStoreConstants.PARTITION_COLUMN);
     AspectHelper ah = kvsh.getAspectHelper(elementKey);
     String jsonDisplayName = ah.getObject(KeyValueStoreConstants.COLUMN_DISPLAY_NAME);
     if ( jsonDisplayName == null ) {
@@ -105,9 +107,9 @@ public class ColumnUtil {
     return jsonDisplayName;
   }
 
-  public ArrayList<Map<String,Object>> getDisplayChoicesList(SQLiteDatabase db, String tableId, String elementKey) {
+  public ArrayList<Map<String,Object>> getDisplayChoicesList(CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey) throws RemoteException {
     
-    KeyValueStoreHelper kvsh = new KeyValueStoreHelper(db, tableId, KeyValueStoreConstants.PARTITION_COLUMN);
+    KeyValueStoreHelper kvsh = new KeyValueStoreHelper(ctxt, appName, db, tableId, KeyValueStoreConstants.PARTITION_COLUMN);
     AspectHelper ah = kvsh.getAspectHelper(elementKey);
     
 
@@ -127,7 +129,7 @@ public class ColumnUtil {
     return jsonDisplayChoices;
   }
 
-  public void setDisplayChoicesList( SQLiteDatabase db, String tableId, ColumnDefinition cd, ArrayList<Map<String,Object>> choices) {
+  public void setDisplayChoicesList( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, ColumnDefinition cd, ArrayList<Map<String,Object>> choices) throws RemoteException {
     KeyValueStoreEntry e = new KeyValueStoreEntry();
     e.tableId = tableId;
     e.partition = KeyValueStoreConstants.PARTITION_COLUMN;
@@ -140,12 +142,12 @@ public class ColumnUtil {
       e1.printStackTrace();
       throw new IllegalArgumentException("Unexpected displayChoices conversion failure!");
     }
-    ODKDatabaseUtils.get().replaceDBTableMetadata(db, e);
+    ctxt.getDatabase().replaceDBTableMetadata(appName, db, e);
   }
   
-  public ArrayList<JoinColumn> getJoins(SQLiteDatabase db, String tableId, String elementKey) {
+  public ArrayList<JoinColumn> getJoins(CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey) throws RemoteException {
     
-    KeyValueStoreHelper kvsh = new KeyValueStoreHelper(db, tableId, KeyValueStoreConstants.PARTITION_COLUMN);
+    KeyValueStoreHelper kvsh = new KeyValueStoreHelper(ctxt, appName, db, tableId, KeyValueStoreConstants.PARTITION_COLUMN);
     AspectHelper ah = kvsh.getAspectHelper(elementKey);
     ArrayList<JoinColumn> joins = null; 
     try {

@@ -17,17 +17,18 @@ package org.opendatakit.common.android.utilities;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import org.opendatakit.webkitserver.WebkitServerConsts;
+
 import android.content.Context;
 import android.net.Uri;
-import fi.iki.elonen.SimpleWebServer;
 
 public class UrlUtils {
 
   private static final String SCHEME_HTTP = "http";
 
   public static Uri getWebViewContentUri(Context c) {
-    return Uri.parse(SCHEME_HTTP + "://" + SimpleWebServer.HOSTNAME + ":"
-        + Integer.toString(SimpleWebServer.PORT) + "/");
+    return Uri.parse(SCHEME_HTTP + "://" + WebkitServerConsts.HOSTNAME + ":"
+        + Integer.toString(WebkitServerConsts.PORT) + "/");
   }
   
   /**

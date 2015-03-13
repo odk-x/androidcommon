@@ -17,7 +17,9 @@ package org.opendatakit.common.android.utilities;
 
 import java.util.ArrayList;
 
-import org.opendatakit.common.android.data.KeyValueStoreEntry;
+import org.opendatakit.database.service.KeyValueStoreEntry;
+
+import android.os.RemoteException;
 
 /**
  * Defines various methods used for getting and setting keys in the key value
@@ -35,9 +37,10 @@ public interface KeyValueHelper {
    * If the key does not exist it returns null.
    * @param key
    * @return
+   * @throws RemoteException 
    * @throws IllegalArgumentException if the type of the entry does not match
    */
-  public Integer getInteger(String key);
+  public Integer getInteger(String key) throws RemoteException;
 
   /**
    * Retrieve a value of type {@link KeyValueStoreEntryType.ARRAY} mapping
@@ -51,9 +54,10 @@ public interface KeyValueHelper {
    * is logged and null is returned.
    * @param key
    * @return
+   * @throws RemoteException 
    * @throws IllegalArgumentException if the type of the entry does not match
    */
-  public <T> ArrayList<T> getArray(String key, Class<T> clazz);
+  public <T> ArrayList<T> getArray(String key, Class<T> clazz) throws RemoteException;
 
   /**
    * Retrieve a value of type {@link KeyValueStoreEntryType.STRING} mapping to
@@ -62,9 +66,10 @@ public interface KeyValueHelper {
    * If the key does not exist it returns null.
    * @param key
    * @return
+   * @throws RemoteException 
    * @throws IllegalArgumentException if the type of the entry does not match
    */
-  public String getString(String key);
+  public String getString(String key) throws RemoteException;
 
   /**
    * Retrieve a value of type {@link KeyValueStoreEntryType.OBJECT} mapping to
@@ -74,9 +79,10 @@ public interface KeyValueHelper {
    * If the key does not exist it returns null.
    * @param key
    * @return
+   * @throws RemoteException 
    * @throws IllegalArgumentException if the type of the entry does not match
    */
-  public String getObject(String key);
+  public String getObject(String key) throws RemoteException;
 
   /**
    * Retrieve a value of type {@link KeyValueStoreEntryType.BOOLEAN} mapping to
@@ -85,9 +91,10 @@ public interface KeyValueHelper {
    * If the key does not exist it returns null.
    * @param key
    * @return
+   * @throws RemoteException 
    * @throws IllegalArgumentException if the type of the entry does not match
    */
-  public Boolean getBoolean(String key);
+  public Boolean getBoolean(String key) throws RemoteException;
 
   /**
    * Retrieve a value of type {@link KeyValueStoreEntryType.NUMBER} mapping to
@@ -96,25 +103,28 @@ public interface KeyValueHelper {
    * If the key does not exist it returns null.
    * @param key
    * @return
+   * @throws RemoteException 
    * @throws IllegalArgumentException if the type of the entry does not match
    */
-  public Double getNumber(String key);
+  public Double getNumber(String key) throws RemoteException;
 
   /**
    * Set an entry of type {@link KeyValueSToreEntryType.INTEGER} in the key
    * value store.
    * @param key
    * @param value
+   * @throws RemoteException 
    */
-  public void setInteger(String key, Integer value);
+  public void setInteger(String key, Integer value) throws RemoteException;
 
   /**
    * Set an entry of type {@link KeyValueSToreEntryType.NUMBER} in the key
    * value store.
    * @param key
    * @param value
+   * @throws RemoteException 
    */
-  public void setNumber(String key, Double value);
+  public void setNumber(String key, Double value) throws RemoteException;
 
   /**
    * Set an entry of type {@link KeyValueSToreEntryType.OBJECT} in the key
@@ -122,24 +132,27 @@ public interface KeyValueHelper {
    * for providing and interpreting it.
    * @param key
    * @param value
+   * @throws RemoteException 
    */
-  public void setObject(String key, String jsonOfObject);
+  public void setObject(String key, String jsonOfObject) throws RemoteException;
 
   /**
    * Set an entry of type {@link KeyValueSToreEntryType.BOOLEAN} in the key
    * value store.
    * @param key
    * @param value
+   * @throws RemoteException 
    */
-  public void setBoolean(String key, Boolean value);
+  public void setBoolean(String key, Boolean value) throws RemoteException;
 
   /**
    * Set an entry of type {@link KeyValueSToreEntryType.STRING} in the key
    * value store.
    * @param key
    * @param value
+   * @throws RemoteException 
    */
-  public void setString(String key, String value);
+  public void setString(String key, String value) throws RemoteException;
 
   /**
    * Set an entry of type {@link KeyValueSToreEntryType.ARRAY} in the key
@@ -150,15 +163,17 @@ public interface KeyValueHelper {
    *
    * @param key
    * @param value
+   * @throws RemoteException 
    */
-  public <T> void setArray(String key, ArrayList<T> value);
+  public <T> void setArray(String key, ArrayList<T> value) throws RemoteException;
 
   /**
    * Remove the given key from the key value store.
    * @param key
    * @return
+   * @throws RemoteException 
    */
-  public void removeKey(String key);
+  public void removeKey(String key) throws RemoteException;
 
   /**
    * Return the entry matching this key.
@@ -166,7 +181,8 @@ public interface KeyValueHelper {
    * Return null if the key is not found.
    * @param key
    * @return
+   * @throws RemoteException 
    */
-  public KeyValueStoreEntry getEntry(String key);
+  public KeyValueStoreEntry getEntry(String key) throws RemoteException;
 
 }

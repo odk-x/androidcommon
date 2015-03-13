@@ -41,18 +41,20 @@ import org.opendatakit.aggregate.odktables.rest.SavepointTypeManipulator;
 import org.opendatakit.aggregate.odktables.rest.SyncState;
 import org.opendatakit.aggregate.odktables.rest.TableConstants;
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
+import org.opendatakit.common.android.application.CommonApplication;
 import org.opendatakit.common.android.data.ColumnDefinition;
-import org.opendatakit.common.android.data.KeyValueStoreEntry;
+import org.opendatakit.common.android.data.ColumnList;
+import org.opendatakit.common.android.data.OrderedColumns;
 import org.opendatakit.common.android.data.UserTable;
 import org.opendatakit.common.android.data.UserTable.Row;
-import org.opendatakit.common.android.database.DatabaseFactory;
 import org.opendatakit.common.android.provider.ColumnDefinitionsColumns;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.KeyValueStoreColumns;
+import org.opendatakit.database.service.KeyValueStoreEntry;
+import org.opendatakit.database.service.OdkDbHandle;
 
 import android.content.ContentValues;
-import android.content.Context;
-import android.database.sqlite.SQLiteDatabase;
+import android.os.RemoteException;
 
 /**
  * Various utilities for importing/exporting tables from/to CSV.
@@ -76,10 +78,10 @@ public class CsvUtil {
 
   private static final String TAG = CsvUtil.class.getSimpleName();
 
-  private final Context context;
+  private final CommonApplication context;
   private final String appName;
 
-  public CsvUtil(Context context, String appName) {
+  public CsvUtil(CommonApplication context, String appName) {
     this.context = context;
     this.appName = appName;
   }
@@ -107,9 +109,10 @@ public class CsvUtil {
    * @param tp
    * @param fileQualifier
    * @return
+   * @throws RemoteException 
    */
-  public boolean exportSeparable(ExportListener exportListener, SQLiteDatabase db, String tableId,
-      ArrayList<ColumnDefinition> orderedDefns, String fileQualifier) {
+  public boolean exportSeparable(ExportListener exportListener, OdkDbHandle db, String tableId,
+      OrderedColumns orderedDefns, String fileQualifier) throws RemoteException {
     // building array of columns to select and header row for output file
     // then we are including all the metadata columns.
     ArrayList<String> columns = new ArrayList<String>();
@@ -128,14 +131,15 @@ public class CsvUtil {
     columns.add(DataTableColumns.SAVEPOINT_CREATOR);
 
     // add the data columns
-    for (ColumnDefinition cd : orderedDefns) {
+    for (ColumnDefinition cd : orderedDefns.getColumnDefinitions()) {
       if (cd.isUnitOfRetention()) {
         columns.add(cd.getElementKey());
       }
     }
 
     // And now add all remaining export columns
-    for (String colName : ODKDatabaseUtils.get().getExportColumns()) {
+    String[] exportColumns = context.getDatabase().getExportColumns();
+    for (String colName : exportColumns) {
       if (columns.contains(colName)) {
         continue;
       }
@@ -163,8 +167,9 @@ public class CsvUtil {
           + DataTableColumns.CONFLICT_TYPE + " IS NULL OR " + DataTableColumns.CONFLICT_TYPE
           + " = " + Integer.toString(ConflictType.LOCAL_UPDATED_UPDATED_VALUES) + ")";
 
-      UserTable table = ODKDatabaseUtils.get().rawSqlQuery(db, appName, tableId, orderedDefns,
-          whereString, null, null, null, null, null);
+      String[] emptyArray = {};
+      UserTable table = context.getDatabase().rawSqlQuery(appName, db, tableId, orderedDefns,
+          whereString, emptyArray, emptyArray, null, null, null);
 
       // emit data table...
       File file = new File(outputCsv, tableId
@@ -215,9 +220,10 @@ public class CsvUtil {
    *
    * @param tp
    * @return
+   * @throws RemoteException 
    */
-  public boolean writePropertiesCsv(SQLiteDatabase db, String tableId,
-      ArrayList<ColumnDefinition> orderedDefns) {
+  public boolean writePropertiesCsv(OdkDbHandle db, String tableId,
+      OrderedColumns orderedDefns) throws RemoteException {
     File definitionCsv = new File(ODKFileUtils.getTableDefinitionCsvFile(appName, tableId));
     File propertiesCsv = new File(ODKFileUtils.getTablePropertiesCsvFile(appName, tableId));
     return writePropertiesCsv(db, tableId, orderedDefns, definitionCsv, propertiesCsv);
@@ -230,9 +236,10 @@ public class CsvUtil {
    * @param definitionCsv
    * @param propertiesCsv
    * @return
+   * @throws RemoteException 
    */
-  private boolean writePropertiesCsv(SQLiteDatabase db, String tableId,
-      ArrayList<ColumnDefinition> orderedDefns, File definitionCsv, File propertiesCsv) {
+  private boolean writePropertiesCsv(OdkDbHandle db, String tableId,
+      OrderedColumns orderedDefns, File definitionCsv, File propertiesCsv) throws RemoteException {
     WebLogger.getLogger(appName).i(TAG, "writePropertiesCsv: tableId: " + tableId);
 
     // writing metadata
@@ -260,7 +267,7 @@ public class CsvUtil {
        * Since the md5Hash of the file identifies identical schemas, ensure that
        * the list of columns is in alphabetical order.
        */
-      for (ColumnDefinition cd : orderedDefns) {
+      for (ColumnDefinition cd : orderedDefns.getColumnDefinitions()) {
         colDefRow[0] = cd.getElementKey();
         colDefRow[1] = cd.getElementName();
         colDefRow[2] = cd.getElementType();
@@ -289,7 +296,7 @@ public class CsvUtil {
        * Since the md5Hash of the file identifies identical properties, ensure
        * that the list of KVS entries is in alphabetical order.
        */
-      List<KeyValueStoreEntry> kvsEntries = ODKDatabaseUtils.get().getDBTableMetadata(db, tableId,
+      List<KeyValueStoreEntry> kvsEntries = context.getDatabase().getDBTableMetadata(appName, db, tableId,
           null, null, null);
       Collections.sort(kvsEntries, new Comparator<KeyValueStoreEntry>() {
 
@@ -379,15 +386,16 @@ public class CsvUtil {
    * @param importListener
    * @param tableId
    * @throws IOException
+   * @throws RemoteException 
    */
-  public void updateTablePropertiesFromCsv(ImportListener importListener, String tableId)
-      throws IOException {
+  public synchronized void updateTablePropertiesFromCsv(ImportListener importListener, String tableId)
+      throws IOException, RemoteException {
 
     WebLogger.getLogger(appName).i(TAG, "updateTablePropertiesFromCsv: tableId: " + tableId);
 
-    SQLiteDatabase db = null;
+    OdkDbHandle db = null;
     try {
-      db = DatabaseFactory.get().getDatabase(context, appName);
+      db = context.getDatabase().openDatabase(appName, false);
       List<Column> columns = new ArrayList<Column>();
 
       // reading data
@@ -455,8 +463,7 @@ public class CsvUtil {
         } catch (IOException e) {
         }
 
-        ArrayList<ColumnDefinition> colDefns = ColumnDefinition.buildColumnDefinitions(appName,
-            tableId, columns);
+        OrderedColumns colDefns = new OrderedColumns(appName, tableId, columns);
         Map<String, List<KeyValueStoreEntry>> colEntries = new TreeMap<String, List<KeyValueStoreEntry>>();
 
         file = new File(ODKFileUtils.getTablePropertiesCsvFile(appName, tableId));
@@ -501,7 +508,7 @@ public class CsvUtil {
               colEntries.put(column, kvList);
             }
             try {
-              ColumnDefinition.find(colDefns, column);
+              colDefns.find(column);
             } catch (IllegalArgumentException e) {
               throw new IllegalStateException("Reference to non-existent column: " + column
                   + " of tableId: " + tableId);
@@ -531,19 +538,18 @@ public class CsvUtil {
         } catch (IOException e) {
         }
 
-        if (ODKDatabaseUtils.get().hasTableId(db, tableId)) {
-          ArrayList<ColumnDefinition> existingDefns = TableUtil.get().getColumnDefinitions(db,
-              appName, tableId);
+        if (context.getDatabase().hasTableId(appName, db, tableId)) {
+          OrderedColumns existingDefns = context.getDatabase().getUserDefinedColumns(appName, db, tableId);
 
           // confirm that the column definitions are unchanged...
-          if (existingDefns.size() != colDefns.size()) {
+          if (existingDefns.getColumnDefinitions().size() != colDefns.getColumnDefinitions().size()) {
             throw new IllegalStateException(
                 "Unexpectedly found tableId with different column definitions that already exists!");
           }
-          for (ColumnDefinition ci : colDefns) {
+          for (ColumnDefinition ci : colDefns.getColumnDefinitions()) {
             ColumnDefinition existingDefn;
             try {
-              existingDefn = ColumnDefinition.find(existingDefns, ci.getElementKey());
+              existingDefn = existingDefns.find(ci.getElementKey());
             } catch (IllegalArgumentException e) {
               throw new IllegalStateException("Unexpectedly failed to match elementKey: "
                   + ci.getElementKey());
@@ -575,11 +581,12 @@ public class CsvUtil {
           // OK -- we have matching table definition
           // now just clear and update the properties...
 
+          boolean successful = false;
           try {
-            db.beginTransaction();
-            ODKDatabaseUtils.get().replaceDBTableMetadata(db, tableId, kvsEntries, true);
+            context.getDatabase().beginTransaction(appName, db);
+            context.getDatabase().replaceDBTableMetadataList(appName, db, tableId, kvsEntries, true);
 
-            for (ColumnDefinition ci : colDefns) {
+            for (ColumnDefinition ci : colDefns.getColumnDefinitions()) {
               // put the displayName into the KVS
               List<KeyValueStoreEntry> kvsList = colEntries.get(ci.getElementKey());
               if (kvsList == null) {
@@ -611,15 +618,15 @@ public class CsvUtil {
                 entry.value = ODKFileUtils.mapper.writeValueAsString(ci.getElementKey());
                 kvsList.add(entry);
               }
-              ODKDatabaseUtils.get().replaceDBTableMetadata(db, tableId, kvsList, false);
+              context.getDatabase().replaceDBTableMetadataList(appName, db, tableId, kvsList, false);
             }
-            db.setTransactionSuccessful();
+            successful = true;
           } finally {
-            db.endTransaction();
+            context.getDatabase().closeTransaction(appName, db, successful);
           }
         } else {
 
-          for (ColumnDefinition ci : colDefns) {
+          for (ColumnDefinition ci : colDefns.getColumnDefinitions()) {
             // put the displayName into the KVS if not supplied
             List<KeyValueStoreEntry> kvsList = colEntries.get(ci.getElementKey());
             if (kvsList == null) {
@@ -664,20 +671,21 @@ public class CsvUtil {
               .constructSimpleDisplayName(tableId) : displayName));
           kvsEntries.add(e);
 
+          boolean successful = false;
           try {
-            db.beginTransaction();
-            ODKDatabaseUtils.get().createOrOpenDBTableWithColumns(db, appName, tableId, columns);
-
-            ODKDatabaseUtils.get().replaceDBTableMetadata(db, tableId, kvsEntries, false);
+            context.getDatabase().beginTransaction(appName, db);
+            ColumnList cols = new ColumnList(columns);
+            context.getDatabase().createOrOpenDBTableWithColumns(appName, db, tableId, cols);
+            context.getDatabase().replaceDBTableMetadataList(appName, db, tableId, kvsEntries, false);
 
             // we have created the table...
-            for (ColumnDefinition ci : colDefns) {
+            for (ColumnDefinition ci : colDefns.getColumnDefinitions()) {
               List<KeyValueStoreEntry> kvsList = colEntries.get(ci.getElementKey());
-              ODKDatabaseUtils.get().replaceDBTableMetadata(db, tableId, kvsList, false);
+              context.getDatabase().replaceDBTableMetadataList(appName, db, tableId, kvsList, false);
             }
-            db.setTransactionSuccessful();
+            successful = true;
           } finally {
-            db.endTransaction();
+            context.getDatabase().closeTransaction(appName, db, successful);
           }
         }
       } finally {
@@ -691,18 +699,19 @@ public class CsvUtil {
 
       // And update the inserted properties so that
       // the known entries have their expected types.
+      boolean successful = false;
       try {
-        db.beginTransaction();
+        context.getDatabase().beginTransaction(appName, db);
 
-        ODKDatabaseUtils.get().enforceTypesDBTableMetadata(db, tableId);
+        context.getDatabase().enforceTypesDBTableMetadata(appName, db, tableId);
 
-        db.setTransactionSuccessful();
+        successful = true;
       } finally {
-        db.endTransaction();
+        context.getDatabase().closeTransaction(appName, db, successful);
       }
     } finally {
       if (db != null) {
-        db.close();
+        context.getDatabase().closeDatabase(appName, db);
       }
     }
   }
@@ -726,17 +735,18 @@ public class CsvUtil {
    * @param createIfNotPresent
    *          -- true if we should try to create the table.
    * @return
+   * @throws RemoteException 
    */
   public boolean importSeparable(ImportListener importListener, String tableId,
-      String fileQualifier, boolean createIfNotPresent) {
+      String fileQualifier, boolean createIfNotPresent) throws RemoteException {
 
-    SQLiteDatabase db = null;
+    OdkDbHandle db = null;
     try {
-      db = DatabaseFactory.get().getDatabase(context, appName);
-      if (!ODKDatabaseUtils.get().hasTableId(db, tableId)) {
+      db = context.getDatabase().openDatabase(appName, false);
+      if (!context.getDatabase().hasTableId(appName, db, tableId)) {
         if (createIfNotPresent) {
           updateTablePropertiesFromCsv(importListener, tableId);
-          if (!ODKDatabaseUtils.get().hasTableId(db, tableId)) {
+          if (!context.getDatabase().hasTableId(appName, db, tableId)) {
             return false;
           }
         } else {
@@ -744,8 +754,7 @@ public class CsvUtil {
         }
       }
 
-      ArrayList<ColumnDefinition> orderedDefns = TableUtil.get().getColumnDefinitions(db, appName,
-          tableId);
+      OrderedColumns orderedDefns = context.getDatabase().getUserDefinedColumns(appName, db, tableId);
 
       WebLogger.getLogger(appName).i(
           TAG,
@@ -797,9 +806,9 @@ public class CsvUtil {
           // default values for metadata columns if not provided
           v_id = UUID.randomUUID().toString();
           v_form_id = null;
-          v_locale = ODKDatabaseUtils.DEFAULT_LOCALE;
+          v_locale = ODKCursorUtils.DEFAULT_LOCALE;
           v_savepoint_type = SavepointTypeManipulator.complete();
-          v_savepoint_creator = ODKDatabaseUtils.DEFAULT_CREATOR;
+          v_savepoint_creator = ODKCursorUtils.DEFAULT_CREATOR;
           v_savepoint_timestamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
           v_row_etag = null;
           v_filter_type = null;
@@ -869,7 +878,7 @@ public class CsvUtil {
               continue;
             }
             try {
-              ColumnDefinition.find(orderedDefns, column);
+              orderedDefns.find(column);
               valueMap.put(column, tmp);
             } catch (IllegalArgumentException e) {
               // this is OK --
@@ -881,7 +890,7 @@ public class CsvUtil {
           // uncommitted edits. For now, we just add our csv import to those,
           // rather
           // than resolve the problems.
-          UserTable table = ODKDatabaseUtils.get().getDataInExistingDBTableWithId(db, appName,
+          UserTable table = context.getDatabase().getDataInExistingDBTableWithId(appName, db,
               tableId, orderedDefns, v_id);
           if (table.getNumberOfRows() > 1) {
             throw new IllegalStateException(
@@ -934,7 +943,7 @@ public class CsvUtil {
 
             if (syncState == SyncState.new_row) {
               // we do the actual update here
-              ODKDatabaseUtils.get().updateDataInExistingDBTableWithId(db, tableId, orderedDefns,
+              context.getDatabase().updateDataInExistingDBTableWithId(appName, db, tableId, orderedDefns,
                   cv, v_id);
             }
             // otherwise, do NOT update the row.
@@ -963,7 +972,7 @@ public class CsvUtil {
 
             cv.put(DataTableColumns.ID, v_id);
 
-            ODKDatabaseUtils.get().insertDataIntoExistingDBTableWithId(db, tableId, orderedDefns,
+            context.getDatabase().insertDataIntoExistingDBTableWithId(appName, db, tableId, orderedDefns,
                 cv, v_id);
           }
         }
@@ -981,7 +990,7 @@ public class CsvUtil {
       return false;
     } finally {
       if (db != null) {
-        db.close();
+        context.getDatabase().closeDatabase(appName, db);
       }
     }
   }

@@ -6,7 +6,7 @@
     android:sharedUserId="org.opendatakit"
     android:sharedUserLabel="@string/app_userLabel" >
 
-	<uses-sdk android:minSdkVersion="14" />
+	<uses-sdk android:minSdkVersion="16" />
 
 	<instrumentation
 		android:name="android.test.InstrumentationTestRunner"
