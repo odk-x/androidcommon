@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.opendatakit.common.R;
+import org.opendatakit.androidcommon.R;
 import org.opendatakit.common.android.listener.DatabaseConnectionListener;
 import org.opendatakit.common.android.listener.InitializationListener;
 import org.opendatakit.common.android.listener.LicenseReaderListener;

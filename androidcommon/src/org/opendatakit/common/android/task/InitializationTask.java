@@ -36,7 +36,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import org.apache.commons.io.FileUtils;
-import org.opendatakit.common.R;
+import org.opendatakit.androidcommon.R;
 import org.opendatakit.common.android.application.CommonApplication;
 import org.opendatakit.common.android.listener.InitializationListener;
 import org.opendatakit.common.android.provider.FormsColumns;

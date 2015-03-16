@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-	package="org.opendatakit.common.android.test"
-	android:versionCode="125"
+	package="org.opendatakit.androidcommon.test"
+	android:versionCode="127"
 	android:versionName="2.0"
     android:sharedUserId="org.opendatakit"
     android:sharedUserLabel="@string/app_userLabel" >
@@ -10,13 +10,14 @@
 
 	<instrumentation
 		android:name="android.test.InstrumentationTestRunner"
-		android:targetPackage="org.opendatakit.common.android.test" />
+		android:targetPackage="org.opendatakit.androidcommon.test" />
 	
 	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
 
 	<application
 		android:icon="@drawable/ic_launcher"
-		android:label="@string/app_name" >
+		android:label="@string/app_name" 
+		android:theme="@style/Opendatakit" >
 		<uses-library android:name="android.test.runner" />
 	</application>
 

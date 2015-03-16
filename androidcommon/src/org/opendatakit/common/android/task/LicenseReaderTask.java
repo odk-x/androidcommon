@@ -20,7 +20,7 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-import org.opendatakit.common.R;
+import org.opendatakit.androidcommon.R;
 import org.opendatakit.common.android.application.CommonApplication;
 import org.opendatakit.common.android.listener.LicenseReaderListener;
 

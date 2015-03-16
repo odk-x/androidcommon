@@ -14,7 +14,7 @@
 
 package org.opendatakit.common.android.fragment;
 
-import org.opendatakit.common.R;
+import org.opendatakit.androidcommon.R;
 import org.opendatakit.common.android.logic.RequestCodes;
 
 import android.app.AlertDialog;

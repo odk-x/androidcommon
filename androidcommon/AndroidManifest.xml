@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.opendatakit.common"
+    package="org.opendatakit.androidcommon"
     android:versionCode="127"
     android:versionName="2.0"
     android:sharedUserId="org.opendatakit"
