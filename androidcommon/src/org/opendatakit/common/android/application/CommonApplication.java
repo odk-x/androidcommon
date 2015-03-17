@@ -1,8 +1,6 @@
 package org.opendatakit.common.android.application;
 
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
 
 import org.opendatakit.androidcommon.R;
 import org.opendatakit.common.android.listener.DatabaseConnectionListener;
@@ -218,8 +216,6 @@ public abstract class CommonApplication extends Application  implements LicenseR
   // These are expected to be broken down and set up during orientation changes.
   private LicenseReaderListener mLicenseReaderListener = null;
   private InitializationListener mInitializationListener = null;
-  
-  private Set<String> appNameHasBeenInitialized = new HashSet<String>();
 
   private boolean shuttingDown = false;
   
@@ -314,15 +310,19 @@ public abstract class CommonApplication extends Application  implements LicenseR
         return false;
       }
     }
-    return !appNameHasBeenInitialized.contains(appName);
+    
+    PropertiesSingleton props = CommonToolProperties.get(this, appName);
+    return props.shouldRunInitializationTask(this.getToolName());
   }
 
   public void clearRunInitializationTask(String appName) {
-    appNameHasBeenInitialized.add(appName);
+    PropertiesSingleton props = CommonToolProperties.get(this, appName);
+    props.clearRunInitializationTask(this.getToolName());
   }
 
   public void setRunInitializationTask(String appName) {
-    appNameHasBeenInitialized.remove(appName);
+    PropertiesSingleton props = CommonToolProperties.get(this, appName);
+    props.setRunInitializationTask(this.getToolName());
   }
 
   private <T> void executeTask(AsyncTask<T, ?, ?> task, T... args) {
