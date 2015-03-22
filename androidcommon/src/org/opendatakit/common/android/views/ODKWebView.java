@@ -192,20 +192,18 @@ public class ODKWebView extends WebView {
   }
 
   /**
-   * Communicates the results for an action callback to the webkit.
-   *
-   * @param pageWaitingForData
-   * @param pathWaitingForData
-   * @param actionWaitingForData
-   * @param jsonObject
+   * Signals that a queued action (either the result of 
+   * a doAction call or a Java-initiated Url change) is
+   * available.
+   * <p>The Javascript side should call 
+   * shim.getFirstQueuedAction() to retrieve the action.
+   * If the returned value is a string, it is a Url change
+   * request. if it is a struct, it is a doAction result.
    */
-  public void doActionResult(String pageWaitingForData, String pathWaitingForData, String actionWaitingForData, String jsonObject ) {
+  public void signalQueuedActionAvailable() {
     // NOTE: this is asynchronous
-    log.i(t, "doActionResult(" + pageWaitingForData + ", " + pathWaitingForData + "," + actionWaitingForData + ",...)");
-    loadJavascriptUrl("javascript:window.landing.opendatakitCallback('" + pageWaitingForData
-        + "','" + pathWaitingForData + "','" + actionWaitingForData + "', '" + jsonObject
-        + "' )");
-    requestFocus();
+    log.i(t, "signalQueuedActionAvailable()");
+    loadJavascriptUrl("javascript:window.landing.signalQueuedActionAvailable()");
   }
 
   // called to invoke a javascript method inside the webView
@@ -221,7 +219,8 @@ public class ODKWebView extends WebView {
 
   public void gotoUrlHash(String hash) {
     log.i(t, "gotoUrlHash: " + hash);
-    loadJavascriptUrl("javascript:window.landing.opendatakitChangeUrlHash('" + hash + "')");
+    activity.queueUrlChange(hash);
+    signalQueuedActionAvailable();
   }
 
   public synchronized void loadPage() {

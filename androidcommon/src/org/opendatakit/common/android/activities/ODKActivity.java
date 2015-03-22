@@ -79,6 +79,35 @@ public interface ODKActivity extends IAppAwareActivity, IInitResumeActivity {
 
   public String doAction(String page, String path, String action, JSONObject valueMap);
 
+  /**
+   * Queue the outcome of a doAction along with its UI element specifiers.
+   * This is a JSON.stringify of:
+   * 
+   * { page: pageWaitingForData, 
+   *   path: pathWaitingForData,
+   *   action: actionWaitingForData,
+   *   jsonValue: { status: integerOutcome ... } }
+   *   
+   * Within the jsonValue, if there are return values in the
+   * result intent, they are under a result key within the jsonValue.
+   * 
+   * @param outcome -- serialization of the above structure.
+   */
+  public void queueActionOutcome(String outcome);
+  
+  /**
+   * Queue a hash change action (initiated by the Java side).
+   * 
+   * @param hash
+   */
+  public void queueUrlChange(String hash);
+  
+  /**
+   * @return the oldest recorded action outcome 
+   *   or Url change. Return null if there are none.
+   */
+  public String getFirstQueuedAction();
+
   public void swapToCustomView(View view);
 
   public void swapOffCustomView();

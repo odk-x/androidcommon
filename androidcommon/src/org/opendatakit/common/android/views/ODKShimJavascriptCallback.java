@@ -373,6 +373,19 @@ public class ODKShimJavascriptCallback {
     return mActivity.getSessionVariable(elementPath);
   }
 
+  public String getFirstQueuedAction(String refId) {
+    if (mWebView == null) {
+      log.w("shim", "getFirstQueuedAction -- interface removed");
+      return null;
+    }
+    if (!mActivity.getRefId().equals(refId)) {
+      log.w("shim", "IGNORED: getFirstQueuedAction(" + refId + ")");
+      return null;
+    }
+    String outcome = mActivity.getFirstQueuedAction();
+    return outcome;
+  }
+  
   // @JavascriptInterface
   public void frameworkHasLoaded(String refId, boolean outcome) {
     if (mWebView == null) {
