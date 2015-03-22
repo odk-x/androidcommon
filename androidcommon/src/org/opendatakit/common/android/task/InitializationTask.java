@@ -643,19 +643,7 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
     // /////////////////////////////////////////
     // /////////////////////////////////////////
     // /////////////////////////////////////////
-    // register the framework form if it is present
-    File frameworkFormDir = new File(ODKFileUtils.getFormFolder(appName, 
-        FormsColumns.COMMON_BASE_FORM_ID, FormsColumns.COMMON_BASE_FORM_ID));
-    File frameworkFormDef = new File(frameworkFormDir, ODKFileUtils.FORMDEF_JSON_FILENAME);
-    if ( frameworkFormDir.exists() && frameworkFormDir.isDirectory() &&
-         frameworkFormDef.exists() && frameworkFormDef.isFile() ) {
-      updateFormDir(FormsColumns.COMMON_BASE_FORM_ID, FormsColumns.COMMON_BASE_FORM_ID, 
-          frameworkFormDir,
-          false,
-          ODKFileUtils.getPendingDeletionTablesFolder(appName) + File.separator);
-    }
-
-    // and now scan for new forms...
+    // scan for new forms...
 
     String completionString = appContext.getString(R.string.searching_for_form_defs);
     publishProgress(completionString, null);

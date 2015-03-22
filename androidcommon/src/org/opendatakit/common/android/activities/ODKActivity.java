@@ -14,8 +14,6 @@
 
 package org.opendatakit.common.android.activities;
 
-import java.io.File;
-
 import org.json.JSONObject;
 
 import android.graphics.Bitmap;
@@ -29,8 +27,6 @@ import android.view.View;
  *
  */
 public interface ODKActivity extends IAppAwareActivity, IInitResumeActivity {
-
-  public File getFrameworkFormPath();
 
   public String getUrlBaseLocation(boolean ifChanged);
 

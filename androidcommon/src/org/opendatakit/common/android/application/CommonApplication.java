@@ -293,10 +293,10 @@ public abstract class CommonApplication extends Application  implements LicenseR
 
   public String getVersionedAppName() {
     String versionDetail = this.getVersionDetail();
-    return getString(getAppNameResourceId()) + versionDetail;
+    return getString(getApkDisplayNameResourceId()) + versionDetail;
   }
 
-  public abstract int getAppNameResourceId();
+  public abstract int getApkDisplayNameResourceId();
   
   public abstract int getAssetZipResourceId();
   
@@ -310,7 +310,6 @@ public abstract class CommonApplication extends Application  implements LicenseR
         return false;
       }
     }
-    
     PropertiesSingleton props = CommonToolProperties.get(this, appName);
     return props.shouldRunInitializationTask(this.getToolName());
   }

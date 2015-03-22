@@ -156,7 +156,7 @@ public class ODKWebView extends WebView {
     ws.setAllowFileAccess(true);
     ws.setAppCacheEnabled(true);
     ws.setAppCachePath(ODKFileUtils.getAppCacheFolder(appName));
-    ws.setCacheMode(WebSettings.LOAD_NO_CACHE);
+    ws.setCacheMode(WebSettings.LOAD_DEFAULT);
     ws.setDatabaseEnabled(true);
     ws.setDefaultFixedFontSize(((CommonApplication) context.getApplicationContext()).getQuestionFontsize(appName));
     ws.setDefaultFontSize(((CommonApplication) context.getApplicationContext()).getQuestionFontsize(appName));
