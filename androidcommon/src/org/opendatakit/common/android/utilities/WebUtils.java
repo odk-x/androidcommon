@@ -44,7 +44,6 @@ import org.opendatakit.httpclientandroidlib.client.methods.HttpPost;
 import org.opendatakit.httpclientandroidlib.protocol.HttpContext;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
-import org.xmlpull.v1.XmlPullParser;
 
 import android.annotation.SuppressLint;
 import android.text.format.DateFormat;
