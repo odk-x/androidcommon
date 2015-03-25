@@ -27,10 +27,11 @@ import java.util.GregorianCalendar;
 import java.util.Locale;
 import java.util.TimeZone;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang3.CharEncoding;
-import org.kxml2.io.KXmlParser;
-import org.kxml2.kdom.Document;
 import org.opendatakit.common.android.utilities.StaticStateManipulator.IStaticFieldManipulator;
 import org.opendatakit.httpclientandroidlib.Header;
 import org.opendatakit.httpclientandroidlib.HttpEntity;
@@ -41,14 +42,16 @@ import org.opendatakit.httpclientandroidlib.client.methods.HttpGet;
 import org.opendatakit.httpclientandroidlib.client.methods.HttpHead;
 import org.opendatakit.httpclientandroidlib.client.methods.HttpPost;
 import org.opendatakit.httpclientandroidlib.protocol.HttpContext;
+import org.w3c.dom.Document;
+import org.xml.sax.InputSource;
 import org.xmlpull.v1.XmlPullParser;
 
 import android.annotation.SuppressLint;
 import android.text.format.DateFormat;
 
 /**
- * Common utility methods for managing constructing requests with the
- * proper parameters and OpenRosa headers.
+ * Common utility methods for managing constructing requests with the proper
+ * parameters and OpenRosa headers.
  *
  * @author mitchellsundt@gmail.com
  */
@@ -77,8 +80,7 @@ public final class WebUtils {
 
   /**
    * Date format pattern used to parse HTTP date headers in ANSI C
-   * <code>asctime()</code> format.
-   * copied from apache.commons.lang.DateUtils
+   * <code>asctime()</code> format. copied from apache.commons.lang.DateUtils
    */
   private static final String PATTERN_ASCTIME = "EEE MMM d HH:mm:ss yyyy";
   private static final String PATTERN_DATE_TOSTRING = "EEE MMM dd HH:mm:ss zzz yyyy";
@@ -97,7 +99,7 @@ public final class WebUtils {
   private static final GregorianCalendar g = new GregorianCalendar(TimeZone.getTimeZone("GMT"));
 
   private static WebUtils webUtils = new WebUtils();
-  
+
   static {
     // register a state-reset manipulator for 'webUtils' field.
     StaticStateManipulator.get().register(50, new IStaticFieldManipulator() {
@@ -106,14 +108,14 @@ public final class WebUtils {
       public void reset() {
         webUtils = new WebUtils();
       }
-      
+
     });
   }
 
-  public static WebUtils get() { 
+  public static WebUtils get() {
     return webUtils;
   }
-  
+
   /**
    * For mocking -- supply a mocked object.
    * 
@@ -122,19 +124,19 @@ public final class WebUtils {
   public static void set(WebUtils utils) {
     webUtils = utils;
   }
-  
+
   protected WebUtils() {
   };
 
   @SuppressLint("SimpleDateFormat")
-  private Date parseDateSubset( String value, String[] parsePatterns, Locale l, TimeZone tz) {
+  private Date parseDateSubset(String value, String[] parsePatterns, Locale l, TimeZone tz) {
     // borrowed from apache.commons.lang.DateUtils...
     Date d = null;
     SimpleDateFormat parser = null;
     ParsePosition pos = new ParsePosition(0);
     for (int i = 0; i < parsePatterns.length; i++) {
       if (i == 0) {
-        if ( l == null ) {
+        if (l == null) {
           parser = new SimpleDateFormat(parsePatterns[0]);
         } else {
           parser = new SimpleDateFormat(parsePatterns[0], l);
@@ -151,6 +153,7 @@ public final class WebUtils {
     }
     return d;
   }
+
   /**
    * Parse a string into a datetime value. Tries the common Http formats, the
    * iso8601 format (used by Javarosa), the default formatting from
@@ -160,59 +163,62 @@ public final class WebUtils {
    * @return
    */
   public Date parseDate(String value) {
-    if ( value == null || value.length() == 0 ) return null;
+    if (value == null || value.length() == 0)
+      return null;
 
-    String[] javaRosaPattern = new String[] {
-        PATTERN_ISO8601_JAVAROSA,
-        PATTERN_DATE_ONLY_JAVAROSA,
+    String[] javaRosaPattern = new String[] { PATTERN_ISO8601_JAVAROSA, PATTERN_DATE_ONLY_JAVAROSA,
         PATTERN_TIME_ONLY_JAVAROSA };
 
-    String[] iso8601Pattern = new String[] {
-        PATTERN_ISO8601 };
+    String[] iso8601Pattern = new String[] { PATTERN_ISO8601 };
 
     String[] localizedParsePatterns = new String[] {
         // try the common HTTP date formats that have time zones
-        PATTERN_RFC1123,
-        PATTERN_RFC1036,
-        PATTERN_DATE_TOSTRING };
+        PATTERN_RFC1123, PATTERN_RFC1036, PATTERN_DATE_TOSTRING };
 
     String[] localizedNoTzParsePatterns = new String[] {
-        // ones without timezones... (will assume UTC)
-        PATTERN_ASCTIME };
+    // ones without timezones... (will assume UTC)
+    PATTERN_ASCTIME };
 
-    String[] tzParsePatterns = new String[] {
-        PATTERN_ISO8601,
-        PATTERN_ISO8601_DATE,
+    String[] tzParsePatterns = new String[] { PATTERN_ISO8601, PATTERN_ISO8601_DATE,
         PATTERN_ISO8601_TIME };
 
     String[] noTzParsePatterns = new String[] {
         // ones without timezones... (will assume UTC)
-        PATTERN_ISO8601_WITHOUT_ZONE,
-        PATTERN_NO_DATE_TIME_ONLY,
-        PATTERN_YYYY_MM_DD_DATE_ONLY_NO_TIME_DASH,
-        PATTERN_GOOGLE_DOCS };
+        PATTERN_ISO8601_WITHOUT_ZONE, PATTERN_NO_DATE_TIME_ONLY,
+        PATTERN_YYYY_MM_DD_DATE_ONLY_NO_TIME_DASH, PATTERN_GOOGLE_DOCS };
 
     Date d = null;
     // iso8601 parsing is sometimes off-by-one when JR does it...
     d = parseDateSubset(value, iso8601Pattern, null, TimeZone.getTimeZone("GMT"));
-    if ( d != null ) return d;
-    // try to parse with the JavaRosa parsers (these are approximate -- timezone must be GMT)
+    if (d != null)
+      return d;
+    // try to parse with the JavaRosa parsers (these are approximate -- timezone
+    // must be GMT)
     d = parseDateSubset(value, javaRosaPattern, null, TimeZone.getTimeZone("GMT"));
-    if ( d != null ) return d;
-    // try localized and english text parsers (for Web headers and interactive filter spec.)
+    if (d != null)
+      return d;
+    // try localized and english text parsers (for Web headers and interactive
+    // filter spec.)
     d = parseDateSubset(value, localizedParsePatterns, Locale.ENGLISH, TimeZone.getTimeZone("GMT"));
-    if ( d != null ) return d;
+    if (d != null)
+      return d;
     d = parseDateSubset(value, localizedParsePatterns, null, TimeZone.getTimeZone("GMT"));
-    if ( d != null ) return d;
-    d = parseDateSubset(value, localizedNoTzParsePatterns, Locale.ENGLISH, TimeZone.getTimeZone("GMT"));
-    if ( d != null ) return d;
+    if (d != null)
+      return d;
+    d = parseDateSubset(value, localizedNoTzParsePatterns, Locale.ENGLISH,
+        TimeZone.getTimeZone("GMT"));
+    if (d != null)
+      return d;
     d = parseDateSubset(value, localizedNoTzParsePatterns, null, TimeZone.getTimeZone("GMT"));
-    if ( d != null ) return d;
+    if (d != null)
+      return d;
     // try other common patterns that might not quite match JavaRosa parsers
     d = parseDateSubset(value, tzParsePatterns, null, TimeZone.getTimeZone("GMT"));
-    if ( d != null ) return d;
+    if (d != null)
+      return d;
     d = parseDateSubset(value, noTzParsePatterns, null, TimeZone.getTimeZone("GMT"));
-    if ( d != null ) return d;
+    if (d != null)
+      return d;
     throw new IllegalArgumentException("Unable to parse the date: " + value);
   }
 
@@ -284,13 +290,15 @@ public final class WebUtils {
     if (d == null)
       return null;
     // SDF is not thread-safe
-    SimpleDateFormat asGMTiso8601 = new SimpleDateFormat(PATTERN_ISO8601); // with time zone
+    // this pattern has a time zone
+    SimpleDateFormat asGMTiso8601 = new SimpleDateFormat(PATTERN_ISO8601); 
     asGMTiso8601.setTimeZone(TimeZone.getTimeZone("GMT"));
     return asGMTiso8601.format(d);
   }
 
   /**
    * Return the RFC1123 string representation of a date.
+   * 
    * @param d
    * @return
    */
@@ -299,7 +307,8 @@ public final class WebUtils {
     if (d == null)
       return null;
     // SDF is not thread-safe
-    SimpleDateFormat asGMTrfc1123 = new SimpleDateFormat(PATTERN_RFC1123); // with time zone
+    // this pattern has a time zone
+    SimpleDateFormat asGMTrfc1123 = new SimpleDateFormat(PATTERN_RFC1123);
     asGMTrfc1123.setTimeZone(TimeZone.getTimeZone("GMT"));
     return asGMTrfc1123.format(d);
   }
@@ -379,8 +388,8 @@ public final class WebUtils {
    * @param httpclient
    * @return
    */
-  public DocumentFetchResult getXmlDocument(String appName, String urlString, HttpContext localContext,
-      HttpClient httpclient, String auth) {
+  public DocumentFetchResult getXmlDocument(String appName, String urlString,
+      HttpContext localContext, HttpClient httpclient, String auth) {
     URI u = null;
     try {
       URL url = new URL(URLDecoder.decode(urlString, CharEncoding.UTF_8));
@@ -432,16 +441,20 @@ public final class WebUtils {
       try {
         InputStream is = null;
         InputStreamReader isr = null;
+        InputSource iss = null;
         try {
           is = entity.getContent();
           isr = new InputStreamReader(is, Charsets.UTF_8);
-          doc = new Document();
-          KXmlParser parser = new KXmlParser();
-          parser.setInput(isr);
-          parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true);
-          doc.parse(parser);
+          iss = new InputSource(isr);
+          DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+          dbf.setNamespaceAware(true);
+          DocumentBuilder db = dbf.newDocumentBuilder();
+          doc = db.parse(iss);
           isr.close();
           isr = null;
+        } catch (Exception e) {
+          WebLogger.getLogger(appName).printStackTrace(e);
+          throw e;
         } finally {
           if (isr != null) {
             try {
@@ -492,7 +505,8 @@ public final class WebUtils {
           b.append(h.getValue());
         }
         if (!versionMatch) {
-          WebLogger.getLogger(appName).w(t, WebUtils.OPEN_ROSA_VERSION_HEADER + " unrecognized version(s): " + b.toString());
+          WebLogger.getLogger(appName).w(t,
+              WebUtils.OPEN_ROSA_VERSION_HEADER + " unrecognized version(s): " + b.toString());
         }
       }
       return new DocumentFetchResult(doc, isOR);

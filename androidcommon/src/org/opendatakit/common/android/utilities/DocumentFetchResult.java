@@ -14,7 +14,7 @@
 
 package org.opendatakit.common.android.utilities;
 
-import org.kxml2.kdom.Document;
+import org.w3c.dom.Document;
 
 /**
  * Result object for managing OpenRosa (old-style) ODK Aggregate form lists,
