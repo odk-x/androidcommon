@@ -53,7 +53,7 @@ public class ODKShimJavascriptCallback {
 
   // @JavascriptInterface
   public String getBaseUrl() {
-    return "../" + ODKFileUtils.FRAMEWORK_FOLDER_NAME;
+    return ODKFileUtils.getRelativeSystemPath();
   }
 
   /**

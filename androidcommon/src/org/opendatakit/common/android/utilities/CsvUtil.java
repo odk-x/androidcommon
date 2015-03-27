@@ -720,7 +720,7 @@ public class CsvUtil {
    * Imports data from a csv file with elementKey headings. This csv file is
    * assumed to be under:
    * <ul>
-   * <li>assets/csv/tableId.fileQualifier.csv</li>
+   * <li>config/assets/csv/tableId.fileQualifier.csv</li>
    * </ul>
    * If the table does not exist, it attempts to create it using the schema and
    * metadata located here:
@@ -764,8 +764,8 @@ public class CsvUtil {
       // reading data
       InputStreamReader input = null;
       try {
-        // both files are read from assets/csv directory...
-        File assetsCsv = new File(new File(ODKFileUtils.getAssetsFolder(appName)), "csv");
+        // both files are read from config/assets/csv directory...
+        File assetsCsv = new File(ODKFileUtils.getAssetsCsvFolder(appName));
 
         // read data table...
         File file = new File(assetsCsv, tableId

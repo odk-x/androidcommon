@@ -95,8 +95,8 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
       if (!ODKFileUtils.isConfiguredSurveyApp(appName, getApplication().getVersionCodeString())) {
         publishProgress(appContext.getString(R.string.expansion_unzipping_begins), null);
 
-        extractFromRawZip(getApplication().getFrameworkZipResourceId(), true, mPendingResult);
-        extractFromRawZip(getApplication().getAssetZipResourceId(), false, mPendingResult);
+        extractFromRawZip(getApplication().getSystemZipResourceId(), true, mPendingResult);
+        extractFromRawZip(getApplication().getConfigZipResourceId(), false, mPendingResult);
 
         ODKFileUtils.assertConfiguredSurveyApp(appName, getApplication().getVersionCodeString());
       }
@@ -105,8 +105,8 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
       if (!ODKFileUtils.isConfiguredTablesApp(appName, getApplication().getVersionCodeString())) {
         publishProgress(appContext.getString(R.string.expansion_unzipping_begins), null);
 
-        extractFromRawZip(getApplication().getFrameworkZipResourceId(), true, mPendingResult);
-        extractFromRawZip(getApplication().getAssetZipResourceId(), false, mPendingResult);
+        extractFromRawZip(getApplication().getSystemZipResourceId(), true, mPendingResult);
+        extractFromRawZip(getApplication().getConfigZipResourceId(), false, mPendingResult);
 
         ODKFileUtils.assertConfiguredTablesApp(appName, getApplication().getVersionCodeString());
       }
@@ -584,15 +584,17 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
           publishProgress(formattedString, detail);
           ImportRequest request = null;
 
-          // If the import file is in the assets/csv directory
+          // If the import file is in the config/assets/csv directory
           // and if it is of the form tableId.csv or tableId.fileQualifier.csv
           // and fileQualifier is not 'properties', then assume it is the
           // new-style CSV format.
           //
-          String[] pathParts = filename.split("/");
-          if ((pathParts.length == 3) && pathParts[0].equals("assets")
-              && pathParts[1].equals("csv")) {
-            String[] terms = pathParts[2].split("\\.");
+          String assetsCsvDirPath = ODKFileUtils.asRelativePath(appName, 
+              new File(ODKFileUtils.getAssetsCsvFolder(appName)));
+          if ( filename.startsWith(assetsCsvDirPath) ) {
+            // get past the file separator
+            String csvFilename = filename.substring(assetsCsvDirPath.length()+1);
+            String[] terms = csvFilename.split("\\.");
             if (terms.length == 2 && terms[1].equals("csv")) {
               String tableId = terms[0];
               String fileQualifier = null;

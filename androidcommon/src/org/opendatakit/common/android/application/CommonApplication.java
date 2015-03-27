@@ -312,9 +312,9 @@ public abstract class CommonApplication extends Application  implements LicenseR
 
   public abstract int getApkDisplayNameResourceId();
   
-  public abstract int getAssetZipResourceId();
+  public abstract int getConfigZipResourceId();
   
-  public abstract int getFrameworkZipResourceId();
+  public abstract int getSystemZipResourceId();
   
   public abstract int getWebKitResourceId();
   
