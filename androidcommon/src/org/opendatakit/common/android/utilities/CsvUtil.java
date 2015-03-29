@@ -16,15 +16,18 @@
 package org.opendatakit.common.android.utilities;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -146,6 +149,18 @@ public class CsvUtil {
       }
       columns.add(colName);
     }
+    
+    File tableInstancesFolder = new File(ODKFileUtils.getInstancesFolder(appName, tableId));
+    HashSet<File> instancesWithData = new HashSet<File>();
+    if ( tableInstancesFolder.exists() && tableInstancesFolder.isDirectory() ) {
+      File[] subDirectories = tableInstancesFolder.listFiles(new FileFilter() {
+
+        @Override
+        public boolean accept(File pathname) {
+          return pathname.isDirectory() && (pathname.list().length != 0);
+        }});
+      instancesWithData.addAll(Arrays.asList(subDirectories));
+    }
 
     OutputStreamWriter output = null;
     try {
@@ -197,10 +212,11 @@ public class CsvUtil {
          */
         String instanceId = dataRow.getRowId();
         File tableInstanceFolder = new File(ODKFileUtils.getInstanceFolder(appName, tableId, instanceId));
-        if ( tableInstanceFolder.exists() && tableInstanceFolder.isDirectory()) {
+        if ( instancesWithData.contains(tableInstanceFolder) ) {
           File outputInstanceFolder = new File(ODKFileUtils.getOutputCsvInstanceFolder(appName, tableId, instanceId));
           outputInstanceFolder.mkdirs();
           FileUtils.copyDirectory(tableInstanceFolder, outputInstanceFolder);
+          instancesWithData.remove(tableInstanceFolder);
         }
 
       }
@@ -779,6 +795,19 @@ public class CsvUtil {
       // reading data
       InputStreamReader input = null;
       try {
+        
+        File assetsCsvInstances = new File(ODKFileUtils.getAssetsCsvInstancesFolder(appName, tableId));
+        HashSet<File> instancesHavingData = new HashSet<File>();
+        if ( assetsCsvInstances.exists() && assetsCsvInstances.isDirectory() ) {
+          File[] subDirectories = assetsCsvInstances.listFiles(new FileFilter() {
+
+            @Override
+            public boolean accept(File pathname) {
+              return pathname.isDirectory() && (pathname.list().length != 0);
+            }});
+          instancesHavingData.addAll(Arrays.asList(subDirectories));
+        }
+        
         // both files are read from config/assets/csv directory...
         File assetsCsv = new File(ODKFileUtils.getAssetsCsvFolder(appName));
 
@@ -998,10 +1027,11 @@ public class CsvUtil {
            * row. This is a simplification.
            */
           File assetsInstanceFolder = new File(ODKFileUtils.getAssetsCsvInstanceFolder(appName, tableId, v_id));
-          if ( assetsInstanceFolder.exists() && assetsInstanceFolder.isDirectory()) {
+          if ( instancesHavingData.contains(assetsInstanceFolder) ) {
             File tableInstanceFolder = new File(ODKFileUtils.getInstanceFolder(appName, tableId, v_id));
             tableInstanceFolder.mkdirs();
             FileUtils.copyDirectory(assetsInstanceFolder, tableInstanceFolder);
+            instancesHavingData.remove(assetsInstanceFolder);
           }
 
         }
