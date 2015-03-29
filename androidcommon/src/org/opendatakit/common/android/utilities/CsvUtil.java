@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.CharEncoding;
 import org.opendatakit.aggregate.odktables.rest.ConflictType;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
@@ -188,6 +189,20 @@ public class CsvUtil {
           ;
         }
         cw.writeNext(row);
+        /**
+         * Copy all attachment files into the output directory tree.
+         * Don't worry about whether they are referenced in the current
+         * row. This is a simplification (and biases toward preserving 
+         * data).
+         */
+        String instanceId = dataRow.getRowId();
+        File tableInstanceFolder = new File(ODKFileUtils.getInstanceFolder(appName, tableId, instanceId));
+        if ( tableInstanceFolder.exists() && tableInstanceFolder.isDirectory()) {
+          File outputInstanceFolder = new File(ODKFileUtils.getOutputCsvInstanceFolder(appName, tableId, instanceId));
+          outputInstanceFolder.mkdirs();
+          FileUtils.copyDirectory(tableInstanceFolder, outputInstanceFolder);
+        }
+
       }
       cw.flush();
       cw.close();
@@ -906,6 +921,7 @@ public class CsvUtil {
             }
             syncState = SyncState.valueOf(syncStateStr);
           }
+
           /**
            * Insertion will set the SYNC_STATE to new_row.
            *
@@ -975,6 +991,19 @@ public class CsvUtil {
             context.getDatabase().insertDataIntoExistingDBTableWithId(appName, db, tableId, orderedDefns,
                 cv, v_id);
           }
+          
+          /**
+           * Copy all attachment files into the destination row.
+           * Don't worry about whether they are present in the current
+           * row. This is a simplification.
+           */
+          File assetsInstanceFolder = new File(ODKFileUtils.getAssetsCsvInstanceFolder(appName, tableId, v_id));
+          if ( assetsInstanceFolder.exists() && assetsInstanceFolder.isDirectory()) {
+            File tableInstanceFolder = new File(ODKFileUtils.getInstanceFolder(appName, tableId, v_id));
+            tableInstanceFolder.mkdirs();
+            FileUtils.copyDirectory(assetsInstanceFolder, tableInstanceFolder);
+          }
+
         }
         cr.close();
         return true;
