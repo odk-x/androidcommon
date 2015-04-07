@@ -23,7 +23,7 @@ import java.util.List;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.ElementType;
 import org.opendatakit.common.android.application.CommonApplication;
-import org.opendatakit.common.android.data.UserTable.Row;
+import org.opendatakit.common.android.data.Row;
 import org.opendatakit.common.android.utilities.KeyValueHelper;
 import org.opendatakit.common.android.utilities.KeyValueStoreHelper;
 import org.opendatakit.common.android.utilities.WebLogger;
