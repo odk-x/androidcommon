@@ -3,3 +3,7 @@ bin/**
 gen/**
 .settings/**
 build/**
+local.properties
+.idea/**
+.gradle/**
+*.iml
