@@ -20,4 +20,7 @@ android {
 dependencies {
     compile fileTree(include: '*.jar', dir: 'libs')
     compile project(':opendatakit.androidlibrary:androidlibrary')
+
+    // Testing dependencies
+    testCompile 'junit:junit:4.12'
 }

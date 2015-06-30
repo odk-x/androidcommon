@@ -14,9 +14,9 @@
 
 package org.opendatakit.common.android.utilities;
 
-import android.test.AndroidTestCase;
+import junit.framework.TestCase;
 
-public class UrlUtilsTest extends AndroidTestCase {
+public class UrlUtilsTest extends TestCase {
   
   public void testNoHashOrParameters() {
     String fileName = "this/test/file/path/.html";
