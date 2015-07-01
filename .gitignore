@@ -1,0 +1,8 @@
+bin
+gen
+build
+androidcommon/build
+local.properties
+.gradle
+.idea/workspace.xml
+.idea/tasks.xml
