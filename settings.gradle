@@ -1,3 +1,3 @@
-include ':androidcommon'
-include ':opendatakit.androidlibrary:androidlibrary'
-project(':opendatakit.androidlibrary:androidlibrary').setProjectDir(new File('../opendatakit.androidlibrary/androidlibrary'))
+include ':androidcommon_lib'
+include ':androidlibrary:androidlibrary_lib'
+project(':androidlibrary:androidlibrary_lib').setProjectDir(new File('../androidlibrary/androidlibrary_lib'))
