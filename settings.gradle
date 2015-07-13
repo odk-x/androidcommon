@@ -1,3 +1,10 @@
 include ':androidcommon_lib'
-include ':androidlibrary:androidlibrary_lib'
-project(':androidlibrary:androidlibrary_lib').setProjectDir(new File('../androidlibrary/androidlibrary_lib'))
+
+def libraryProjectGradle = new File('../androidlibrary/androidlibrary_lib/build.gradle')
+if (libraryProjectGradle.isFile()) { // check if local project is present
+    include ':androidlibrary:androidlibrary_lib'
+    project(':androidlibrary:androidlibrary_lib').setProjectDir(new File('../androidlibrary/androidlibrary_lib')) // set local location
+} else {
+    println 'No local copy of AndroidLibrary exists, please pull project separately'
+    assert false
+}

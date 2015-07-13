@@ -24,6 +24,10 @@ android {
         }
     }
 
+    lintOptions {
+        abortOnError false
+    }
+
     packagingOptions {
         pickFirst 'META-INF/LICENSE'        /* File 1: jackson-core-2.4.1.jar
                                                File 2: jackson-annotations-2.4.1.jar */
@@ -41,8 +45,15 @@ android {
 
 dependencies {
     compile fileTree(include: '*.jar', dir: 'libs')
-    compile project(':androidlibrary:androidlibrary_lib')
 
+    def libraryProjectGradle = new File('../androidlibrary/androidlibrary_lib/build.gradle')
+    if (libraryProjectGradle.isFile()) {
+        compile project(':androidlibrary:androidlibrary_lib')
+    } else {
+        // TODO: Replace with code to include remote build artifact
+        println 'No local copy of AndroidLibrary exists, please pull project separately'
+        assert false
+    }
     // Testing dependencies
     testCompile 'junit:junit:4.12'
 }
@@ -63,7 +74,8 @@ task jacocoTestDebugReport(type:JacocoReport, dependsOn: ["jacocoMergeGen"]) {
                        '**/R$*.class',
                        '**/*$ViewInjector*.*',
                        '**/BuildConfig.*',
-                       '**/Manifest*.*']
+                       '**/Manifest*.*',
+                       '**/*Test*.class']
     )
 
     sourceDirectories = files("${buildDir.parent}/src/main/java") // Set src directories
