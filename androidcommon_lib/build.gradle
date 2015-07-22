@@ -6,12 +6,18 @@ apply plugin: 'jacoco'  // Can't (yet) use integrated Android JaCoCo for UnitTes
                         // see: https://code.google.com/p/android/issues/detail?id=144664
 apply plugin: 'com.android.library'
 
+group = 'org.opendatakit'
+def androidVersionCode = 127
+version = androidVersionCode
+
 android {
     buildToolsVersion "22.0.1"
     compileSdkVersion 19
     defaultConfig {
         minSdkVersion 16
         targetSdkVersion 16
+        versionCode androidVersionCode
+        versionName '2.0'
     }
 
     buildTypes {
@@ -107,4 +113,17 @@ task jacocoMergeGen(type: JacocoMerge, dependsOn: ["testDebug", "connectedAndroi
             "${buildDir}/jacoco/testDebug.exec", // UnitTest output
             "${buildDir}/outputs/code-coverage/connected/coverage.ec" // AndroidTest output
     ])
+}
+
+// Define the snapshot version to be the git hash
+task snapshotVersion() {
+    def gitHash = new ByteArrayOutputStream()
+    exec {
+        commandLine 'git', 'rev-parse', '--short', 'HEAD'
+        standardOutput = gitHash
+    }
+
+    doLast {
+        version = gitHash.toString().trim()
+    }
 }
