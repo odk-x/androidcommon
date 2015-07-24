@@ -47,4 +47,10 @@
 
 <string name="activity_not_found">No activity found to handle: %s</string>
 
+<string name="dependency_missing">Dependency Missing:</string>
+<string name="dependencies_missing">Dependencies Missing:</string>
+<string name="oi_missing">Please install OI File Manager before continuing.</string>
+<string name="core_missing">Please install Core Services before continuing.</string>
+<string name="oi_and_core_missing">Please install both OI File Manager and Core Services before continuing.</string>
+
 </resources>
