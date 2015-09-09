@@ -14,13 +14,24 @@ The Google group for software engineering questions is: [opendatakit-developers@
 
 ## Setting up your environment and building the project
 
+General instructions for setting up an ODK 2.0 environment can be found at our [DevEnv Setup wiki page](https://github.com/opendatakit/opendatakit/wiki/DevEnv-Setup)
+
 Install [Android Studio](http://developer.android.com/tools/studio/index.html) and the [SDK](http://developer.android.com/sdk/index.html#Other).
 
-This project depends on the ODK [androidlibrary](https://github.com/opendatakit/androidlibrary) project, so be sure to clone it into the same parent directory as androidcommon.
+This project depends on the ODK [androidlibrary](https://github.com/opendatakit/androidlibrary) project; its binaries will be downloaded automatically fom our maven repository during the build phase. If you wish to modify that project yourself, you must clone it into the same parent directory as androidcommon. You directory stucture should resemble the following:
+
+        |-- odk
+
+            |-- androidcommon
+
+            |-- androidlibrary
+
+
+  * Note that this only applies if you are modifying androidlibrary. If you use the maven dependencies (the default option), the project will not show up in your directory. 
 
 Open the androidcommon project directory in Android Studio.
 
-Now you should be ready to build, by selecting `Build->Make` Project.
+Now you should be ready to build, by selecting `Build->Make Project`.
 
 ## Running
 
