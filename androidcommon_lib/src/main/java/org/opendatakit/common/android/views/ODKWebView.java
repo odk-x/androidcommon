@@ -58,6 +58,7 @@ public class ODKWebView extends WebView {
   private WebLogger log;
   private ODKShimJavascriptCallback shim;
   private ODKDbShimJavascriptCallback dbShim;
+  private Data data;
   private String loadPageUrl = null;
   private boolean isLoadPageFrameworkFinished = false;
   private boolean isLoadPageFinished = false;
@@ -65,11 +66,13 @@ public class ODKWebView extends WebView {
   private boolean isFirstPageLoad = true;
   private final LinkedList<String> javascriptRequestsWaitingForPageLoad = new LinkedList<String>();
 
-  public void serviceChange( boolean ready, OdkDbShimInterface dbShimBinder ) {
-    if ( ready && dbShimBinder != null ) {
+  public void serviceChange( boolean ready, OdkDbShimInterface dbShimBinder, ICallbackFragment fragment ) {
+    if ( ready && dbShimBinder != null && fragment != null ) {
       dbShim = new ODKDbShimJavascriptCallback(ODKWebView.this, activity, dbShimBinder);
       addJavascriptInterface(dbShim, "dbshim");
-      loadPage();    
+      data = new Data(fragment);
+      addJavascriptInterface(data.getJavascriptInterfaceWithWeakReference(), "dataif");
+      loadPage();
     } else {
       resetLoadPageStatus(loadPageUrl);
     }

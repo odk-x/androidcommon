@@ -51,7 +51,7 @@ public class ODKShimJavascriptCallback {
     mActivity = null;
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public String getBaseUrl() {
     return ODKFileUtils.getRelativeSystemPath();
   }
@@ -74,7 +74,7 @@ public class ODKShimJavascriptCallback {
    *
    * @return JSONstring as defined above.
    */
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public String getPlatformInfo() {
     if (mWebView == null) {
       log.i(t, "getPlatformInfo -- interface removed");
@@ -113,7 +113,7 @@ public class ODKShimJavascriptCallback {
    *
    * @return JSONstring as defined above.
    */
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public String getDatabaseSettings() {
     if (mWebView == null) {
       log.i(t, "getDatabaseSettings -- interface removed");
@@ -127,7 +127,7 @@ public class ODKShimJavascriptCallback {
         + "\",\"maxSize\":" + ArchaicConstantsToRemove.WEBDB_INSTANCE_DB_ESTIMATED_SIZE + "}";
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public void log(String level, String loggingString) {
     char l = (level == null) ? 'I' : level.charAt(0);
     switch (l) {
@@ -158,7 +158,7 @@ public class ODKShimJavascriptCallback {
     }
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public String getProperty(String propertyId) {
     if (mWebView == null) {
       log.i(t, "getProperty -- interface removed");
@@ -168,8 +168,8 @@ public class ODKShimJavascriptCallback {
 
     return mActivity.getProperty(propertyId);
   }
-  
-  // @JavascriptInterface
+
+  @android.webkit.JavascriptInterface
   public void clearInstanceId(String refId) {
     if (mWebView == null) {
       log.w("shim", "clearInstanceId -- interface removed");
@@ -184,13 +184,13 @@ public class ODKShimJavascriptCallback {
   }
 
   /**
-   * If formId is null, clears the instanceId. If formId matches the current
-   * formId, sets the instanceId.
+   * If refId is null, clears the instanceId. If refId matches the current
+   * refId, sets the instanceId.
    *
-   * @param formId
+   * @param refId
    * @param instanceId
    */
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public void setInstanceId(String refId, String instanceId) {
     if (mWebView == null) {
       log.w("shim", "setInstanceId -- interface removed");
@@ -204,7 +204,7 @@ public class ODKShimJavascriptCallback {
     mActivity.setInstanceId(instanceId);
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public String getInstanceId(String refId) {
     if (mWebView == null) {
       log.w("shim", "getInstanceId -- interface removed");
@@ -218,7 +218,7 @@ public class ODKShimJavascriptCallback {
     return mActivity.getInstanceId();
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public void pushSectionScreenState(String refId) {
     if (mWebView == null) {
       log.w("shim", "pushSectionScreenState -- interface removed");
@@ -232,7 +232,7 @@ public class ODKShimJavascriptCallback {
     mActivity.pushSectionScreenState();
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public void setSectionScreenState(String refId, String screenPath, String state) {
     if (mWebView == null) {
       log.w("shim", "setSectionScreenState -- interface removed");
@@ -247,7 +247,7 @@ public class ODKShimJavascriptCallback {
     mActivity.setSectionScreenState(screenPath, state);
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public void clearSectionScreenState(String refId) {
     if (mWebView == null) {
       log.w("shim", "clearSectionScreenState -- interface removed");
@@ -261,7 +261,7 @@ public class ODKShimJavascriptCallback {
     mActivity.clearSectionScreenState();
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public String getControllerState(String refId) {
     if (mWebView == null) {
       log.w("shim", "getControllerState -- interface removed");
@@ -275,7 +275,7 @@ public class ODKShimJavascriptCallback {
     return mActivity.getControllerState();
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public String getScreenPath(String refId) {
     if (mWebView == null) {
       log.w("shim", "getScreenPath -- interface removed");
@@ -289,7 +289,7 @@ public class ODKShimJavascriptCallback {
     return mActivity.getScreenPath();
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public boolean hasScreenHistory(String refId) {
     if (mWebView == null) {
       log.w("shim", "hasScreenHistory -- interface removed");
@@ -303,7 +303,7 @@ public class ODKShimJavascriptCallback {
     return mActivity.hasScreenHistory();
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public String popScreenHistory(String refId) {
     if (mWebView == null) {
       log.w("shim", "popScreenHistory -- interface removed");
@@ -317,7 +317,7 @@ public class ODKShimJavascriptCallback {
     return mActivity.popScreenHistory();
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public boolean hasSectionStack(String refId) {
     if (mWebView == null) {
       log.w("shim", "hasSectionStack -- interface removed");
@@ -331,7 +331,7 @@ public class ODKShimJavascriptCallback {
     return mActivity.hasSectionStack();
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public String popSectionStack(String refId) {
     if (mWebView == null) {
       log.w("shim", "popSectionStack -- interface removed");
@@ -345,7 +345,7 @@ public class ODKShimJavascriptCallback {
     return mActivity.popSectionStack();
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public void setSessionVariable(String refId, String elementPath, String jsonValue) {
     if (mWebView == null) {
       log.w("shim", "setSessionVariable -- interface removed");
@@ -359,7 +359,7 @@ public class ODKShimJavascriptCallback {
     mActivity.setSessionVariable(elementPath, jsonValue);
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public String getSessionVariable(String refId, String elementPath) {
     if (mWebView == null) {
       log.w("shim", "getSessionVariable -- interface removed");
@@ -373,6 +373,7 @@ public class ODKShimJavascriptCallback {
     return mActivity.getSessionVariable(elementPath);
   }
 
+  @android.webkit.JavascriptInterface
   public String getFirstQueuedAction(String refId) {
     if (mWebView == null) {
       log.w("shim", "getFirstQueuedAction -- interface removed");
@@ -385,8 +386,8 @@ public class ODKShimJavascriptCallback {
     String outcome = mActivity.getFirstQueuedAction();
     return outcome;
   }
-  
-  // @JavascriptInterface
+
+  @android.webkit.JavascriptInterface
   public void frameworkHasLoaded(String refId, boolean outcome) {
     if (mWebView == null) {
       log.w("shim", "frameworkHasLoaded -- interface removed");
@@ -400,7 +401,7 @@ public class ODKShimJavascriptCallback {
     mWebView.frameworkHasLoaded();
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public void ignoreAllChangesCompleted(String refId, String instanceId) {
     if (mWebView == null) {
       log.w("shim", "ignoreAllChangesCompleted -- interface removed");
@@ -414,7 +415,7 @@ public class ODKShimJavascriptCallback {
     mActivity.ignoreAllChangesCompleted(instanceId);
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public void ignoreAllChangesFailed(String refId, String instanceId) {
     if (mWebView == null) {
       log.w("shim", "ignoreAllChangesFailed -- interface removed");
@@ -428,7 +429,7 @@ public class ODKShimJavascriptCallback {
     mActivity.ignoreAllChangesFailed(instanceId);
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public void saveAllChangesCompleted(String refId, String instanceId, boolean asComplete) {
     if (mWebView == null) {
       log.w("shim", "saveAllChangesCompleted -- interface removed");
@@ -446,7 +447,7 @@ public class ODKShimJavascriptCallback {
     mActivity.saveAllChangesCompleted(instanceId, asComplete);
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public void saveAllChangesFailed(String refId, String instanceId) {
     if (mWebView == null) {
       log.w("shim", "saveAllChangesFailed -- interface removed");
@@ -460,7 +461,7 @@ public class ODKShimJavascriptCallback {
     mActivity.saveAllChangesFailed(instanceId);
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public String doAction(String refId, String page, String path, String action, String jsonMap) {
     if (mWebView == null) {
       log.w("shim", "doAction -- interface removed");

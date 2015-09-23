@@ -17,6 +17,7 @@ package org.opendatakit.common.android.application;
 import java.util.ArrayList;
 
 import org.opendatakit.androidcommon.R;
+import org.opendatakit.common.android.activities.ODKActivity;
 import org.opendatakit.common.android.listener.DatabaseConnectionListener;
 import org.opendatakit.common.android.listener.InitializationListener;
 import org.opendatakit.common.android.listener.LicenseReaderListener;
@@ -26,6 +27,9 @@ import org.opendatakit.common.android.task.InitializationTask;
 import org.opendatakit.common.android.task.LicenseReaderTask;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
+import org.opendatakit.common.android.views.DataIf;
+import org.opendatakit.common.android.views.ExecutorContext;
+import org.opendatakit.common.android.views.ICallbackFragment;
 import org.opendatakit.common.android.views.ODKWebView;
 import org.opendatakit.database.DatabaseConsts;
 import org.opendatakit.database.service.OdkDbInterface;
@@ -598,15 +602,20 @@ public abstract class CommonApplication extends Application  implements LicenseR
       Log.i(t, "configureView - possibly updating service information within ODKWebView");
       if ( getWebKitResourceId() != -1 ) {
         View v = activeActivity.findViewById(getWebKitResourceId());
+        ICallbackFragment fragment = null;
+        if ( activeActivity instanceof ODKActivity) {
+          fragment = ((ODKActivity) activeActivity).getCallbackFragment();
+        }
         if (v != null && v instanceof ODKWebView) {
           ODKWebView wv = (ODKWebView) v;
           if (mBackgroundServices.isDestroying) {
-            wv.serviceChange(false, null);
-          } else if (activeActivity != null) {
+            wv.serviceChange(false, null, null);
+          } else {
             OdkWebkitServerInterface webkitServerIf = getWebkitServer();
             OdkDbShimInterface dbShimIf = getDbShim();
-            wv.serviceChange(webkitServerIf != null && 
-                dbShimIf != null, dbShimIf);
+            OdkDbInterface dbIf = getDatabase();
+            wv.serviceChange(webkitServerIf != null &&
+                dbShimIf != null && dbIf != null, dbShimIf, fragment);
           }
         }
       }

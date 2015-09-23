@@ -19,6 +19,7 @@ import org.json.JSONObject;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.view.View;
+import org.opendatakit.common.android.views.ICallbackFragment;
 
 /**
  * Interface that implements some of the shim.js callbacks from the WebKit.
@@ -121,6 +122,9 @@ public interface ODKActivity extends IAppAwareActivity, IInitResumeActivity {
 
   // for InstanceUploaderTableChooserListFragment
   public void chooseInstanceUploaderTable(String tableId);
+
+  public ICallbackFragment getCallbackFragment();
+
   /**
    * Use the Activity implementation of this.
    *

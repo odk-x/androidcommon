@@ -84,7 +84,7 @@ public class ODKDbShimJavascriptCallback {
     }
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public void confirmSettings(String generation) {
     if (mWebView == null) {
       log.i(t, "confirmSettings -- interface removed");
@@ -103,7 +103,7 @@ public class ODKDbShimJavascriptCallback {
     }
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public void executeSqlStmt(String generation, int transactionGeneration, int actionIdx,
       String sqlStmt, String strBinds) {
 
@@ -126,7 +126,7 @@ public class ODKDbShimJavascriptCallback {
     }
   }
 
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public void rollback(String generation, int transactionGeneration) {
 
     if (mWebView == null) {
@@ -146,7 +146,7 @@ public class ODKDbShimJavascriptCallback {
       }
     }
   }
-  // @JavascriptInterface
+  @android.webkit.JavascriptInterface
   public void commit(String generation, int transactionGeneration) {
 
     if (mWebView == null) {
