@@ -129,21 +129,23 @@ public class ExecutorContext implements DatabaseConnectionListener {
     }
 
     public void reportError(String callbackJSON, String transId, String errorMessage) {
-        Map<String,Object> response = new HashMap<String,Object>();
+      if ( callbackJSON != null ) {
+        Map<String, Object> response = new HashMap<String, Object>();
         response.put("callbackJSON", callbackJSON);
         response.put("error", errorMessage);
-        if ( transId != null ) {
-            response.put("transId", transId);
+        if (transId != null) {
+          response.put("transId", transId);
         }
         String responseStr = null;
         try {
-            responseStr = ODKFileUtils.mapper.writeValueAsString(response);
+          responseStr = ODKFileUtils.mapper.writeValueAsString(response);
         } catch (JsonProcessingException e) {
-          WebLogger.getLogger(currentContext.getAppName()).e(TAG,"should never have a conversion error");
+          WebLogger.getLogger(currentContext.getAppName()).e(TAG, "should never have a conversion error");
           WebLogger.getLogger(currentContext.getAppName()).printStackTrace(e);
           throw new IllegalStateException("should never have a conversion error");
         }
         fragment.signalResponseAvailable(responseStr);
+      }
     }
 
 
