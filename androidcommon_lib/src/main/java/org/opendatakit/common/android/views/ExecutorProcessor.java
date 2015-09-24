@@ -446,8 +446,26 @@ public abstract class ExecutorProcessor implements Runnable {
     reportSuccessAndCleanUp(null, null);
   }
 
-  private void addCheckpoint() {
-    // TODO: implement this
+  private void addCheckpoint() throws RemoteException {
+    if ( request.tableId == null ) {
+      reportErrorAndCleanUp("tableId cannot be null");
+      return;
+    }
+    if ( request.rowId == null ) {
+      reportErrorAndCleanUp("rowId cannot be null");
+      return;
+    }
+    OrderedColumns columns = context.getOrderedColumns(request.tableId);
+    if ( columns == null ) {
+      columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
+      context.putOrderedColumns(request.tableId, columns);
+    }
+
+    ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
+    dbInterface.insertCheckpointRowIntoExistingDBTableWithId(context.getAppName(), dbHandle, request.tableId,
+            columns, cvValues, request.rowId);
+
+    reportSuccessAndCleanUp(null, null);
   }
 
   private void saveCheckpointAsIncomplete() throws RemoteException {
@@ -465,18 +483,14 @@ public abstract class ExecutorProcessor implements Runnable {
       context.putOrderedColumns(request.tableId, columns);
     }
 
-    ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
+    //ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
     dbInterface.saveAsIncompleteMostRecentCheckpointDataInDBTableWithId(context.getAppName(), dbHandle, request.tableId,
             request.rowId);
 
     reportSuccessAndCleanUp(null, null);
   }
 
-  private void saveCheckpointAsComplete() {
-    // TODO: implement this
-  }
-
-  private void deleteLastCheckpoint() throws RemoteException {
+  private void saveCheckpointAsComplete() throws RemoteException {
     if (request.tableId == null) {
       reportErrorAndCleanUp("tableId cannot be null");
       return;
@@ -485,20 +499,43 @@ public abstract class ExecutorProcessor implements Runnable {
       reportErrorAndCleanUp("rowId cannot be null");
       return;
     }
-    // TODO: implement this
-    if (request.deleteAllCheckpoints != true) {
-      reportErrorAndCleanUp("not yet implemented");
-      return;
-    }
     OrderedColumns columns = context.getOrderedColumns(request.tableId);
     if (columns == null) {
       columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
       context.putOrderedColumns(request.tableId, columns);
     }
 
-    ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
-    dbInterface.deleteCheckpointRowsWithId(context.getAppName(), dbHandle, request.tableId,
+    //ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
+    dbInterface.saveAsCompleteMostRecentCheckpointDataInDBTableWithId(context.getAppName(), dbHandle, request.tableId,
             request.rowId);
+
+    reportSuccessAndCleanUp(null, null);
+  }
+
+  private void deleteLastCheckpoint() throws RemoteException {
+    if ( request.tableId == null ) {
+      reportErrorAndCleanUp("tableId cannot be null");
+      return;
+    }
+    if ( request.rowId == null ) {
+      reportErrorAndCleanUp("rowId cannot be null");
+      return;
+    }
+
+    if ( request.deleteAllCheckpoints != true ) {
+      dbInterface.deleteLastCheckpointRowWithId(context.getAppName(), dbHandle, request.tableId,
+              request.rowId);
+    } else {
+      OrderedColumns columns = context.getOrderedColumns(request.tableId);
+      if (columns == null) {
+        columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
+        context.putOrderedColumns(request.tableId, columns);
+      }
+
+      //ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
+      dbInterface.deleteCheckpointRowsWithId(context.getAppName(), dbHandle, request.tableId,
+              request.rowId);
+    }
 
     reportSuccessAndCleanUp(null, null);
   }
