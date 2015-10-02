@@ -62,6 +62,7 @@ public class ODKDbShimJavascriptCallback {
       @Override
       public void run() {
         if ( mWebView != null ) {
+          log.i(t, "fireCallback -- Fired on UI Thread");
           mWebView.loadUrl(fullCommand);
         }
       }

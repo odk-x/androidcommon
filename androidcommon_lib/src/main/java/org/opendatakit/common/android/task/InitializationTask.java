@@ -711,8 +711,9 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
    * formsFolder, then any 'framework' forms should be forbidden. If it is not
    * the formsFolder, only 'framework' forms should be allowed
    *
-   * @param mediaPath
-   *          -- full formDir
+   * @param tableId
+   * @param formId
+   * @param formDir
    * @param isFormsFolder
    * @param baseStaleMediaPath
    *          -- path prefix to the stale forms/framework directory.
