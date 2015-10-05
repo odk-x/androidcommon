@@ -14,6 +14,7 @@
 
 package org.opendatakit.common.android.views;
 
+import android.os.RemoteException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.opendatakit.common.android.data.OrderedColumns;
 import org.opendatakit.common.android.listener.DatabaseConnectionListener;
@@ -25,6 +26,7 @@ import org.opendatakit.database.service.OdkDbInterface;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author mitchellsundt@gmail.com
@@ -47,7 +49,14 @@ public class ExecutorContext implements DatabaseConnectionListener {
      * Specifically, the API we need to access.
      */
     private final ICallbackFragment fragment;
-    /**
+
+  /**
+   * The mutex used to guard all of the private data structures:
+   *   worker, workQueue, activeConnections, mCacheOrderedDefns
+   */
+  private final Object mutex = new Object();
+
+   /**
      * Our use of an executor is a bit odd:
      *
      * We need to handle database service disconnections.
@@ -62,6 +71,11 @@ public class ExecutorContext implements DatabaseConnectionListener {
      * to be processed. The work is held here.
      */
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
+
+    /**
+     * workQueue should only be accessed by synchronized methods, as it may be
+     * accessed in multiple threads.
+     */
     private final LinkedList<ExecutorRequest> workQueue = new LinkedList<ExecutorRequest>();
 
     private Map<String, OdkDbHandle> activeConnections = new HashMap<String, OdkDbHandle>();
@@ -80,31 +94,156 @@ public class ExecutorContext implements DatabaseConnectionListener {
       }
     }
 
-    public synchronized void queueRequest(ExecutorRequest request) {
-      if ( !worker.isTerminated() ) {
-        // push the request
-        workQueue.push(request);
-        // signal executor that there is work
-        worker.execute(fragment.newExecutorProcessor(this));
+  /**
+   * if we are not shutting down and there is work to be done then fire an ExecutorProcessor.
+   */
+  private void triggerExecutorProcessor() {
+      // processor is most often NOT discarded
+      ExecutorProcessor processor = fragment.newExecutorProcessor(this);
+      synchronized (mutex) {
+        // we might have drained the queue -- or not.
+        if ( !worker.isShutdown() && !worker.isTerminated() && !workQueue.isEmpty() ) {
+          worker.execute(processor);
+        }
       }
     }
 
-    public synchronized ExecutorRequest peekRequest() {
-        if ( workQueue.isEmpty() ) {
-            return null;
+  /**
+   * if we are not shutting down then queue a request and fire an ExecutorProcessor.
+   * @param request
+   */
+  public void queueRequest(ExecutorRequest request) {
+      // processor is most often NOT discarded
+      ExecutorProcessor processor = fragment.newExecutorProcessor(this);
+      synchronized (mutex) {
+        if ( !worker.isShutdown() && !worker.isTerminated()) {
+          // push the request
+          workQueue.push(request);
+          worker.execute(processor);
+        }
+      }
+    }
+
+  /**
+   * @return the next ExecutorRequest or null if the queue is empty
+   */
+  public ExecutorRequest peekRequest() {
+      synchronized (mutex) {
+        if (workQueue.isEmpty()) {
+          return null;
         } else {
-            return workQueue.peekFirst();
+          return workQueue.peekFirst();
         }
+      }
     }
 
-    public synchronized void popRequest() {
-        if ( !worker.isTerminated() && !workQueue.isEmpty() ) {
-            workQueue.removeFirst();
-            // signal that we have work...
-            worker.execute(fragment.newExecutorProcessor(this));
+  /**
+   * Remove the current item from the top of the work queue.
+   *
+   * @param trigger true if we should fire an ExecutorProcessor.
+   */
+  public void popRequest(boolean trigger) {
+      // processor is most often NOT discarded
+      ExecutorProcessor processor = (trigger ? fragment.newExecutorProcessor(this) : null);
+      synchronized (mutex) {
+        if ( !worker.isShutdown() && !worker.isTerminated() && !workQueue.isEmpty() ) {
+          workQueue.removeFirst();
+          // signal that we have work...
+          if ( trigger ) {
+            worker.execute(processor);
+          }
         }
+      }
     }
 
+  /**
+   * shutdown the worker. This is done within the mutex to ensure that the above methods
+   * never throw an unexpected state exception.
+   */
+    private void shutdownWorker() {
+      WebLogger.getLogger(currentContext.getAppName()).i(TAG, "shutdownWorker - shutting down dataif Executor");
+      Throwable t = null;
+      synchronized (mutex) {
+        if ( !worker.isShutdown() && !worker.isTerminated() ) {
+          worker.shutdown();
+        }
+        try {
+          worker.awaitTermination(2000L, TimeUnit.MILLISECONDS);
+        } catch (Throwable th) {
+          t = th;
+        }
+      }
+
+      if ( t != null ) {
+        WebLogger.getLogger(currentContext.getAppName()).w(TAG,
+                "shutdownWorker - dataif Executor threw exception while shutting down");
+        WebLogger.getLogger(currentContext.getAppName()).printStackTrace(t);
+      }
+      WebLogger.getLogger(currentContext.getAppName()).i(TAG, "shutdownWorker - dataif Executor has been shut down.");
+    }
+
+  /**
+   * Get the connection on which this transaction is active.
+   *
+   * @param transId
+   * @return OdkDbHandle
+   */
+  public OdkDbHandle getActiveConnection(String transId) {
+    synchronized (mutex) {
+      return activeConnections.get(transId);
+    }
+  }
+
+  public void registerActiveConnection(String transId, OdkDbHandle dbHandle) {
+    boolean alreadyExists = false;
+    synchronized (mutex) {
+      if ( activeConnections.containsKey(transId) ) {
+        alreadyExists = true;
+      } else {
+        activeConnections.put(transId, dbHandle);
+      }
+    }
+    if ( alreadyExists ) {
+      WebLogger.getLogger(currentContext.getAppName()).e(TAG,"transaction id " + transId + " already registered!");
+      throw new IllegalArgumentException("transaction id already registered!");
+    }
+  }
+
+  private String getFirstActiveTransactionId() {
+    synchronized (mutex) {
+      Set<String> transIds = activeConnections.keySet();
+      if ( transIds.isEmpty() ) {
+        return null;
+      } else {
+        return transIds.iterator().next();
+      }
+    }
+  }
+
+  public void removeActiveConnection(String transId) {
+    synchronized (mutex) {
+      activeConnections.remove(transId);
+    }
+  }
+
+  public OrderedColumns getOrderedColumns(String tableId) {
+    synchronized (mutex) {
+      return mCachedOrderedDefns.get(tableId);
+    }
+  }
+
+  public void putOrderedColumns(String tableId, OrderedColumns orderedColumns) {
+    synchronized (mutex) {
+      mCachedOrderedDefns.put(tableId, orderedColumns);
+    }
+  }
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // No direct access to data structures below this point
+
+  /**
+   * @return
+   */
     public OdkDbInterface getDatabase() {
         return fragment.getDatabase();
     }
@@ -115,17 +254,44 @@ public class ExecutorContext implements DatabaseConnectionListener {
 
     public void releaseResources(String reason) {
         // TODO: rollback any transactions and close connections
-        worker.shutdown();
-        for ( OdkDbHandle dbh : activeConnections.values() ) {
-            // close connection
+      shutdownWorker();
+
+      for(;;) {
+        ExecutorRequest req = peekRequest();
+        if ( req == null ) {
+          break;
         }
-        while (!workQueue.isEmpty()) {
-            ExecutorRequest req = peekRequest();
-            if ( req != null ) {
-              reportError(req.callbackJSON, null, "shutting down worker (" + reason + ") -- rolling back all transactions and releasing all connections");
-              workQueue.pop();
-            }
+        reportError(req.callbackJSON, null, "releaseResources - shutting down worker (" + reason +
+                    ") -- rolling back all transactions and releasing all connections");
+        popRequest(false);
+      }
+
+      WebLogger.getLogger(currentContext.getAppName()).i(TAG, "releaseResources - workQueue has been purged.");
+
+      for (;;) {
+        String transId = getFirstActiveTransactionId();
+        if ( transId == null ) {
+          break;
         }
+        OdkDbHandle dbh = getActiveConnection(transId);
+        removeActiveConnection(transId);
+        if ( dbh == null ) {
+          WebLogger.getLogger(getAppName()).w(TAG, "Unexpected failure to retrieve dbHandle for " + transId);
+        }
+        OdkDbInterface dbInterface = currentContext.getDatabase();
+        if ( dbInterface != null ) {
+          try {
+            dbInterface.closeDatabase(currentContext.getAppName(), dbh);
+          } catch (Throwable t) {
+            WebLogger.getLogger(currentContext.getAppName()).w(TAG,
+                    "releaseResources - Exception thrown while trying to close dbHandle");
+            WebLogger.getLogger(currentContext.getAppName()).printStackTrace(t);
+          }
+        }
+      }
+
+      WebLogger.getLogger(currentContext.getAppName()).w(TAG,
+              "releaseResources - closed all associated dbHandles");
     }
 
     public void reportError(String callbackJSON, String transId, String errorMessage) {
@@ -172,42 +338,9 @@ public class ExecutorContext implements DatabaseConnectionListener {
         fragment.signalResponseAvailable(responseStr);
     }
 
-    /**
-     * Get the connection on which this transaction is active.
-     *
-     * @param transId
-     * @return OdkDbHandle
-     */
-    public OdkDbHandle getActiveConnection(String transId) {
-        return activeConnections.get(transId);
-    }
-
-    public void registerActiveConnection(String transId, OdkDbHandle dbHandle) {
-        if ( activeConnections.containsKey(transId) ) {
-          WebLogger.getLogger(currentContext.getAppName()).e(TAG,"transaction id " + transId + " already registered!");
-          throw new IllegalArgumentException("transaction id already registered!");
-        }
-        activeConnections.put(transId, dbHandle);
-    }
-
-    public void removeActiveConnection(String transId) {
-        activeConnections.remove(transId);
-    }
-
-    public OrderedColumns getOrderedColumns(String tableId) {
-        return mCachedOrderedDefns.get(tableId);
-    }
-
-    public void putOrderedColumns(String tableId, OrderedColumns orderedColumns) {
-        mCachedOrderedDefns.put(tableId, orderedColumns);
-    }
-
     @Override
     public void databaseAvailable() {
-        // we might have drained the queue -- or not.
-        if ( !worker.isTerminated()) {
-          worker.execute(fragment.newExecutorProcessor(this));
-        }
+      triggerExecutorProcessor();
     }
 
     @Override

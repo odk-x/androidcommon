@@ -92,14 +92,14 @@ public abstract class ExecutorProcessor implements Runnable {
       if (transId == null) {
         if (request.executorRequestType == ExecutorRequestType.CLOSE_TRANSACTION) {
           context.reportError(request.callbackJSON, null, "Close Transaction did not specify a transId");
-          context.popRequest();
+          context.popRequest(true);
           return;
         }
 
         dbHandle = dbInterface.openDatabase(context.getAppName(), true);
         if (dbHandle == null) {
           context.reportError(request.callbackJSON, null, "Unable to open database connection");
-          context.popRequest();
+          context.popRequest(true);
           return;
         }
 
@@ -109,7 +109,7 @@ public abstract class ExecutorProcessor implements Runnable {
         dbHandle = context.getActiveConnection(transId);
         if (dbHandle == null) {
           context.reportError(request.callbackJSON, null, "transId is no longer valid");
-          context.popRequest();
+          context.popRequest(true);
           return;
         }
       }
@@ -177,7 +177,7 @@ public abstract class ExecutorProcessor implements Runnable {
         context.removeActiveConnection(transId);
       }
       context.reportError(request.callbackJSON, transIdReported, errorMessage);
-      context.popRequest();
+      context.popRequest(true);
     }
   }
 
@@ -209,7 +209,7 @@ public abstract class ExecutorProcessor implements Runnable {
         context.reportError(request.callbackJSON, transIdReported,
                 "error while commiting transaction and closing database");
       }
-      context.popRequest();
+      context.popRequest(true);
     }
   }
 
@@ -257,7 +257,7 @@ public abstract class ExecutorProcessor implements Runnable {
 
   private void updateExecutorContext() {
     context.releaseResources("switching to new WebFragment");
-    context.popRequest();
+    context.popRequest(false);
   }
 
   private void rawQuery() {
@@ -541,10 +541,13 @@ public abstract class ExecutorProcessor implements Runnable {
   }
 
   private void closeTransaction() throws RemoteException {
-    dbInterface.closeTransactionAndDatabase(context.getAppName(), dbHandle, request.commitTransaction);
-    context.removeActiveConnection(transId);
-    context.reportSuccess(request.callbackJSON, null, null, null);
-    context.popRequest();
+    try {
+      dbInterface.closeTransactionAndDatabase(context.getAppName(), dbHandle, request.commitTransaction);
+    } finally {
+      context.removeActiveConnection(transId);
+      context.reportSuccess(request.callbackJSON, null, null, null);
+      context.popRequest(true);
+    }
   }
 
 }
