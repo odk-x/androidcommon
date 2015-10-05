@@ -39,7 +39,9 @@ import java.util.*;
 public abstract class ExecutorProcessor implements Runnable {
   private static final String TAG = "ExecutorProcessor";
 
-  private static final List<String> ADMIN_COLUMNS;
+  // Changed this to protected so that extended
+  // ExecutorProcessors can make use of this
+  protected static final List<String> ADMIN_COLUMNS;
 
   static {
     // everything is a STRING except for
@@ -287,13 +289,11 @@ public abstract class ExecutorProcessor implements Runnable {
     // assemble the data and metadata objects
     ArrayList<List<Object>> data = new ArrayList<List<Object>>();
     Map<String, Integer> elementKeyToIndexMap = userTable.getElementKeyMap();
-    Map<String, Integer> rowIdMap = new HashMap<String, Integer>();
 
     OrderedColumns columnDefinitions = userTable.getColumnDefinitions();
 
     for (int i = 0; i < userTable.getNumberOfRows(); ++i) {
       Row r = userTable.getRowAtIndex(i);
-      rowIdMap.put(r.getRowId(), i);
       List<Object> values = Arrays.asList(new Object[ADMIN_COLUMNS.size() + elementKeyToIndexMap.size()]);
       data.add(values);
 
@@ -321,8 +321,7 @@ public abstract class ExecutorProcessor implements Runnable {
     }
 
     Map<String, Object> metadata = new HashMap<String, Object>();
-    // rowId -> index into row list
-    metadata.put("rowIdMap", rowIdMap);
+    metadata.put("tableId", userTable.getTableId());
     // elementKey -> index in row within row list
     metadata.put("elementKeyMap", elementKeyToIndexMap);
     // orderedColumns -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
@@ -343,6 +342,8 @@ public abstract class ExecutorProcessor implements Runnable {
             if (type == ElementDataType.integer) {
               value = Integer.parseInt(entry.value);
             } else if (type == ElementDataType.bool) {
+              // This is broken - a value
+              // of "TRUE" is returned some times
               value = DataHelper.intToBool(Integer.parseInt(entry.value));
             } else if (type == ElementDataType.number) {
               value = Double.parseDouble(entry.value);
@@ -374,11 +375,11 @@ public abstract class ExecutorProcessor implements Runnable {
 
     // extend the metadata with whatever else this app needs....
     // e.g., row and column color maps
-    extendQueryMetadata(entries, userTable, metadata);
+    extendQueryMetadata(dbHandle, entries, userTable, metadata);
     reportSuccessAndCleanUp(data, metadata);
   }
 
-  protected abstract void extendQueryMetadata(List<KeyValueStoreEntry> entries, UserTable userTable, Map<String, Object> metadata);
+  protected abstract void extendQueryMetadata(OdkDbHandle dbHandle, List<KeyValueStoreEntry> entries, UserTable userTable, Map<String, Object> metadata);
 
   private void updateRow() throws RemoteException {
     if (request.tableId == null) {
