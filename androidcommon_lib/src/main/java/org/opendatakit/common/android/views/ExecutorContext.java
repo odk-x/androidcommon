@@ -149,7 +149,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
         if ( !worker.isShutdown() && !worker.isTerminated() && !workQueue.isEmpty() ) {
           workQueue.removeFirst();
           // signal that we have work...
-          if ( trigger ) {
+          if ( trigger && !workQueue.isEmpty() ) {
             worker.execute(processor);
           }
         }
@@ -168,7 +168,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
           worker.shutdown();
         }
         try {
-          worker.awaitTermination(2000L, TimeUnit.MILLISECONDS);
+          worker.awaitTermination(3000L, TimeUnit.MILLISECONDS);
         } catch (Throwable th) {
           t = th;
         }
