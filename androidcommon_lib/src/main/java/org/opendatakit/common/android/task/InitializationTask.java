@@ -452,7 +452,7 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
     ODKFileUtils.assertDirectoryStructure(appName);
     OdkDbHandle db = null;
     try {
-      db = getApplication().getDatabase().openDatabase(appName, false);
+      db = getApplication().getDatabase().openDatabase(appName);
       tableIds = getApplication().getDatabase().getAllTableIds(appName, db);
     } finally {
       if (db != null) {

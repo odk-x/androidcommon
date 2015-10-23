@@ -108,13 +108,15 @@ public class CsvUtil {
    * <li>tableid.definition.csv - data table column definition</li>
    * <li>tableid.properties.csv - key-value store of this table</li>
    * </ul>
-   *
-   * @param exportListener
-   * @param tp
-   * @param fileQualifier
-   * @return
-   * @throws RemoteException 
-   */
+    *
+    * @param exportListener
+    * @param db
+    * @param tableId
+    * @param orderedDefns
+    * @param fileQualifier
+    * @return
+    * @throws RemoteException
+    */
   public boolean exportSeparable(ExportListener exportListener, OdkDbHandle db, String tableId,
       OrderedColumns orderedDefns, String fileQualifier) throws RemoteException {
     // building array of columns to select and header row for output file
@@ -248,11 +250,13 @@ public class CsvUtil {
    * store). The md5hash of it corresponds to the propertiesETag.
    *
    * For use by the sync mechanism.
-   *
-   * @param tp
-   * @return
-   * @throws RemoteException 
-   */
+    *
+    * @param db
+    * @param tableId
+    * @param orderedDefns
+    * @return
+    * @throws RemoteException
+    */
   public boolean writePropertiesCsv(OdkDbHandle db, String tableId,
       OrderedColumns orderedDefns) throws RemoteException {
     File definitionCsv = new File(ODKFileUtils.getTableDefinitionCsvFile(appName, tableId));
@@ -262,13 +266,15 @@ public class CsvUtil {
 
   /**
    * Common routine to write the definition and properties files.
-   *
-   * @param tp
-   * @param definitionCsv
-   * @param propertiesCsv
-   * @return
-   * @throws RemoteException 
-   */
+    *
+    * @param db
+    * @param tableId
+    * @param orderedDefns
+    * @param definitionCsv
+    * @param propertiesCsv
+    * @return
+    * @throws RemoteException
+    */
   private boolean writePropertiesCsv(OdkDbHandle db, String tableId,
       OrderedColumns orderedDefns, File definitionCsv, File propertiesCsv) throws RemoteException {
     WebLogger.getLogger(appName).i(TAG, "writePropertiesCsv: tableId: " + tableId);
@@ -426,7 +432,7 @@ public class CsvUtil {
 
     OdkDbHandle db = null;
     try {
-      db = context.getDatabase().openDatabase(appName, false);
+      db = context.getDatabase().openDatabase(appName);
       List<Column> columns = new ArrayList<Column>();
 
       // reading data
@@ -773,7 +779,7 @@ public class CsvUtil {
 
     OdkDbHandle db = null;
     try {
-      db = context.getDatabase().openDatabase(appName, false);
+      db = context.getDatabase().openDatabase(appName);
       if (!context.getDatabase().hasTableId(appName, db, tableId)) {
         if (createIfNotPresent) {
           updateTablePropertiesFromCsv(importListener, tableId);

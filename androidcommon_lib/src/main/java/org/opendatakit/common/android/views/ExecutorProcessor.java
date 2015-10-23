@@ -98,12 +98,13 @@ public abstract class ExecutorProcessor implements Runnable {
           return;
         }
 
-        dbHandle = dbInterface.openDatabase(context.getAppName(), true);
+        dbHandle = dbInterface.openDatabase(context.getAppName());
         if (dbHandle == null) {
           context.reportError(request.callbackJSON, null, "Unable to open database connection");
           context.popRequest(true);
           return;
         }
+         dbInterface.beginTransaction(context.getAppName(), dbHandle);
 
         transId = UUID.randomUUID().toString();
         context.registerActiveConnection(transId, dbHandle);

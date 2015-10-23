@@ -88,9 +88,14 @@ public class ColorRuleGroup {
 
   /**
    * Construct the rule group for the given column.
-   * 
-   * @param tp
+   *
+   * @param ctxt
+   * @param appName
+   * @param db
+   * @param tableId
    * @param elementKey
+   * @param type
+   * @param adminColumns
    * @throws RemoteException
    */
   private ColorRuleGroup(CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey,
@@ -146,8 +151,7 @@ public class ColorRuleGroup {
 
   /**
    * Parse a json String of a list of {@link ColorRule} objects into a
-   * 
-   * @param appName
+   *
    * @param json
    * @return
    */
@@ -216,8 +220,9 @@ public class ColorRuleGroup {
     KeyValueStoreHelper kvsh = null;
     KeyValueHelper aspectHelper = null;
     try {
-      db = ctxt.getDatabase().openDatabase(mAppName, true);
+      db = ctxt.getDatabase().openDatabase(mAppName);
 
+      ctxt.getDatabase().beginTransaction(mAppName, db);
       // initialize the KVS helpers...
       switch (mType) {
       case COLUMN:
@@ -327,17 +332,10 @@ public class ColorRuleGroup {
 
   /**
    * Use the rule group to determine if it applies to the given data.
-   * 
-   * @param rowData
-   *          an array of data from the row
-   * @param indexMapping
-   *          a mapping of element key to index in the rowData array
-   * @param propertiesMapping
-   *          a mapping of element key to {@link ColumnDefinition}. Necessary
-   *          for knowing how to interpret the row data (int, number, String,
-   *          etc).
+   *
+   * @param orderedDefns set of columnDefinitions for the table
+   * @param row the data from the row
    * @return null or the matching rule in the group, {@link ColorGuide}.
-   * @throws IllegalArgumentException
    */
   public ColorGuide getColorGuide(OrderedColumns orderedDefns, Row row) {
     for (int i = 0; i < ruleList.size(); i++) {
