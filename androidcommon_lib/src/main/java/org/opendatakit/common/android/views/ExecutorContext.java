@@ -14,7 +14,6 @@
 
 package org.opendatakit.common.android.views;
 
-import android.os.RemoteException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.opendatakit.common.android.data.OrderedColumns;
 import org.opendatakit.common.android.listener.DatabaseConnectionListener;
@@ -118,7 +117,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
       synchronized (mutex) {
         if ( !worker.isShutdown() && !worker.isTerminated()) {
           // push the request
-          workQueue.push(request);
+          workQueue.add(request);
           worker.execute(processor);
         }
       }

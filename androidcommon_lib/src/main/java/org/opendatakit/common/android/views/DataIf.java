@@ -240,7 +240,6 @@ public class DataIf {
      * Save checkpoint as incomplete. In the process, it applies any changes indicated by the stringifiedJSON.
      *
      * @param tableId  The table being updated
-     * @param stringifiedJSON key-value map of values to store or update. If missing, the value remains unchanged.
      * @param rowId The rowId of the row being saved-as-incomplete.
      * @param callbackJSON The JSON object used by the JS layer to recover the callback function
      *                     that can process the response
@@ -251,10 +250,10 @@ public class DataIf {
      * transId and leaveTransactionOpen are used only if the user wants to explicitly control db transactions
      */
     @android.webkit.JavascriptInterface
-    public void saveCheckpointAsIncomplete (String tableId, String stringifiedJSON, String rowId,
+    public void saveCheckpointAsIncomplete (String tableId, String rowId,
                                               String callbackJSON, String transId, Boolean leaveTransactionOpen)
             throws RemoteException {
-        weakData.get().saveCheckpointAsIncomplete(tableId, stringifiedJSON, rowId,
+        weakData.get().saveCheckpointAsIncomplete(tableId, rowId,
                 callbackJSON, transId, leaveTransactionOpen);
     }
 
@@ -263,7 +262,6 @@ public class DataIf {
      * Save checkpoint as complete. In the process, it applies any changes indicated by the stringifiedJSON.
      *
      * @param tableId  The table being updated
-     * @param stringifiedJSON key-value map of values to store or update. If missing, the value remains unchanged.
      * @param rowId The rowId of the row being marked-as-complete.
      * @param callbackJSON The JSON object used by the JS layer to recover the callback function
      *                     that can process the response
@@ -274,10 +272,10 @@ public class DataIf {
      * transId and leaveTransactionOpen are used only if the user wants to explicitly control db transactions
      */
     @android.webkit.JavascriptInterface
-    public void saveCheckpointAsComplete (String tableId, String stringifiedJSON, String rowId,
+    public void saveCheckpointAsComplete (String tableId, String rowId,
                                             String callbackJSON, String transId, Boolean leaveTransactionOpen)
             throws RemoteException {
-        weakData.get().saveCheckpointAsComplete(tableId, stringifiedJSON, rowId,
+        weakData.get().saveCheckpointAsComplete(tableId, rowId,
                 callbackJSON, transId, leaveTransactionOpen);
     }
 

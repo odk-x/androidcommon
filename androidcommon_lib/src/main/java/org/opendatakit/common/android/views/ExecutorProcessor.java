@@ -265,6 +265,7 @@ public abstract class ExecutorProcessor implements Runnable {
 
   private void rawQuery() {
     // TODO: implement this
+    reportErrorAndCleanUp("rawQuery not implemented");
   }
 
   private void userTableQuery() throws RemoteException {

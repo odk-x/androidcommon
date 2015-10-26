@@ -184,7 +184,7 @@ public class ExecutorRequest {
      * transId and leaveTransactionOpen are used only if the user wants to explicitly control db transactions
      */
     public ExecutorRequest(ExecutorRequestType executorRequestType, String tableId, String stringifiedJSON, String rowId,
-                            String callbackJSON, String transId, Boolean leaveTransactionOpen) {
+        String callbackJSON, String transId, Boolean leaveTransactionOpen) {
         this.executorRequestType = executorRequestType;
         this.tableId = tableId;
         this.stringifiedJSON = stringifiedJSON;
@@ -247,6 +247,46 @@ public class ExecutorRequest {
         this.orderByDirection = null;
         this.includeKeyValueStoreMap = false;
         this.stringifiedJSON = null;
+        this.commitTransaction = false;
+    }
+
+    /**
+     * Save checkpoint as incomplete or complete
+     *
+     * @param executorRequestType The type of request. One of:
+     *                    <li>USER_TABLE_SAVE_CHECKPOINT_AS_INCOMPLETE</li>
+     *                    <li>USER_TABLE_SAVE_CHECKPOINT_AS_COMPLETE</li>
+     * @param tableId  The table being updated
+     * @param rowId The rowId of the row being deleted.
+     * @param transId null or the id of an open transaction if action should occur on an existing transaction.
+     * @param callbackJSON The JSON object used by the JS layer to recover the callback function
+     *                     that can process the response
+     * @param leaveTransactionOpen null or false close the transaction or use a transient one. true will return
+     *                             the transId and leave transaction open.
+     *
+     * transId and leaveTransactionOpen are used only if the user wants to explicitly control db transactions
+     */
+    public ExecutorRequest(ExecutorRequestType executorRequestType, String tableId, String rowId,
+        String callbackJSON, String transId, Boolean leaveTransactionOpen) {
+        this.executorRequestType = executorRequestType;
+        this.tableId = tableId;
+        this.rowId = rowId;
+        this.callbackJSON = callbackJSON;
+        this.transId = transId;
+        this.leaveTransactionOpen = leaveTransactionOpen;
+
+        // unused:
+        this.stringifiedJSON = null;
+        this.oldContext = null;
+        this.sqlCommand = null;
+        this.whereClause = null;
+        this.sqlBindParams = null;
+        this.groupBy = null;
+        this.having = null;
+        this.orderByElementKey = null;
+        this.orderByDirection = null;
+        this.includeKeyValueStoreMap = false;
+        this.deleteAllCheckpoints = false;
         this.commitTransaction = false;
     }
 
