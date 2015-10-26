@@ -190,46 +190,38 @@ public class Data {
 
     /**
      * Save checkpoint as incomplete. In the process, it applies any changes indicated by the stringifiedJSON.
-     *
      * @param tableId  The table being updated
-     * @param stringifiedJSON key-value map of values to store or update. If missing, the value remains unchanged.
      * @param rowId The rowId of the row being saved-as-incomplete.
      * @param callbackJSON The JSON object used by the JS layer to recover the callback function
-     *                     that can process the response
+*                     that can process the response
      * @param transId null or the id of an open transaction if action should occur on an existing transaction.
      * @param leaveTransactionOpen null or false close the transaction or use a transient one. true will return
-     *                             the transId and leave transaction open.
-     *
-     * transId and leaveTransactionOpen are used only if the user wants to explicitly control db transactions
+*                             the transId and leave transaction open.
+*
      */
-    public void saveCheckpointAsIncomplete (String tableId, String stringifiedJSON, String rowId,
-                                              String callbackJSON, String transId, Boolean leaveTransactionOpen) {
+    public void saveCheckpointAsIncomplete(String tableId, String rowId, String callbackJSON, String transId, Boolean leaveTransactionOpen) {
         ExecutorRequest request = new ExecutorRequest(
                 ExecutorRequestType.USER_TABLE_SAVE_CHECKPOINT_AS_INCOMPLETE,
-                tableId, stringifiedJSON, rowId, callbackJSON, transId, leaveTransactionOpen);
+                tableId, rowId, callbackJSON, transId, leaveTransactionOpen);
 
         queueRequest(request);
     }
 
     /**
-     * Save checkpoint as complete. In the process, it applies any changes indicated by the stringifiedJSON.
-     *
+     * Save checkpoint as complete.
      * @param tableId  The table being updated
-     * @param stringifiedJSON key-value map of values to store or update. If missing, the value remains unchanged.
      * @param rowId The rowId of the row being marked-as-complete.
      * @param callbackJSON The JSON object used by the JS layer to recover the callback function
-     *                     that can process the response
+*                     that can process the response
      * @param transId null or the id of an open transaction if action should occur on an existing transaction.
      * @param leaveTransactionOpen null or false close the transaction or use a transient one. true will return
-     *                             the transId and leave transaction open.
-     *
-     * transId and leaveTransactionOpen are used only if the user wants to explicitly control db transactions
+*                             the transId and leave transaction open.
+*
      */
-    public void saveCheckpointAsComplete (String tableId, String stringifiedJSON, String rowId,
-                                            String callbackJSON, String transId, Boolean leaveTransactionOpen) {
+    public void saveCheckpointAsComplete(String tableId, String rowId, String callbackJSON, String transId, Boolean leaveTransactionOpen) {
         ExecutorRequest request = new ExecutorRequest(
                 ExecutorRequestType.USER_TABLE_SAVE_CHECKPOINT_AS_COMPLETE,
-                tableId, stringifiedJSON, rowId, callbackJSON, transId, leaveTransactionOpen);
+                tableId, rowId, callbackJSON, transId, leaveTransactionOpen);
 
         queueRequest(request);
     }
