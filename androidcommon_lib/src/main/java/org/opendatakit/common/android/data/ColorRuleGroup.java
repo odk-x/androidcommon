@@ -22,11 +22,10 @@ import java.util.List;
 
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.ElementType;
+import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.common.android.application.CommonApplication;
-import org.opendatakit.common.android.data.Row;
-import org.opendatakit.common.android.utilities.KeyValueHelper;
-import org.opendatakit.common.android.utilities.KeyValueStoreHelper;
-import org.opendatakit.common.android.utilities.WebLogger;
+import org.opendatakit.common.android.utilities.*;
+import org.opendatakit.database.service.KeyValueStoreEntry;
 import org.opendatakit.database.service.OdkDbHandle;
 
 import android.os.RemoteException;
@@ -53,11 +52,6 @@ public class ColorRuleGroup {
   /*****************************
    * Things needed for the key value store.
    *****************************/
-  public static final String KVS_PARTITION_COLUMN = "ColumnColorRuleGroup";
-  public static final String KEY_COLOR_RULES_COLUMN = "ColumnColorRuleGroup.ruleList";
-  public static final String KVS_PARTITION_TABLE = "TableColorRuleGroup";
-  public static final String KEY_COLOR_RULES_TABLE = "TableColorRuleGroup.ruleList";
-  public static final String KEY_COLOR_RULES_STATUS_COLUMN = "StatusColumn.ruleList";
   public static final String DEFAULT_KEY_COLOR_RULES = "[]";
 
   private static final ObjectMapper mapper;
@@ -105,29 +99,36 @@ public class ColorRuleGroup {
     this.mTableId = tableId;
     this.mElementKey = elementKey;
     String jsonRulesString = DEFAULT_KEY_COLOR_RULES;
-    KeyValueStoreHelper kvsh;
-    KeyValueHelper aspectHelper;
     mAdminColumns = adminColumns;
+    List<KeyValueStoreEntry> entries = null;
     switch (mType) {
     case COLUMN:
-      kvsh = new KeyValueStoreHelper(ctxt, appName, db, mTableId, KVS_PARTITION_COLUMN);
-      aspectHelper = kvsh.getAspectHelper(mElementKey);
-      jsonRulesString = aspectHelper.getObject(KEY_COLOR_RULES_COLUMN);
+      entries = ctxt.getDatabase().getDBTableMetadata(appName, db, mTableId,
+              LocalKeyValueStoreConstants.ColumnColorRules.PARTITION,
+              elementKey,
+              LocalKeyValueStoreConstants.ColumnColorRules.KEY_COLOR_RULES_COLUMN);
       break;
     case TABLE:
-      kvsh = new KeyValueStoreHelper(ctxt, appName, db, mTableId, KVS_PARTITION_COLUMN);
-      aspectHelper = null;
-      jsonRulesString = kvsh.getObject(KEY_COLOR_RULES_TABLE);
+      entries = ctxt.getDatabase().getDBTableMetadata(appName, db, mTableId,
+              LocalKeyValueStoreConstants.TableColorRules.PARTITION,
+              KeyValueStoreConstants.ASPECT_DEFAULT,
+              LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_ROW);
       break;
     case STATUS_COLUMN:
-      kvsh = new KeyValueStoreHelper(ctxt, appName, db, mTableId, KVS_PARTITION_COLUMN);
-      aspectHelper = null;
-      jsonRulesString = kvsh.getObject(KEY_COLOR_RULES_STATUS_COLUMN);
+      entries = ctxt.getDatabase().getDBTableMetadata(appName, db, mTableId,
+              LocalKeyValueStoreConstants.TableColorRules.PARTITION,
+              KeyValueStoreConstants.ASPECT_DEFAULT,
+              LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_STATUS_COLUMN);
       break;
     default:
       WebLogger.getLogger(mAppName).e(TAG, "unrecognized ColorRuleGroup type: " + mType);
     }
-    this.ruleList = parseJsonString(jsonRulesString);
+    if ( entries.size() != 1 ) {
+      this.ruleList = new ArrayList<ColorRule>();
+    } else {
+      jsonRulesString = KeyValueStoreUtils.getObject(appName, entries.get(0));
+      this.ruleList = parseJsonString(jsonRulesString);
+    }
   }
 
   public String[] getAdminColumns() {
@@ -215,69 +216,40 @@ public class ColorRuleGroup {
    * @throws RemoteException
    */
   public void saveRuleList(CommonApplication ctxt) throws RemoteException {
-    boolean successful = false;
     OdkDbHandle db = null;
-    KeyValueStoreHelper kvsh = null;
-    KeyValueHelper aspectHelper = null;
     try {
       db = ctxt.getDatabase().openDatabase(mAppName);
-
-      ctxt.getDatabase().beginTransaction(mAppName, db);
       // initialize the KVS helpers...
-      switch (mType) {
-      case COLUMN:
-        kvsh = new KeyValueStoreHelper(ctxt, mAppName, db, mTableId, KVS_PARTITION_COLUMN);
-        aspectHelper = kvsh.getAspectHelper(mElementKey);
-        break;
-      case TABLE:
-        kvsh = new KeyValueStoreHelper(ctxt, mAppName, db, mTableId, KVS_PARTITION_COLUMN);
-        aspectHelper = null;
-        break;
-      case STATUS_COLUMN:
-        kvsh = new KeyValueStoreHelper(ctxt, mAppName, db, mTableId, KVS_PARTITION_COLUMN);
-        aspectHelper = null;
-        break;
-      default:
-        WebLogger.getLogger(mAppName).e(TAG, "unrecognized ColorRuleGroup type: " + mType);
-        return;
-      }
-
-      // if there are no rules, we want to remove the key from the kvs.
-      if (ruleList.size() == 0) {
-        switch (mType) {
-        case COLUMN:
-          aspectHelper.removeKey(KEY_COLOR_RULES_COLUMN);
-          break;
-        case TABLE:
-          kvsh.removeKey(KEY_COLOR_RULES_TABLE);
-          break;
-        case STATUS_COLUMN:
-          kvsh.removeKey(KEY_COLOR_RULES_STATUS_COLUMN);
-          break;
-        }
-      }
 
       // set it to this default just in case something goes wrong and it is
       // somehow set. this way if you manage to set the object you will have
       // something that doesn't throw an error when you expect to get back
       // an array list. it will just be of length 0. not sure if this is a good
       // idea or not.
-      String ruleListJson = DEFAULT_KEY_COLOR_RULES;
       try {
-        ruleListJson = mapper.writeValueAsString(ruleList);
+        String ruleListJson = mapper.writeValueAsString(ruleList);
+        KeyValueStoreEntry entry = null;
         switch (mType) {
         case COLUMN:
-          aspectHelper.setObject(KEY_COLOR_RULES_COLUMN, ruleListJson);
+          entry = KeyValueStoreUtils.buildEntry(mTableId, LocalKeyValueStoreConstants.ColumnColorRules.PARTITION,
+                  mElementKey,
+                  LocalKeyValueStoreConstants.ColumnColorRules.KEY_COLOR_RULES_COLUMN,
+                  ElementDataType.array, ruleListJson);
           break;
         case TABLE:
-          kvsh.setObject(KEY_COLOR_RULES_TABLE, ruleListJson);
+          entry = KeyValueStoreUtils.buildEntry(mTableId, LocalKeyValueStoreConstants.TableColorRules.PARTITION,
+                  KeyValueStoreConstants.ASPECT_DEFAULT,
+                  LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_ROW,
+                  ElementDataType.array, ruleListJson);
           break;
         case STATUS_COLUMN:
-          kvsh.setObject(KEY_COLOR_RULES_STATUS_COLUMN, ruleListJson);
+          entry = KeyValueStoreUtils.buildEntry(mTableId, LocalKeyValueStoreConstants.TableColorRules.PARTITION,
+                  KeyValueStoreConstants.ASPECT_DEFAULT,
+                  LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_STATUS_COLUMN,
+                  ElementDataType.array, ruleListJson);
           break;
         }
-
-        successful = true;
+        ctxt.getDatabase().replaceDBTableMetadata(mAppName, db, entry);
       } catch (JsonGenerationException e) {
         WebLogger.getLogger(mAppName).e(TAG, "problem parsing list of color rules");
         WebLogger.getLogger(mAppName).printStackTrace(e);
@@ -290,7 +262,7 @@ public class ColorRuleGroup {
       }
     } finally {
       if (db != null) {
-        ctxt.getDatabase().closeTransactionAndDatabase(mAppName, db, successful);
+        ctxt.getDatabase().closeDatabase(mAppName, db);
       }
     }
   }
