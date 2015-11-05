@@ -379,6 +379,20 @@ public class CsvUtil {
       String[] kvsRow = new String[kvsHeaders.size()];
       for (int i = 0; i < kvsEntries.size(); i++) {
         KeyValueStoreEntry entry = kvsEntries.get(i);
+
+        // replace all the choiceList entries with their choiceListJSON
+        if ( entry.partition.equals(KeyValueStoreConstants.PARTITION_COLUMN) &&
+            entry.key.equals(KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST) ) {
+          // exported type is an array -- the choiceListJSON
+          entry.type = ElementDataType.array.name();
+          if ((entry.value != null) && (entry.value.trim().length() != 0)) {
+            String choiceListJSON = context.getDatabase().getChoiceList(appName, db, entry.value);
+            entry.value = choiceListJSON;
+          } else {
+            entry.value = null;
+          }
+        }
+
         kvsRow[0] = entry.partition;
         kvsRow[1] = entry.aspect;
         kvsRow[2] = entry.key;
@@ -560,6 +574,21 @@ public class CsvUtil {
     try {
 
       db = context.getDatabase().openDatabase(appName);
+
+      // Go through the KVS list and replace all the choiceList entries with their choiceListId
+      for ( KeyValueStoreEntry entry : kvsEntries ) {
+        if ( entry.partition.equals(KeyValueStoreConstants.PARTITION_COLUMN) &&
+             entry.key.equals(KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST) ) {
+          // stored type is a string -- the choiceListId
+          entry.type = ElementDataType.string.name();
+          if ((entry.value != null) && (entry.value.trim().length() != 0)) {
+            String choiceListId = context.getDatabase().setChoiceList(appName, db, entry.value);
+            entry.value = choiceListId;
+          } else {
+            entry.value = null;
+          }
+        }
+      }
 
       ColumnList cols = new ColumnList(columns);
       context.getDatabase().createOrOpenDBTableWithColumnsAndProperties(appName, db, tableId, cols, kvsEntries, true);
