@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.type.CollectionType;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.common.android.application.CommonApplication;
@@ -114,16 +115,46 @@ public class ColumnUtil {
       // default to none
       return new ArrayList<Map<String,Object>>();
     }
-    @SuppressWarnings("rawtypes")
-    ArrayList<Map> untypedJsonDisplayChoices = KeyValueStoreUtils.getArray(appName,
-            choicesListList.get(0), Map.class);
-    
-    if(untypedJsonDisplayChoices == null) {
+    /*
+     * Getting the choiceListId
+     */
+    String choiceListId = KeyValueStoreUtils.getString(appName, choicesListList.get(0));
+    if (choiceListId == null || choiceListId.trim().length() == 0) {
+      return new ArrayList<Map<String,Object>>();
+    }
+    /*
+     * Use that to get the choiceListJSON
+     */
+    String choiceListJSON = ctxt.getDatabase().getChoiceList(appName, db, choiceListId);
+    if (choiceListJSON == null || choiceListJSON.trim().length() == 0) {
+      return new ArrayList<Map<String,Object>>();
+    }
+    // and transform the JSON into an array of objects holding the
+    // choice value and the language-to-displayName translation maps
+    CollectionType javaType =
+        ODKFileUtils.mapper.getTypeFactory().constructCollectionType(ArrayList.class, Map.class);
+    ArrayList<Map> result = null;
+    try {
+        result = ODKFileUtils.mapper.readValue(choiceListJSON, javaType);
+    } catch (JsonParseException e) {
+      WebLogger.getLogger(appName).e("ColumnUtil",
+          "getDisplayChoicesList: problem parsing json list entry from the kvs");
+      WebLogger.getLogger(appName).printStackTrace(e);
+    } catch (JsonMappingException e) {
+      WebLogger.getLogger(appName).e("ColumnUtil",
+          "getDisplayChoicesList: problem mapping json list entry from the kvs");
+      WebLogger.getLogger(appName).printStackTrace(e);
+    } catch (IOException e) {
+      WebLogger.getLogger(appName).e("ColumnUtil",
+          "getDisplayChoicesList: i/o problem with json for list entry from the kvs");
+      WebLogger.getLogger(appName).printStackTrace(e);
+    }
+    if(result == null) {
       return new ArrayList<Map<String,Object>>();
     }
     
     ArrayList<Map<String,Object>> jsonDisplayChoices = new ArrayList<Map<String,Object>>();
-    for ( @SuppressWarnings("rawtypes") Map m : untypedJsonDisplayChoices) {
+    for ( Map m : result) {
       @SuppressWarnings("unchecked")
       Map<String,Object> tm = (Map<String,Object>) m;
       jsonDisplayChoices.add(tm);
@@ -132,18 +163,17 @@ public class ColumnUtil {
   }
 
   public void setDisplayChoicesList( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, ColumnDefinition cd, ArrayList<Map<String,Object>> choices) throws RemoteException {
-    String choiceList = null;
+    String choiceListJSON = null;
     try {
-      choiceList = ODKFileUtils.mapper.writeValueAsString(choices);
+      choiceListJSON = ODKFileUtils.mapper.writeValueAsString(choices);
     } catch (JsonProcessingException e1) {
       e1.printStackTrace();
       throw new IllegalArgumentException("Unexpected displayChoices conversion failure!");
     }
+    String choiceListId = ctxt.getDatabase().setChoiceList(appName, db, choiceListJSON);
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId,
-            KeyValueStoreConstants.PARTITION_COLUMN,
-            cd.getElementKey(),
-            KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST,
-            ElementDataType.array, choiceList);
+        KeyValueStoreConstants.PARTITION_COLUMN, cd.getElementKey(),
+        KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST, ElementDataType.string, choiceListId);
     ctxt.getDatabase().replaceDBTableMetadata(appName, db, e);
   }
   
@@ -151,7 +181,8 @@ public class ColumnUtil {
 
     List<KeyValueStoreEntry> joinsList =
             ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
-                    KeyValueStoreConstants.PARTITION_COLUMN, elementKey, KeyValueStoreConstants.COLUMN_JOINS);
+                KeyValueStoreConstants.PARTITION_COLUMN, elementKey,
+                KeyValueStoreConstants.COLUMN_JOINS);
     if ( joinsList.size() != 1 ) {
       return new ArrayList<JoinColumn>();
     }
