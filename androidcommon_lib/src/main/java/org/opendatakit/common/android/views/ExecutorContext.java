@@ -142,18 +142,19 @@ public class ExecutorContext implements DatabaseConnectionListener {
    * @param trigger true if we should fire an ExecutorProcessor.
    */
   public void popRequest(boolean trigger) {
-      // processor is most often NOT discarded
-      ExecutorProcessor processor = (trigger ? fragment.newExecutorProcessor(this) : null);
-      synchronized (mutex) {
-        if ( !worker.isShutdown() && !worker.isTerminated() && !workQueue.isEmpty() ) {
-          workQueue.removeFirst();
-          // signal that we have work...
-          if ( trigger && !workQueue.isEmpty() ) {
-            worker.execute(processor);
-          }
-        }
+    // processor is most often NOT discarded
+    ExecutorProcessor processor = (trigger ? fragment.newExecutorProcessor(this) : null);
+    synchronized (mutex) {
+		  if ( !workQueue.isEmpty() ) {
+		    // remove the last request
+        workQueue.removeFirst();
+		  }
+      if ( !worker.isShutdown() && !worker.isTerminated() && trigger && !workQueue.isEmpty() ) {
+        // signal that we have work...
+        worker.execute(processor);
       }
     }
+  }
 
   /**
    * shutdown the worker. This is done within the mutex to ensure that the above methods
@@ -255,14 +256,21 @@ public class ExecutorContext implements DatabaseConnectionListener {
         // TODO: rollback any transactions and close connections
       shutdownWorker();
 
+	  String errorMessage = "releaseResources - shutting down worker (" + reason +
+                   ") -- rolling back all transactions and releasing all connections";
       for(;;) {
         ExecutorRequest req = peekRequest();
         if ( req == null ) {
           break;
         }
-        reportError(req.callbackJSON, null, "releaseResources - shutting down worker (" + reason +
-                    ") -- rolling back all transactions and releasing all connections");
-        popRequest(false);
+        try {
+           reportError(req.callbackJSON, null, errorMessage);
+        } catch(Exception e) {
+           WebLogger.getLogger(getAppName()).w(TAG, "releaseResources - exception while "
+               + "cancelling outstanding requests");
+        } finally {
+           popRequest(false);
+        }
       }
 
       WebLogger.getLogger(currentContext.getAppName()).i(TAG, "releaseResources - workQueue has been purged.");
