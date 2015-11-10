@@ -29,7 +29,7 @@ public abstract class BasePreferenceActivity extends PreferenceActivity implemen
   @Override
   protected void onPause() {
     ((CommonApplication) getApplication()).onActivityPause(this);
-    super.onDestroy();
+    super.onPause();
   }
 
   @Override

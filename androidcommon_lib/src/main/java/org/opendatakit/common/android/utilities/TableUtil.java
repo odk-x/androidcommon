@@ -585,7 +585,7 @@ public class TableUtil {
       // any columns labeled latitude or longitude.
       final List<ColumnDefinition> geoPointCols = orderedDefns.getGeopointColumnDefinitions();
       for (ColumnDefinition cd : orderedDefns.getColumnDefinitions()) {
-        if (GeoColumnUtil.get().isLatitudeColumnDefinition(geoPointCols, cd)) {
+        if (orderedDefns.isLatitudeColumnDefinition(geoPointCols, cd)) {
           rawValue = cd.getElementKey();
           break;
         }
@@ -611,7 +611,7 @@ public class TableUtil {
       // any columns labeled latitude or longitude.
       final List<ColumnDefinition> geoPointCols = orderedDefns.getGeopointColumnDefinitions();
       for (ColumnDefinition cd : orderedDefns.getColumnDefinitions()) {
-        if (GeoColumnUtil.get().isLongitudeColumnDefinition(geoPointCols, cd)) {
+        if (orderedDefns.isLongitudeColumnDefinition(geoPointCols, cd)) {
           rawValue = cd.getElementKey();
           break;
         }

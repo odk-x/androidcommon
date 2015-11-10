@@ -16,6 +16,7 @@ package org.opendatakit.common.android.views;
 
 import org.opendatakit.common.android.activities.ODKActivity;
 import org.opendatakit.common.android.utilities.WebLogger;
+import org.opendatakit.common.android.utilities.WebLoggerIf;
 import org.opendatakit.dbshim.service.DbShimCallback;
 import org.opendatakit.dbshim.service.OdkDbShimInterface;
 
@@ -37,7 +38,7 @@ public class ODKDbShimJavascriptCallback {
 
   private ODKWebView mWebView;
   private ODKActivity mActivity;
-  private final WebLogger log;
+  private final WebLoggerIf log;
   private OdkDbShimInterface mDbShimService;
   private DbShimCallback.Stub mCallbackIf = new DbShimCallback.Stub() {
     @Override

@@ -29,7 +29,7 @@ public abstract class BaseListActivity extends ListActivity implements IAppAware
   @Override
   protected void onPause() {
     ((CommonApplication) getApplication()).onActivityPause(this);
-    super.onDestroy();
+    super.onPause();
   }
 
   @Override

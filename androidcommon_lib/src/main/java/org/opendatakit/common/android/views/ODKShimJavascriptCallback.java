@@ -24,6 +24,7 @@ import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
 
 import android.os.Build;
+import org.opendatakit.common.android.utilities.WebLoggerIf;
 
 /**
  * The class mapped to 'shim' in the Javascript
@@ -37,7 +38,7 @@ public class ODKShimJavascriptCallback {
 
   private ODKWebView mWebView;
   private ODKActivity mActivity;
-  private final WebLogger log;
+  private final WebLoggerIf log;
 
   public ODKShimJavascriptCallback(ODKWebView webView, ODKActivity activity) {
     mWebView = webView;
