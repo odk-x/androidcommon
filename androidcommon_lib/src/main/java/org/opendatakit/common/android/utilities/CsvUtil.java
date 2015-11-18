@@ -379,6 +379,20 @@ public class CsvUtil {
       String[] kvsRow = new String[kvsHeaders.size()];
       for (int i = 0; i < kvsEntries.size(); i++) {
         KeyValueStoreEntry entry = kvsEntries.get(i);
+
+        // replace all the choiceList entries with their choiceListJSON
+        if ( entry.partition.equals(KeyValueStoreConstants.PARTITION_COLUMN) &&
+            entry.key.equals(KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST) ) {
+          // exported type is an array -- the choiceListJSON
+          entry.type = ElementDataType.array.name();
+          if ((entry.value != null) && (entry.value.trim().length() != 0)) {
+            String choiceListJSON = context.getDatabase().getChoiceList(appName, db, entry.value);
+            entry.value = choiceListJSON;
+          } else {
+            entry.value = null;
+          }
+        }
+
         kvsRow[0] = entry.partition;
         kvsRow[1] = entry.aspect;
         kvsRow[2] = entry.key;
@@ -430,322 +444,155 @@ public class CsvUtil {
 
     WebLogger.getLogger(appName).i(TAG, "updateTablePropertiesFromCsv: tableId: " + tableId);
 
+    List<Column> columns = new ArrayList<Column>();
+    List<KeyValueStoreEntry> kvsEntries = new ArrayList<KeyValueStoreEntry>();
+
+    // reading data
+    File file = null;
+    FileInputStream in = null;
+    InputStreamReader input = null;
+    RFC4180CsvReader cr = null;
+    try {
+      file = new File(ODKFileUtils.getTableDefinitionCsvFile(appName, tableId));
+      in = new FileInputStream(file);
+      input = new InputStreamReader(in, CharEncoding.UTF_8);
+      cr = new RFC4180CsvReader(input);
+
+      String[] row;
+
+      // Read ColumnDefinitions
+      // get the column headers
+      String[] colHeaders = cr.readNext();
+      int colHeadersLength = countUpToLastNonNullElement(colHeaders);
+      // get the first row
+      row = cr.readNext();
+      while (row != null && countUpToLastNonNullElement(row) != 0) {
+
+        String elementKeyStr = null;
+        String elementNameStr = null;
+        String elementTypeStr = null;
+        String listChildElementKeysStr = null;
+        int rowLength = countUpToLastNonNullElement(row);
+        for (int i = 0; i < rowLength; ++i) {
+          if (i >= colHeadersLength) {
+            throw new IllegalStateException("data beyond header row of ColumnDefinitions table");
+          }
+          if (ColumnDefinitionsColumns.ELEMENT_KEY.equals(colHeaders[i])) {
+            elementKeyStr = row[i];
+          }
+          if (ColumnDefinitionsColumns.ELEMENT_NAME.equals(colHeaders[i])) {
+            elementNameStr = row[i];
+          }
+          if (ColumnDefinitionsColumns.ELEMENT_TYPE.equals(colHeaders[i])) {
+            elementTypeStr = row[i];
+          }
+          if (ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS.equals(colHeaders[i])) {
+            listChildElementKeysStr = row[i];
+          }
+        }
+
+        if (elementKeyStr == null || elementTypeStr == null) {
+          throw new IllegalStateException("ElementKey and ElementType must be specified");
+        }
+
+        columns.add(new Column(elementKeyStr, elementNameStr, elementTypeStr,
+            listChildElementKeysStr));
+
+        // get next row or blank to end...
+        row = cr.readNext();
+      }
+
+      cr.close();
+      try {
+        input.close();
+      } catch (IOException e) {
+      }
+      try {
+        in.close();
+      } catch (IOException e) {
+      }
+
+      file = new File(ODKFileUtils.getTablePropertiesCsvFile(appName, tableId));
+      in = new FileInputStream(file);
+      input = new InputStreamReader(in, CharEncoding.UTF_8);
+      cr = new RFC4180CsvReader(input);
+      // Read KeyValueStore
+      // read the column headers
+      String[] kvsHeaders = cr.readNext();
+      // read the first row
+      row = cr.readNext();
+      while (row != null && countUpToLastNonNullElement(row) != 0) {
+        String partition = null;
+        String aspect = null;
+        String key = null;
+        String type = null;
+        String value = null;
+        int rowLength = countUpToLastNonNullElement(row);
+        for (int i = 0; i < rowLength; ++i) {
+          if (KeyValueStoreColumns.PARTITION.equals(kvsHeaders[i])) {
+            partition = row[i];
+          }
+          if (KeyValueStoreColumns.ASPECT.equals(kvsHeaders[i])) {
+            aspect = row[i];
+          }
+          if (KeyValueStoreColumns.KEY.equals(kvsHeaders[i])) {
+            key = row[i];
+          }
+          if (KeyValueStoreColumns.VALUE_TYPE.equals(kvsHeaders[i])) {
+            type = row[i];
+          }
+          if (KeyValueStoreColumns.VALUE.equals(kvsHeaders[i])) {
+            value = row[i];
+          }
+        }
+        KeyValueStoreEntry kvsEntry = KeyValueStoreUtils.buildEntry(tableId, partition, aspect, key,
+                ElementDataType.valueOf(type), value);
+        kvsEntries.add(kvsEntry);
+        // get next row or blank to end...
+        row = cr.readNext();
+      }
+      cr.close();
+      try {
+        input.close();
+      } catch (IOException e) {
+      }
+      try {
+        in.close();
+      } catch (IOException e) {
+      }
+
+    } finally {
+      try {
+        if (input != null) {
+          input.close();
+        }
+      } catch (IOException e) {
+      }
+    }
+
     OdkDbHandle db = null;
     try {
+
       db = context.getDatabase().openDatabase(appName);
-      List<Column> columns = new ArrayList<Column>();
 
-      // reading data
-      File file = null;
-      FileInputStream in = null;
-      InputStreamReader input = null;
-      RFC4180CsvReader cr = null;
-      try {
-        file = new File(ODKFileUtils.getTableDefinitionCsvFile(appName, tableId));
-        in = new FileInputStream(file);
-        input = new InputStreamReader(in, CharEncoding.UTF_8);
-        cr = new RFC4180CsvReader(input);
-
-        String[] row;
-
-        // Read ColumnDefinitions
-        // get the column headers
-        String[] colHeaders = cr.readNext();
-        int colHeadersLength = countUpToLastNonNullElement(colHeaders);
-        // get the first row
-        row = cr.readNext();
-        while (row != null && countUpToLastNonNullElement(row) != 0) {
-
-          String elementKeyStr = null;
-          String elementNameStr = null;
-          String elementTypeStr = null;
-          String listChildElementKeysStr = null;
-          int rowLength = countUpToLastNonNullElement(row);
-          for (int i = 0; i < rowLength; ++i) {
-            if (i >= colHeadersLength) {
-              throw new IllegalStateException("data beyond header row of ColumnDefinitions table");
-            }
-            if (ColumnDefinitionsColumns.ELEMENT_KEY.equals(colHeaders[i])) {
-              elementKeyStr = row[i];
-            }
-            if (ColumnDefinitionsColumns.ELEMENT_NAME.equals(colHeaders[i])) {
-              elementNameStr = row[i];
-            }
-            if (ColumnDefinitionsColumns.ELEMENT_TYPE.equals(colHeaders[i])) {
-              elementTypeStr = row[i];
-            }
-            if (ColumnDefinitionsColumns.LIST_CHILD_ELEMENT_KEYS.equals(colHeaders[i])) {
-              listChildElementKeysStr = row[i];
-            }
-          }
-
-          if (elementKeyStr == null || elementTypeStr == null) {
-            throw new IllegalStateException("ElementKey and ElementType must be specified");
-          }
-
-          columns.add(new Column(elementKeyStr, elementNameStr, elementTypeStr,
-              listChildElementKeysStr));
-
-          // get next row or blank to end...
-          row = cr.readNext();
-        }
-
-        cr.close();
-        try {
-          input.close();
-        } catch (IOException e) {
-        }
-        try {
-          in.close();
-        } catch (IOException e) {
-        }
-
-        OrderedColumns colDefns = new OrderedColumns(appName, tableId, columns);
-        Map<String, List<KeyValueStoreEntry>> colEntries = new TreeMap<String, List<KeyValueStoreEntry>>();
-
-        file = new File(ODKFileUtils.getTablePropertiesCsvFile(appName, tableId));
-        in = new FileInputStream(file);
-        input = new InputStreamReader(in, CharEncoding.UTF_8);
-        cr = new RFC4180CsvReader(input);
-        // Read KeyValueStore
-        // read the column headers
-        String[] kvsHeaders = cr.readNext();
-        int kvsHeadersLength = countUpToLastNonNullElement(kvsHeaders);
-        String displayName = null;
-        List<KeyValueStoreEntry> kvsEntries = new ArrayList<KeyValueStoreEntry>();
-        // read the first row
-        row = cr.readNext();
-        while (row != null && countUpToLastNonNullElement(row) != 0) {
-          KeyValueStoreEntry kvsEntry = new KeyValueStoreEntry();
-          kvsEntry.tableId = tableId;
-          int rowLength = countUpToLastNonNullElement(row);
-          for (int i = 0; i < rowLength; ++i) {
-            if (KeyValueStoreColumns.PARTITION.equals(kvsHeaders[i])) {
-              kvsEntry.partition = row[i];
-            }
-            if (KeyValueStoreColumns.ASPECT.equals(kvsHeaders[i])) {
-              kvsEntry.aspect = row[i];
-            }
-            if (KeyValueStoreColumns.KEY.equals(kvsHeaders[i])) {
-              kvsEntry.key = row[i];
-            }
-            if (KeyValueStoreColumns.VALUE_TYPE.equals(kvsHeaders[i])) {
-              kvsEntry.type = row[i];
-            }
-            if (KeyValueStoreColumns.VALUE.equals(kvsHeaders[i])) {
-              kvsEntry.value = row[i];
-            }
-          }
-          if (KeyValueStoreConstants.PARTITION_COLUMN.equals(kvsEntry.partition)) {
-            // column-specific
-            String column = kvsEntry.aspect;
-            List<KeyValueStoreEntry> kvList = colEntries.get(column);
-            if (kvList == null) {
-              kvList = new ArrayList<KeyValueStoreEntry>();
-              colEntries.put(column, kvList);
-            }
-            try {
-              colDefns.find(column);
-            } catch (IllegalArgumentException e) {
-              throw new IllegalStateException("Reference to non-existent column: " + column
-                  + " of tableId: " + tableId);
-            }
-            kvList.add(kvsEntry);
+      // Go through the KVS list and replace all the choiceList entries with their choiceListId
+      for ( KeyValueStoreEntry entry : kvsEntries ) {
+        if ( entry.partition.equals(KeyValueStoreConstants.PARTITION_COLUMN) &&
+             entry.key.equals(KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST) ) {
+          // stored type is a string -- the choiceListId
+          entry.type = ElementDataType.string.name();
+          if ((entry.value != null) && (entry.value.trim().length() != 0)) {
+            String choiceListId = context.getDatabase().setChoiceList(appName, db, entry.value);
+            entry.value = choiceListId;
           } else {
-            // not column-specific
-            // see if we can find the displayName
-            if (KeyValueStoreConstants.PARTITION_TABLE.equals(kvsEntry.partition)
-                && KeyValueStoreConstants.ASPECT_DEFAULT.equals(kvsEntry.aspect)
-                && KeyValueStoreConstants.TABLE_DISPLAY_NAME.equals(kvsEntry.key)) {
-              displayName = kvsEntry.value;
-            }
-            // still put it in the kvsEntries -- displayName is not stored???
-            kvsEntries.add(kvsEntry);
+            entry.value = null;
           }
-          // get next row or blank to end...
-          row = cr.readNext();
-        }
-        cr.close();
-        try {
-          input.close();
-        } catch (IOException e) {
-        }
-        try {
-          in.close();
-        } catch (IOException e) {
-        }
-
-        if (context.getDatabase().hasTableId(appName, db, tableId)) {
-          OrderedColumns existingDefns = context.getDatabase().getUserDefinedColumns(appName, db, tableId);
-
-          // confirm that the column definitions are unchanged...
-          if (existingDefns.getColumnDefinitions().size() != colDefns.getColumnDefinitions().size()) {
-            throw new IllegalStateException(
-                "Unexpectedly found tableId with different column definitions that already exists!");
-          }
-          for (ColumnDefinition ci : colDefns.getColumnDefinitions()) {
-            ColumnDefinition existingDefn;
-            try {
-              existingDefn = existingDefns.find(ci.getElementKey());
-            } catch (IllegalArgumentException e) {
-              throw new IllegalStateException("Unexpectedly failed to match elementKey: "
-                  + ci.getElementKey());
-            }
-            if (!existingDefn.getElementName().equals(ci.getElementName())) {
-              throw new IllegalStateException(
-                  "Unexpected mis-match of elementName for elementKey: " + ci.getElementKey());
-            }
-            List<ColumnDefinition> refList = existingDefn.getChildren();
-            List<ColumnDefinition> ciList = ci.getChildren();
-            if (refList.size() != ciList.size()) {
-              throw new IllegalStateException(
-                  "Unexpected mis-match of listOfStringElementKeys for elementKey: "
-                      + ci.getElementKey());
-            }
-            for (int i = 0; i < ciList.size(); ++i) {
-              if (!refList.contains(ciList.get(i))) {
-                throw new IllegalStateException("Unexpected mis-match of listOfStringElementKeys["
-                    + i + "] for elementKey: " + ci.getElementKey());
-              }
-            }
-            ElementType type = ci.getType();
-            ElementType existingType = existingDefn.getType();
-            if (!existingType.equals(type)) {
-              throw new IllegalStateException(
-                  "Unexpected mis-match of elementType for elementKey: " + ci.getElementKey());
-            }
-          }
-          // OK -- we have matching table definition
-          // now just clear and update the properties...
-
-          boolean successful = false;
-          try {
-            context.getDatabase().beginTransaction(appName, db);
-            context.getDatabase().replaceDBTableMetadataList(appName, db, tableId, kvsEntries, true);
-
-            for (ColumnDefinition ci : colDefns.getColumnDefinitions()) {
-              // put the displayName into the KVS
-              List<KeyValueStoreEntry> kvsList = colEntries.get(ci.getElementKey());
-              if (kvsList == null) {
-                kvsList = new ArrayList<KeyValueStoreEntry>();
-                colEntries.put(ci.getElementKey(), kvsList);
-              }
-              KeyValueStoreEntry entry = null;
-              for (KeyValueStoreEntry e : kvsList) {
-                if (e.partition.equals(KeyValueStoreConstants.PARTITION_COLUMN)
-                    && e.aspect.equals(ci.getElementKey())
-                    && e.key.equals(KeyValueStoreConstants.COLUMN_DISPLAY_NAME)) {
-                  entry = e;
-                  break;
-                }
-              }
-
-              if (entry != null && (entry.value == null || entry.value.trim().length() == 0)) {
-                kvsList.remove(entry);
-                entry = null;
-              }
-
-              if (entry == null) {
-                entry = new KeyValueStoreEntry();
-                entry.tableId = tableId;
-                entry.partition = KeyValueStoreConstants.PARTITION_COLUMN;
-                entry.aspect = ci.getElementKey();
-                entry.key = KeyValueStoreConstants.COLUMN_DISPLAY_NAME;
-                entry.type = ElementDataType.object.name();
-                entry.value = ODKFileUtils.mapper.writeValueAsString(ci.getElementKey());
-                kvsList.add(entry);
-              }
-              context.getDatabase().replaceDBTableMetadataList(appName, db, tableId, kvsList, false);
-            }
-            successful = true;
-          } finally {
-            context.getDatabase().closeTransaction(appName, db, successful);
-          }
-        } else {
-
-          for (ColumnDefinition ci : colDefns.getColumnDefinitions()) {
-            // put the displayName into the KVS if not supplied
-            List<KeyValueStoreEntry> kvsList = colEntries.get(ci.getElementKey());
-            if (kvsList == null) {
-              kvsList = new ArrayList<KeyValueStoreEntry>();
-              colEntries.put(ci.getElementKey(), kvsList);
-            }
-            KeyValueStoreEntry entry = null;
-            for (KeyValueStoreEntry e : kvsList) {
-              if (e.partition.equals(KeyValueStoreConstants.PARTITION_COLUMN)
-                  && e.aspect.equals(ci.getElementKey())
-                  && e.key.equals(KeyValueStoreConstants.COLUMN_DISPLAY_NAME)) {
-                entry = e;
-                break;
-              }
-            }
-
-            if (entry != null && (entry.value == null || entry.value.trim().length() == 0)) {
-              kvsList.remove(entry);
-              entry = null;
-            }
-
-            if (entry == null) {
-              entry = new KeyValueStoreEntry();
-              entry.tableId = tableId;
-              entry.partition = KeyValueStoreConstants.PARTITION_COLUMN;
-              entry.aspect = ci.getElementKey();
-              entry.key = KeyValueStoreConstants.COLUMN_DISPLAY_NAME;
-              entry.type = ElementDataType.object.name();
-              entry.value = ODKFileUtils.mapper.writeValueAsString(ci.getElementKey());
-              kvsList.add(entry);
-            }
-          }
-
-          // ensure there is a display name for the table...
-          KeyValueStoreEntry e = new KeyValueStoreEntry();
-          e.tableId = tableId;
-          e.partition = KeyValueStoreConstants.PARTITION_TABLE;
-          e.aspect = KeyValueStoreConstants.ASPECT_DEFAULT;
-          e.key = KeyValueStoreConstants.TABLE_DISPLAY_NAME;
-          e.type = ElementDataType.object.name();
-          e.value = NameUtil.normalizeDisplayName((displayName == null ? NameUtil
-              .constructSimpleDisplayName(tableId) : displayName));
-          kvsEntries.add(e);
-
-          boolean successful = false;
-          try {
-            context.getDatabase().beginTransaction(appName, db);
-            ColumnList cols = new ColumnList(columns);
-            context.getDatabase().createOrOpenDBTableWithColumns(appName, db, tableId, cols);
-            context.getDatabase().replaceDBTableMetadataList(appName, db, tableId, kvsEntries, false);
-
-            // we have created the table...
-            for (ColumnDefinition ci : colDefns.getColumnDefinitions()) {
-              List<KeyValueStoreEntry> kvsList = colEntries.get(ci.getElementKey());
-              context.getDatabase().replaceDBTableMetadataList(appName, db, tableId, kvsList, false);
-            }
-            successful = true;
-          } finally {
-            context.getDatabase().closeTransaction(appName, db, successful);
-          }
-        }
-      } finally {
-        try {
-          if (input != null) {
-            input.close();
-          }
-        } catch (IOException e) {
         }
       }
 
-      // And update the inserted properties so that
-      // the known entries have their expected types.
-      boolean successful = false;
-      try {
-        context.getDatabase().beginTransaction(appName, db);
+      ColumnList cols = new ColumnList(columns);
+      context.getDatabase().createOrOpenDBTableWithColumnsAndProperties(appName, db, tableId, cols, kvsEntries, true);
 
-        context.getDatabase().enforceTypesDBTableMetadata(appName, db, tableId);
-
-        successful = true;
-      } finally {
-        context.getDatabase().closeTransaction(appName, db, successful);
-      }
     } finally {
       if (db != null) {
         context.getDatabase().closeDatabase(appName, db);

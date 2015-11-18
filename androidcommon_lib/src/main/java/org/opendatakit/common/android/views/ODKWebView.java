@@ -15,6 +15,7 @@
  */
 package org.opendatakit.common.android.views;
 
+import org.opendatakit.dbshim.service.OdkDbShimInterface;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
@@ -30,6 +31,7 @@ import org.opendatakit.common.android.activities.ODKActivity;
 import org.opendatakit.common.android.application.CommonApplication;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
+import org.opendatakit.common.android.utilities.WebLoggerIf;
 import org.opendatakit.dbshim.service.OdkDbShimInterface;
 
 import java.util.LinkedList;
@@ -55,7 +57,7 @@ public class ODKWebView extends WebView {
   private static final String JAVASCRIPT_REQUESTS_WAITING_FOR_PAGE_LOAD = "JAVASCRIPT_REQUESTS_WAITING_FOR_PAGE_LOAD";
 
   private final ODKActivity activity;
-  private WebLogger log;
+  private WebLoggerIf log;
   private ODKShimJavascriptCallback shim;
   private ODKDbShimJavascriptCallback dbShim;
   private Data data;
@@ -190,7 +192,7 @@ public class ODKWebView extends WebView {
     addJavascriptInterface(shim, "shim");
   }
 
-  public final WebLogger getLogger() {
+  public final WebLoggerIf getLogger() {
     return log;
   }
 
