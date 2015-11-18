@@ -259,7 +259,7 @@ public abstract class ExecutorProcessor implements Runnable {
   }
 
   private void updateExecutorContext() {
-    context.releaseResources("switching to new WebFragment");
+    request.oldContext.releaseResources("switching to new WebFragment");
     context.popRequest(false);
   }
 
@@ -284,9 +284,12 @@ public abstract class ExecutorProcessor implements Runnable {
 
 
     List<KeyValueStoreEntry> entries = null;
-    if (request.includeKeyValueStoreMap) {
+
+    // We are assuming that we always have the KVS
+    // otherwise use the request.includeKeyValueStoreMap
+    //if (request.includeKeyValueStoreMap) {
       entries = dbInterface.getDBTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null);
-    }
+    //}
 
     // assemble the data and metadata objects
     ArrayList<List<Object>> data = new ArrayList<List<Object>>();
@@ -346,7 +349,22 @@ public abstract class ExecutorProcessor implements Runnable {
             } else if (type == ElementDataType.bool) {
               // This is broken - a value
               // of "TRUE" is returned some times
-              value = DataHelper.intToBool(Integer.parseInt(entry.value));
+              value = entry.value;
+              if (value != null) {
+                try {
+                  value = DataHelper.intToBool(Integer.parseInt(entry.value));
+                } catch (Exception e) {
+                  WebLogger.getLogger(context.getAppName()).e(TAG,
+                      "ElementDataType: " + entry.type + " could not be converted from int");
+                  try {
+                    value = DataHelper.stringToBool(entry.value);
+                  } catch (Exception e2) {
+                    WebLogger.getLogger(context.getAppName()).e(TAG,
+                        "ElementDataType: " + entry.type + " could not be converted from string");
+                    e2.printStackTrace();
+                  }
+                }
+              }
             } else if (type == ElementDataType.number) {
               value = Double.parseDouble(entry.value);
             } else if (type == ElementDataType.string) {

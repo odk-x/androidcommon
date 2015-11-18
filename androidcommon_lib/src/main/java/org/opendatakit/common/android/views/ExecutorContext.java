@@ -145,12 +145,12 @@ public class ExecutorContext implements DatabaseConnectionListener {
       // processor is most often NOT discarded
       ExecutorProcessor processor = (trigger ? fragment.newExecutorProcessor(this) : null);
       synchronized (mutex) {
-        if ( !worker.isShutdown() && !worker.isTerminated() && !workQueue.isEmpty() ) {
-          workQueue.removeFirst();
+         if ( !workQueue.isEmpty() ) {
+            workQueue.removeFirst();
+         }
+        if ( !worker.isShutdown() && !worker.isTerminated() && trigger && !workQueue.isEmpty() ) {
           // signal that we have work...
-          if ( trigger && !workQueue.isEmpty() ) {
-            worker.execute(processor);
-          }
+          worker.execute(processor);
         }
       }
     }
@@ -346,4 +346,8 @@ public class ExecutorContext implements DatabaseConnectionListener {
     public void databaseUnavailable() {
         new ExecutorContext(fragment);
     }
+
+   public synchronized boolean isAlive() {
+      return !(worker.isShutdown() || worker.isTerminated());
+   }
 }

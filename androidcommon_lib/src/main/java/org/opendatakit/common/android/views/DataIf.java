@@ -82,15 +82,27 @@ public class DataIf {
         weakData = new WeakReference<Data>(data);
     }
 
-  /**
-   * Access the result of a request
-   *
-   * @return null if there is no result, otherwise the responseJSON of the last action
-   */
+   /**
+    * Get the data for the view once the user is ready for it.
+    * When the user chooses to launch a detail, list, or map view
+    * they will have to call this via the JS API with success and
+    * failure callback functions to manipulate the data for their views
+    *
+    */
   @android.webkit.JavascriptInterface
-  public String getResponseJSON() {
-      return weakData.get().getResponseJSON();
+  public void getViewData(String callbackJSON) {
+     weakData.get().getViewData(callbackJSON);
   }
+
+   /**
+    * Access the result of a request
+    *
+    * @return null if there is no result, otherwise the responseJSON of the last action
+    */
+   @android.webkit.JavascriptInterface
+   public String getResponseJSON() {
+      return weakData.get().getResponseJSON();
+   }
 
     /**
      * Query the database using sql.
@@ -139,8 +151,8 @@ public class DataIf {
     public void rawQuery(String sqlCommand, String[] sqlBindParams,
                            String callbackJSON, String transId, Boolean leaveTransactionOpen)
             throws RemoteException {
-        weakData.get().rawQuery(sqlCommand, sqlBindParams,
-                callbackJSON, transId, leaveTransactionOpen);
+        weakData.get().rawQuery(sqlCommand, sqlBindParams, callbackJSON, transId,
+            leaveTransactionOpen);
     }
 
     /**
@@ -161,8 +173,8 @@ public class DataIf {
     public void updateRow(String tableId, String stringifiedJSON, String rowId,
                             String callbackJSON, String transId, Boolean leaveTransactionOpen)
             throws RemoteException {
-        weakData.get().updateRow(tableId, stringifiedJSON, rowId,
-                callbackJSON, transId, leaveTransactionOpen);
+        weakData.get().updateRow(tableId, stringifiedJSON, rowId, callbackJSON, transId,
+            leaveTransactionOpen);
     }
 
 
@@ -184,8 +196,8 @@ public class DataIf {
     public void deleteRow(String tableId, String stringifiedJSON, String rowId,
                             String callbackJSON, String transId, Boolean leaveTransactionOpen)
             throws RemoteException {
-        weakData.get().deleteRow(tableId, stringifiedJSON, rowId,
-                callbackJSON, transId, leaveTransactionOpen);
+        weakData.get().deleteRow(tableId, stringifiedJSON, rowId, callbackJSON, transId,
+            leaveTransactionOpen);
     }
 
 
@@ -207,8 +219,8 @@ public class DataIf {
     public void addRow(String tableId, String stringifiedJSON, String rowId,
                        String callbackJSON, String transId, Boolean leaveTransactionOpen)
             throws RemoteException {
-        weakData.get().addRow(tableId, stringifiedJSON, rowId,
-                callbackJSON, transId, leaveTransactionOpen);
+        weakData.get().addRow(tableId, stringifiedJSON, rowId, callbackJSON, transId,
+            leaveTransactionOpen);
     }
 
 
@@ -253,8 +265,8 @@ public class DataIf {
     public void saveCheckpointAsIncomplete (String tableId, String rowId,
                                               String callbackJSON, String transId, Boolean leaveTransactionOpen)
             throws RemoteException {
-        weakData.get().saveCheckpointAsIncomplete(tableId, rowId,
-                callbackJSON, transId, leaveTransactionOpen);
+        weakData.get().saveCheckpointAsIncomplete(tableId, rowId, callbackJSON, transId,
+            leaveTransactionOpen);
     }
 
 
@@ -275,8 +287,8 @@ public class DataIf {
     public void saveCheckpointAsComplete (String tableId, String rowId,
                                             String callbackJSON, String transId, Boolean leaveTransactionOpen)
             throws RemoteException {
-        weakData.get().saveCheckpointAsComplete(tableId, rowId,
-                callbackJSON, transId, leaveTransactionOpen);
+        weakData.get().saveCheckpointAsComplete(tableId, rowId, callbackJSON, transId,
+            leaveTransactionOpen);
     }
 
 
@@ -298,8 +310,8 @@ public class DataIf {
     public void deleteLastCheckpoint (String tableId, String rowId, boolean deleteAllCheckpoints,
                                               String callbackJSON, String transId, Boolean leaveTransactionOpen)
             throws RemoteException {
-        weakData.get().deleteLastCheckpoint(tableId, rowId, deleteAllCheckpoints,
-                callbackJSON, transId, leaveTransactionOpen);
+        weakData.get().deleteLastCheckpoint(tableId, rowId, deleteAllCheckpoints, callbackJSON,
+            transId, leaveTransactionOpen);
     }
 
     /**

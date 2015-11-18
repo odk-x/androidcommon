@@ -15,15 +15,8 @@
  */
 package org.opendatakit.common.android.views;
 
-import java.util.LinkedList;
-
-import org.opendatakit.common.android.activities.ODKActivity;
-import org.opendatakit.common.android.application.CommonApplication;
-import org.opendatakit.common.android.utilities.ODKFileUtils;
-import org.opendatakit.common.android.utilities.WebLogger;
-import org.opendatakit.dbshim.service.OdkDbShimInterface;
-
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Build;
@@ -33,6 +26,13 @@ import android.util.AttributeSet;
 import android.view.View;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import org.opendatakit.common.android.activities.ODKActivity;
+import org.opendatakit.common.android.application.CommonApplication;
+import org.opendatakit.common.android.utilities.ODKFileUtils;
+import org.opendatakit.common.android.utilities.WebLogger;
+import org.opendatakit.dbshim.service.OdkDbShimInterface;
+
+import java.util.LinkedList;
 
 /**
  * NOTE: assumes that the Context implements ODKActivity.
@@ -70,7 +70,7 @@ public class ODKWebView extends WebView {
     if ( ready && dbShimBinder != null && fragment != null ) {
       dbShim = new ODKDbShimJavascriptCallback(ODKWebView.this, activity, dbShimBinder);
       addJavascriptInterface(dbShim, "dbshim");
-      data = new Data(fragment);
+      data = new Data(fragment, (Activity)activity);
       addJavascriptInterface(data.getJavascriptInterfaceWithWeakReference(), "dataif");
       loadPage();
     } else {

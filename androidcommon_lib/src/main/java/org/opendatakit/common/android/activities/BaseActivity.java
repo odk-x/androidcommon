@@ -30,7 +30,7 @@ public abstract class BaseActivity extends Activity implements DatabaseConnectio
   @Override
   protected void onPause() {
     ((CommonApplication) getApplication()).onActivityPause(this);
-    super.onDestroy();
+    super.onPause();
   }
 
   @Override
