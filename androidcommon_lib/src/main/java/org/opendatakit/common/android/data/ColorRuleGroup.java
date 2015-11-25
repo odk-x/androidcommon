@@ -79,6 +79,7 @@ public class ColorRuleGroup {
   private String mTableId;
   private String mElementKey;
   private String[] mAdminColumns;
+  private boolean mDefault;
 
   /**
    * Construct the rule group for the given column.
@@ -123,8 +124,14 @@ public class ColorRuleGroup {
     default:
       WebLogger.getLogger(mAppName).e(TAG, "unrecognized ColorRuleGroup type: " + mType);
     }
+    mDefault = false;
     if ( entries.size() != 1 ) {
-      this.ruleList = new ArrayList<ColorRule>();
+      if (mType == Type.STATUS_COLUMN) {
+        this.ruleList = ColorRuleUtil.getDefaultSyncStateColorRules();
+        mDefault = true;
+      } else {
+        this.ruleList = new ArrayList<ColorRule>();
+      }
     } else {
       jsonRulesString = KeyValueStoreUtils.getObject(appName, entries.get(0));
       this.ruleList = parseJsonString(jsonRulesString);
@@ -197,6 +204,7 @@ public class ColorRuleGroup {
   public void replaceColorRuleList(List<ColorRule> newRules) {
     this.ruleList.clear();
     this.ruleList.addAll(newRules);
+    mDefault = false;
   }
 
   /**
@@ -216,6 +224,10 @@ public class ColorRuleGroup {
    * @throws RemoteException
    */
   public void saveRuleList(CommonApplication ctxt) throws RemoteException {
+    if ( mDefault ) {
+      // nothing to save
+      return;
+    }
     OdkDbHandle db = null;
     try {
       db = ctxt.getDatabase().openDatabase(mAppName);
@@ -276,6 +288,7 @@ public class ColorRuleGroup {
     for (int i = 0; i < ruleList.size(); i++) {
       if (ruleList.get(i).getRuleId().equals(updatedRule.getRuleId())) {
         ruleList.set(i, updatedRule);
+        mDefault = false;
         return;
       }
     }
@@ -291,6 +304,7 @@ public class ColorRuleGroup {
     for (int i = 0; i < ruleList.size(); i++) {
       if (ruleList.get(i).getRuleId().equals(rule.getRuleId())) {
         ruleList.remove(i);
+        mDefault = false;
         return;
       }
     }
