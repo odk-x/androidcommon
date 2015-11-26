@@ -95,39 +95,6 @@ public class ODKShimJavascriptCallback {
     // @formatter:on
   }
 
-  /**
-   * <p>
-   * Get information needed to open the W3C SQLite database.
-   * </p>
-   *
-   * <pre>
-   * {"shortName":"odk",
-   *  "version":"1","
-   *  "displayName":"ODK Instances Database",
-   *  "maxSize":65536 }
-   * </pre>
-   *
-   * The database interaction is always asynchronous because that is what
-   * Android 2.2.3 WebKit supports. The "version" value can be used by the
-   * javascript to adjust to whatever database structure is expected to be used
-   * within the ODK frameworks.
-   *
-   * @return JSONstring as defined above.
-   */
-  @android.webkit.JavascriptInterface
-  public String getDatabaseSettings() {
-    if (mWebView == null) {
-      log.i(t, "getDatabaseSettings -- interface removed");
-      return "{}";
-    }
-    log("I", "getDatabaseSettings");
-    // maxSize is in bytes
-    return "{\"shortName\":\"" + ArchaicConstantsToRemove.WEBDB_INSTANCE_DB_SHORT_NAME
-        + "\",\"version\":\"" + ArchaicConstantsToRemove.WEBDB_INSTANCE_DB_VERSION
-        + "\",\"displayName\":\"" + ArchaicConstantsToRemove.WEBDB_INSTANCE_DB_DISPLAY_NAME
-        + "\",\"maxSize\":" + ArchaicConstantsToRemove.WEBDB_INSTANCE_DB_ESTIMATED_SIZE + "}";
-  }
-
   @android.webkit.JavascriptInterface
   public void log(String level, String loggingString) {
     char l = (level == null) ? 'I' : level.charAt(0);
