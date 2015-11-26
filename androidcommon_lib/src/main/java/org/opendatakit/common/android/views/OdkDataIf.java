@@ -72,14 +72,14 @@ import java.lang.ref.WeakReference;
  *
  * The rawQuery result just has the first two entries.
  */
-public class DataIf {
+public class OdkDataIf {
 
-    public static final String TAG = "DataIf";
+    public static final String TAG = "OdkDataIf";
 
-    private WeakReference<Data> weakData;
+    private WeakReference<OdkData> weakData;
 
-    DataIf(Data data) {
-        weakData = new WeakReference<Data>(data);
+    OdkDataIf(OdkData odkData) {
+        weakData = new WeakReference<OdkData>(odkData);
     }
 
    /**
