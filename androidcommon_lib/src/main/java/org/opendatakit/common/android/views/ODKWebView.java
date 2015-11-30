@@ -32,7 +32,6 @@ import org.opendatakit.common.android.application.CommonApplication;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
 import org.opendatakit.common.android.utilities.WebLoggerIf;
-import org.opendatakit.dbshim.service.OdkDbShimInterface;
 
 import java.util.LinkedList;
 
@@ -60,7 +59,7 @@ public class ODKWebView extends WebView {
   private WebLoggerIf log;
   private ODKShimJavascriptCallback shim;
   private ODKDbShimJavascriptCallback dbShim;
-  private Data data;
+  private OdkData odkData;
   private String loadPageUrl = null;
   private boolean isLoadPageFrameworkFinished = false;
   private boolean isLoadPageFinished = false;
@@ -72,8 +71,8 @@ public class ODKWebView extends WebView {
     if ( ready && dbShimBinder != null && fragment != null ) {
       dbShim = new ODKDbShimJavascriptCallback(ODKWebView.this, activity, dbShimBinder);
       addJavascriptInterface(dbShim, "dbshim");
-      data = new Data(fragment, (Activity)activity);
-      addJavascriptInterface(data.getJavascriptInterfaceWithWeakReference(), "dataif");
+      odkData = new OdkData(fragment, (Activity)activity);
+      addJavascriptInterface(odkData.getJavascriptInterfaceWithWeakReference(), "odkDataIf");
       loadPage();
     } else {
       resetLoadPageStatus(loadPageUrl);

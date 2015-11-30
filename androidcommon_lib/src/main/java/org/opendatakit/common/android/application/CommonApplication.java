@@ -14,30 +14,6 @@
 
 package org.opendatakit.common.android.application;
 
-import java.util.ArrayList;
-
-import org.opendatakit.androidcommon.R;
-import org.opendatakit.common.android.activities.ODKActivity;
-import org.opendatakit.common.android.listener.DatabaseConnectionListener;
-import org.opendatakit.common.android.listener.InitializationListener;
-import org.opendatakit.common.android.listener.LicenseReaderListener;
-import org.opendatakit.common.android.logic.CommonToolProperties;
-import org.opendatakit.common.android.logic.PropertiesSingleton;
-import org.opendatakit.common.android.task.InitializationTask;
-import org.opendatakit.common.android.task.LicenseReaderTask;
-import org.opendatakit.common.android.utilities.ODKFileUtils;
-import org.opendatakit.common.android.utilities.WebLogger;
-import org.opendatakit.common.android.views.DataIf;
-import org.opendatakit.common.android.views.ExecutorContext;
-import org.opendatakit.common.android.views.ICallbackFragment;
-import org.opendatakit.common.android.views.ODKWebView;
-import org.opendatakit.database.DatabaseConsts;
-import org.opendatakit.database.service.OdkDbInterface;
-import org.opendatakit.dbshim.DbShimConsts;
-import org.opendatakit.dbshim.service.OdkDbShimInterface;
-import org.opendatakit.webkitserver.WebkitServerConsts;
-import org.opendatakit.webkitserver.service.OdkWebkitServerInterface;
-
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Application;
@@ -57,6 +33,27 @@ import android.util.Log;
 import android.view.View;
 import android.webkit.WebView;
 import android.widget.Toast;
+import org.opendatakit.androidcommon.R;
+import org.opendatakit.common.android.activities.ODKActivity;
+import org.opendatakit.common.android.listener.DatabaseConnectionListener;
+import org.opendatakit.common.android.listener.InitializationListener;
+import org.opendatakit.common.android.listener.LicenseReaderListener;
+import org.opendatakit.common.android.logic.CommonToolProperties;
+import org.opendatakit.common.android.logic.PropertiesSingleton;
+import org.opendatakit.common.android.task.InitializationTask;
+import org.opendatakit.common.android.task.LicenseReaderTask;
+import org.opendatakit.common.android.utilities.ODKFileUtils;
+import org.opendatakit.common.android.utilities.WebLogger;
+import org.opendatakit.common.android.views.ICallbackFragment;
+import org.opendatakit.common.android.views.ODKWebView;
+import org.opendatakit.database.DatabaseConsts;
+import org.opendatakit.database.service.OdkDbInterface;
+import org.opendatakit.dbshim.DbShimConsts;
+import org.opendatakit.dbshim.service.OdkDbShimInterface;
+import org.opendatakit.webkitserver.WebkitServerConsts;
+import org.opendatakit.webkitserver.service.OdkWebkitServerInterface;
+
+import java.util.ArrayList;
 
 public abstract class CommonApplication extends Application  implements LicenseReaderListener, InitializationListener {
 

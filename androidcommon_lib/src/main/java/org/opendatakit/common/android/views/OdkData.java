@@ -18,7 +18,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import org.opendatakit.common.android.provider.DataTableColumns;
 
-public class Data {
+public class OdkData {
 
    public static final String descOrder = "DESC";
 
@@ -79,13 +79,13 @@ public class Data {
 
    protected Activity mActivity;
 
-   private static final String TAG = Data.class.getSimpleName();
+   private static final String TAG = OdkData.class.getSimpleName();
 
    private final ICallbackFragment mFragment;
 
    private ExecutorContext context;
 
-   public Data(ICallbackFragment fragment, Activity activity) {
+   public OdkData(ICallbackFragment fragment, Activity activity) {
       mFragment = fragment;
       mActivity = activity;
       // change to support multiple data objects within a single webpage
@@ -106,8 +106,8 @@ public class Data {
       context.queueRequest(request);
    }
 
-   public DataIf getJavascriptInterfaceWithWeakReference() {
-      return new DataIf(this);
+   public OdkDataIf getJavascriptInterfaceWithWeakReference() {
+      return new OdkDataIf(this);
    }
 
    /**
