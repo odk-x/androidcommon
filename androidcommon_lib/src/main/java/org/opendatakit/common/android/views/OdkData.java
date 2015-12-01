@@ -189,6 +189,23 @@ public class OdkData {
       queueRequest(request);
    }
 
+  /**
+   * Get all rows that match the given rowId.
+   * This can be zero, one or more. It is more than one if there
+   * is a sync conflict or if there are edit checkpoints.
+   *
+   * @param tableId              The table being updated
+   * @param rowId                The rowId of the row being added.
+   * @param callbackJSON         The JSON object used by the JS layer to recover the callback function
+   *                             that can process the response
+   */
+  public void getRows(String tableId, String rowId, String callbackJSON) {
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_GET_ROWS, tableId,
+        null, rowId, callbackJSON);
+
+    queueRequest(request);
+  }
+
    /**
     * Get the most recent checkpoint or last state for a row in the table.
     * Throws an exception if this row is in conflict.
@@ -199,7 +216,7 @@ public class OdkData {
     * @param callbackJSON         The JSON object used by the JS layer to recover the callback function
     *                             that can process the response
     */
-   public void getRow(String tableId, String rowId, String callbackJSON) {
+   public void getMostRecentRow(String tableId, String rowId, String callbackJSON) {
       ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_GET_MOST_RECENT_ROW, tableId,
           null, rowId, callbackJSON);
 
@@ -307,20 +324,32 @@ public class OdkData {
       queueRequest(request);
    }
 
+  /**
+   * Delete all checkpoint.  Checkpoints accumulate; this removes all of them.
+   *
+   * @param tableId              The table being updated
+   * @param rowId                The rowId of the row being saved-as-incomplete.
+   * @param callbackJSON         The JSON object used by the JS layer to recover the callback function
+   *                             that can process the response
+   */
+  public void deleteAllCheckpoints(String tableId, String rowId, String callbackJSON) {
+    ExecutorRequest request = new ExecutorRequest(
+        ExecutorRequestType.USER_TABLE_DELETE_ALL_CHECKPOINTS, tableId, null, rowId, callbackJSON);
+
+    queueRequest(request);
+  }
+
    /**
     * Delete last checkpoint.  Checkpoints accumulate; this removes the most recent one, leaving earlier ones.
     *
     * @param tableId              The table being updated
     * @param rowId                The rowId of the row being saved-as-incomplete.
-    * @param deleteAllCheckpoints true if all checkpoints should be deleted, not just the last one.
     * @param callbackJSON         The JSON object used by the JS layer to recover the callback function
     *                             that can process the response
     */
-   public void deleteLastCheckpoint(String tableId, String rowId, boolean deleteAllCheckpoints,
-       String callbackJSON) {
+   public void deleteLastCheckpoint(String tableId, String rowId, String callbackJSON) {
       ExecutorRequest request = new ExecutorRequest(
-          ExecutorRequestType.USER_TABLE_DELETE_LAST_CHECKPOINT, tableId, rowId,
-          deleteAllCheckpoints, callbackJSON);
+          ExecutorRequestType.USER_TABLE_DELETE_LAST_CHECKPOINT, tableId, null, rowId, callbackJSON);
 
       queueRequest(request);
    }

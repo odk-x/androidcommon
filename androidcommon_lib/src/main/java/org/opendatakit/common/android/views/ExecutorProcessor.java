@@ -111,6 +111,9 @@ public abstract class ExecutorProcessor implements Runnable {
         case USER_TABLE_QUERY:
           userTableQuery();
           break;
+      case USER_TABLE_GET_ROWS:
+          getRows();
+          break;
       case USER_TABLE_GET_MOST_RECENT_ROW:
           getMostRecentRow();
           break;
@@ -375,6 +378,26 @@ public abstract class ExecutorProcessor implements Runnable {
   protected abstract void extendQueryMetadata(OdkDbHandle dbHandle, List<KeyValueStoreEntry> entries, UserTable userTable, Map<String, Object> metadata);
 
 
+  private void getRows() throws RemoteException {
+    if (request.tableId == null) {
+      reportErrorAndCleanUp("tableId cannot be null");
+      return;
+    }
+    if (request.rowId == null) {
+      reportErrorAndCleanUp("rowId cannot be null");
+      return;
+    }
+    OrderedColumns columns = context.getOrderedColumns(request.tableId);
+    if (columns == null) {
+      columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
+      context.putOrderedColumns(request.tableId, columns);
+    }
+    UserTable t = dbInterface
+        .getRowsWithId(context.getAppName(), dbHandle, request.tableId, columns, request.rowId);
+
+    reportSuccessAndCleanUp(t);
+  }
+
   private void getMostRecentRow() throws RemoteException {
     if (request.tableId == null) {
       reportErrorAndCleanUp("tableId cannot be null");
@@ -389,8 +412,8 @@ public abstract class ExecutorProcessor implements Runnable {
       columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
       context.putOrderedColumns(request.tableId, columns);
     }
-    UserTable t = dbInterface.getMostRecentRowInExistingDBTableWithId(context.getAppName(),
-        dbHandle, request.tableId, columns, request.rowId);
+    UserTable t = dbInterface
+        .getMostRecentRowWithId(context.getAppName(), dbHandle, request.tableId, columns, request.rowId);
 
     reportSuccessAndCleanUp(t);
   }
@@ -412,7 +435,7 @@ public abstract class ExecutorProcessor implements Runnable {
 
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
     UserTable t = dbInterface
-        .updateDataInExistingDBTableWithId(context.getAppName(), dbHandle, request.tableId, columns, cvValues, request.rowId);
+        .updateRowWithId(context.getAppName(), dbHandle, request.tableId, columns, cvValues, request.rowId);
 
     reportSuccessAndCleanUp(t);
   }
@@ -433,8 +456,8 @@ public abstract class ExecutorProcessor implements Runnable {
     }
 
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
-    dbInterface.deleteDataInExistingDBTableWithId(context.getAppName(), dbHandle, request.tableId,
-            request.rowId);
+    dbInterface
+        .deleteRowWithId(context.getAppName(), dbHandle, request.tableId, columns, request.rowId);
 
     reportSuccessAndCleanUp(null, null);
   }
@@ -456,7 +479,7 @@ public abstract class ExecutorProcessor implements Runnable {
 
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
     UserTable t = dbInterface
-        .insertDataIntoExistingDBTableWithId(context.getAppName(), dbHandle, request.tableId, columns, cvValues, request.rowId);
+        .insertRowWithId(context.getAppName(), dbHandle, request.tableId, columns, cvValues, request.rowId);
 
     reportSuccessAndCleanUp(t);
   }
@@ -477,8 +500,8 @@ public abstract class ExecutorProcessor implements Runnable {
     }
 
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
-    UserTable t = dbInterface.insertCheckpointRowIntoExistingDBTableWithId(context.getAppName(),
-        dbHandle, request.tableId, columns, cvValues, request.rowId);
+    UserTable t = dbInterface
+        .insertCheckpointRowWithId(context.getAppName(), dbHandle, request.tableId, columns, cvValues, request.rowId);
 
     reportSuccessAndCleanUp(t);
   }
@@ -499,8 +522,8 @@ public abstract class ExecutorProcessor implements Runnable {
     }
 
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
-    UserTable t = dbInterface.saveAsIncompleteMostRecentCheckpointDataInDBTableWithId(
-        context.getAppName(), dbHandle, request.tableId, columns, cvValues, request.rowId);
+    UserTable t = dbInterface.saveAsIncompleteMostRecentCheckpointRowWithId(context.getAppName(),
+        dbHandle, request.tableId, columns, cvValues, request.rowId);
 
     reportSuccessAndCleanUp(t);
   }
@@ -521,8 +544,8 @@ public abstract class ExecutorProcessor implements Runnable {
     }
 
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
-    UserTable t = dbInterface.saveAsCompleteMostRecentCheckpointDataInDBTableWithId(
-        context.getAppName(), dbHandle, request.tableId, columns, cvValues, request.rowId);
+    UserTable t = dbInterface.saveAsCompleteMostRecentCheckpointRowWithId(context.getAppName(),
+        dbHandle, request.tableId, columns, cvValues, request.rowId);
 
     reportSuccessAndCleanUp(t);
   }
@@ -537,22 +560,38 @@ public abstract class ExecutorProcessor implements Runnable {
       return;
     }
 
-    if ( request.deleteAllCheckpoints != true ) {
-      dbInterface.deleteLastCheckpointRowWithId(context.getAppName(), dbHandle, request.tableId,
-              request.rowId);
-    } else {
-      OrderedColumns columns = context.getOrderedColumns(request.tableId);
-      if (columns == null) {
-        columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
-        context.putOrderedColumns(request.tableId, columns);
-      }
-
-      //ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
-      dbInterface.deleteAllCheckpointRowsWithId(context.getAppName(), dbHandle, request.tableId,
-          request.rowId);
+    OrderedColumns columns = context.getOrderedColumns(request.tableId);
+    if (columns == null) {
+      columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
+      context.putOrderedColumns(request.tableId, columns);
     }
 
-    reportSuccessAndCleanUp(null, null);
+    UserTable t = dbInterface.deleteLastCheckpointRowWithId(context.getAppName(), dbHandle,
+        request.tableId, columns, request.rowId);
+    reportSuccessAndCleanUp(t);
+  }
+
+  private void deleteAllCheckpoints() throws RemoteException {
+    if ( request.tableId == null ) {
+      reportErrorAndCleanUp("tableId cannot be null");
+      return;
+    }
+    if ( request.rowId == null ) {
+      reportErrorAndCleanUp("rowId cannot be null");
+      return;
+    }
+
+    OrderedColumns columns = context.getOrderedColumns(request.tableId);
+    if (columns == null) {
+      columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
+      context.putOrderedColumns(request.tableId, columns);
+    }
+
+    //ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
+    UserTable t = dbInterface.deleteAllCheckpointRowsWithId(context.getAppName(), dbHandle,
+        request.tableId, columns, request.rowId);
+
+    reportSuccessAndCleanUp(t);
   }
 
 }

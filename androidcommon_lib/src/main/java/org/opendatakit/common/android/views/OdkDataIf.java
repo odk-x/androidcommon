@@ -136,7 +136,24 @@ public class OdkDataIf {
         weakData.get().rawQuery(sqlCommand, sqlBindParams, callbackJSON);
     }
 
-    /**
+  /**
+   * Get all rows that match the given rowId.
+   * This can be zero, one or more. It is more than one if there
+   * is a sync conflict or if there are edit checkpoints.
+   *
+   * @param tableId  The table being updated
+   * @param rowId The rowId of the row being changed.
+   * @param callbackJSON The JSON object used by the JS layer to recover the callback function
+   *                     that can process the response
+   */
+  @android.webkit.JavascriptInterface
+  public void getRows(String tableId, String rowId, String callbackJSON)
+      throws RemoteException {
+    weakData.get().getRows(tableId, rowId, callbackJSON);
+  }
+
+
+  /**
      * Get the most recent checkpoint or data for a row in the table
      * Throws an exception if the row is in conflict.
      *
@@ -146,9 +163,9 @@ public class OdkDataIf {
      *                     that can process the response
      */
     @android.webkit.JavascriptInterface
-    public void getRow(String tableId, String rowId, String callbackJSON)
+    public void getMostRecentRow(String tableId, String rowId, String callbackJSON)
       throws RemoteException {
-         weakData.get().getRow(tableId, rowId, callbackJSON);
+         weakData.get().getMostRecentRow(tableId, rowId, callbackJSON);
     }
 
 
@@ -255,19 +272,33 @@ public class OdkDataIf {
     }
 
 
+  /**
+   * Delete all checkpoints.  Checkpoints accumulate; this removes all of them.
+   *
+   * @param tableId  The table being updated
+   * @param rowId The rowId of the row being saved-as-incomplete.
+   * @param callbackJSON The JSON object used by the JS layer to recover the callback function
+   *                     that can process the response
+   */
+  @android.webkit.JavascriptInterface
+  public void deleteAllCheckpoints (String tableId, String rowId,
+      String callbackJSON)
+      throws RemoteException {
+    weakData.get().deleteAllCheckpoints(tableId, rowId, callbackJSON);
+  }
+
     /**
      * Delete last checkpoint.  Checkpoints accumulate; this removes the most recent one, leaving earlier ones.
      *
      * @param tableId  The table being updated
      * @param rowId The rowId of the row being saved-as-incomplete.
-     * @param deleteAllCheckpoints true if all checkpoints should be deleted, not just the last one.
      * @param callbackJSON The JSON object used by the JS layer to recover the callback function
      *                     that can process the response
      */
     @android.webkit.JavascriptInterface
-    public void deleteLastCheckpoint (String tableId, String rowId, boolean deleteAllCheckpoints,
+    public void deleteLastCheckpoint (String tableId, String rowId,
                                               String callbackJSON)
             throws RemoteException {
-        weakData.get().deleteLastCheckpoint(tableId, rowId, deleteAllCheckpoints, callbackJSON);
+        weakData.get().deleteLastCheckpoint(tableId, rowId, callbackJSON);
     }
 }

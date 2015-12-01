@@ -154,6 +154,7 @@ public class ExecutorRequest {
      *                    <li>USER_TABLE_ADD_CHECKPOINT</li>
      *                    <li>USER_TABLE_SAVE_CHECKPOINT_AS_INCOMPLETE</li>
      *                    <li>USER_TABLE_SAVE_CHECKPOINT_AS_COMPLETE</li>
+     *                    <li>USER_TABLE_DELETE_ALL_CHECKPOINTS</li>
      *                    <li>USER_TABLE_DELETE_LAST_CHECKPOINT</li></ul>
      * @param tableId  The table being updated
      * @param stringifiedJSON key-value map of values to store or update. If missing, the value remains unchanged.
@@ -182,42 +183,6 @@ public class ExecutorRequest {
         this.orderByDirection = null;
         this.includeKeyValueStoreMap = false;
         this.deleteAllCheckpoints = false;
-        this.commitTransaction = false;
-    }
-
-    /**
-     * Delete last or all checkpoints
-     *
-     * @param executorRequestType The type of request. Must be:
-     *                    <ul><li>USER_TABLE_DELETE_LAST_CHECKPOINT</li></ul>
-     * @param tableId  The table being updated
-     * @param rowId The rowId of the row being deleted.
-     * @param deleteAllCheckpoints true if all checkpoints should be deleted, not just the last one.
-     * @param callbackJSON The JSON object used by the JS layer to recover the callback function
-     *                     that can process the response
-     */
-    public ExecutorRequest(ExecutorRequestType executorRequestType, String tableId, String rowId, boolean deleteAllCheckpoints,
-                           String callbackJSON) {
-        if ( executorRequestType != ExecutorRequestType.USER_TABLE_DELETE_LAST_CHECKPOINT) {
-            throw new IllegalArgumentException("expected USER_TABLE_DELETE_LAST_CHECKPOINT");
-        }
-        this.executorRequestType = executorRequestType;
-        this.tableId = tableId;
-        this.rowId = rowId;
-        this.deleteAllCheckpoints = deleteAllCheckpoints;
-        this.callbackJSON = callbackJSON;
-
-        // unused:
-        this.oldContext = null;
-        this.sqlCommand = null;
-        this.whereClause = null;
-        this.sqlBindParams = null;
-        this.groupBy = null;
-        this.having = null;
-        this.orderByElementKey = null;
-        this.orderByDirection = null;
-        this.includeKeyValueStoreMap = false;
-        this.stringifiedJSON = null;
         this.commitTransaction = false;
     }
 }
