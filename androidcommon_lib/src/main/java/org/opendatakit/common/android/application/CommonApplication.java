@@ -16,14 +16,11 @@ package org.opendatakit.common.android.application;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.Application;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Configuration;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -32,16 +29,12 @@ import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
 import android.webkit.WebView;
-import android.widget.Toast;
-import org.opendatakit.androidcommon.R;
 import org.opendatakit.common.android.activities.ODKActivity;
 import org.opendatakit.common.android.listener.DatabaseConnectionListener;
 import org.opendatakit.common.android.listener.InitializationListener;
-import org.opendatakit.common.android.listener.LicenseReaderListener;
 import org.opendatakit.common.android.logic.CommonToolProperties;
 import org.opendatakit.common.android.logic.PropertiesSingleton;
 import org.opendatakit.common.android.task.InitializationTask;
-import org.opendatakit.common.android.task.LicenseReaderTask;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
 import org.opendatakit.common.android.views.ICallbackFragment;
@@ -55,7 +48,8 @@ import org.opendatakit.webkitserver.service.OdkWebkitServerInterface;
 
 import java.util.ArrayList;
 
-public abstract class CommonApplication extends Application  implements LicenseReaderListener, InitializationListener {
+public abstract class CommonApplication extends AppAwareApplication implements
+    InitializationListener {
 
   private static final String t = "CommonApplication";
   
@@ -181,7 +175,6 @@ public abstract class CommonApplication extends Application  implements LicenseR
    *
    */
   private static final class BackgroundTasks {
-    LicenseReaderTask mLicenseReaderTask = null;
     InitializationTask mInitializationTask = null;
 
     BackgroundTasks() {
@@ -229,7 +222,6 @@ public abstract class CommonApplication extends Application  implements LicenseR
   private final BackgroundServices mBackgroundServices = new BackgroundServices(); 
 
   // These are expected to be broken down and set up during orientation changes.
-  private LicenseReaderListener mLicenseReaderListener = null;
   private InitializationListener mInitializationListener = null;
 
   private boolean shuttingDown = false;
@@ -262,57 +254,6 @@ public abstract class CommonApplication extends Application  implements LicenseR
     Log.i(t, "onTerminate");
   }
 
-  public int getQuestionFontsize(String appName) {
-    PropertiesSingleton props = CommonToolProperties.get(this, appName);
-    Integer question_font = props.getIntegerProperty(CommonToolProperties.KEY_FONT_SIZE);
-    int questionFontsize = (question_font == null) ? CommonToolProperties.DEFAULT_FONT_SIZE : question_font;
-    return questionFontsize;
-  }
-
-  /**
-   * The tool name is the name of the package after the org.opendatakit. prefix.
-   * 
-   * @return the tool name.
-   */
-  public String getToolName() {
-    String packageName = getPackageName();
-    String[] parts = packageName.split("\\.");
-    return parts[2];
-  }
-
-  public String getVersionCodeString() {
-    try {
-      PackageInfo pinfo;
-      pinfo = getPackageManager().getPackageInfo(getPackageName(), 0);
-      int versionNumber = pinfo.versionCode;
-      return Integer.toString(versionNumber);
-    } catch (NameNotFoundException e) {
-      e.printStackTrace();
-      return "";
-    }
-  }
-
-  public String getVersionDetail() {
-    String versionDetail = "";
-    try {
-      PackageInfo pinfo;
-      pinfo = getPackageManager().getPackageInfo(getPackageName(), 0);
-      int versionNumber = pinfo.versionCode;
-      String versionName = pinfo.versionName;
-      versionDetail = " " + versionName + " (rev " + versionNumber + ")";
-    } catch (NameNotFoundException e) {
-      e.printStackTrace();
-    }
-    return versionDetail;
-  }
-
-  public String getVersionedAppName() {
-    String versionDetail = this.getVersionDetail();
-    return getString(getApkDisplayNameResourceId()) + versionDetail;
-  }
-
-  public abstract int getApkDisplayNameResourceId();
-  
   public abstract int getConfigZipResourceId();
   
   public abstract int getSystemZipResourceId();
@@ -357,12 +298,8 @@ public abstract class CommonApplication extends Application  implements LicenseR
   
   public void onActivityPause(Activity activity) {
     if ( activeActivity == activity ) {
-      mLicenseReaderListener = null;
       mInitializationListener = null;
   
-      if (mBackgroundTasks.mLicenseReaderTask != null) {
-        mBackgroundTasks.mLicenseReaderTask.setLicenseReaderListener(null);
-      }
       if (mBackgroundTasks.mInitializationTask != null) {
         mBackgroundTasks.mInitializationTask.setInitializationListener(null);
       }
@@ -373,12 +310,8 @@ public abstract class CommonApplication extends Application  implements LicenseR
     if ( activeActivity == activity ) {
       activeActivity = null;
       
-      mLicenseReaderListener = null;
       mInitializationListener = null;
   
-      if (mBackgroundTasks.mLicenseReaderTask != null) {
-        mBackgroundTasks.mLicenseReaderTask.setLicenseReaderListener(null);
-      }
       if (mBackgroundTasks.mInitializationTask != null) {
         mBackgroundTasks.mInitializationTask.setInitializationListener(null);
       }
@@ -398,7 +331,6 @@ public abstract class CommonApplication extends Application  implements LicenseR
       shuttingDown = true;
       
       shutdownServices();
-      WebLogger.closeAll();
     } finally {
       shuttingDown = false;
     }
@@ -415,9 +347,6 @@ public abstract class CommonApplication extends Application  implements LicenseR
     databaseListenerActivity = null;
     activeActivity = activity;
     
-    if (mBackgroundTasks.mLicenseReaderTask != null) {
-      mBackgroundTasks.mLicenseReaderTask.setLicenseReaderListener(this);
-    }
     if (mBackgroundTasks.mInitializationTask != null) {
       mBackgroundTasks.mInitializationTask.setInitializationListener(this);
     }
@@ -659,15 +588,6 @@ public abstract class CommonApplication extends Application  implements LicenseR
   // /////////////////////////////////////////////////////////////////////////
   // registrations
 
-  public void establishReadLicenseListener(LicenseReaderListener listener) {
-    mLicenseReaderListener = listener;
-    // async task may have completed while we were reorienting...
-    if (mBackgroundTasks.mLicenseReaderTask != null
-        && mBackgroundTasks.mLicenseReaderTask.getStatus() == AsyncTask.Status.FINISHED) {
-      this.readLicenseComplete(mBackgroundTasks.mLicenseReaderTask.getResult());
-    }
-  }
-  
   /**
    * Called by an activity when it has been sufficiently initialized so
    * that it can handle a databaseAvailable() call.
@@ -722,21 +642,6 @@ public abstract class CommonApplication extends Application  implements LicenseR
 
   // ///////////////////////////////////////////////////
   // actions
-
-  public synchronized void readLicenseFile(String appName, LicenseReaderListener listener) {
-    mLicenseReaderListener = listener;
-    if (mBackgroundTasks.mLicenseReaderTask != null
-        && mBackgroundTasks.mLicenseReaderTask.getStatus() != AsyncTask.Status.FINISHED) {
-      Toast.makeText(this, getString(R.string.still_reading_license_file), Toast.LENGTH_LONG).show();
-    } else {
-      LicenseReaderTask lrt = new LicenseReaderTask();
-      lrt.setApplication(this);
-      lrt.setAppName(appName);
-      lrt.setLicenseReaderListener(this);
-      mBackgroundTasks.mLicenseReaderTask = lrt;
-      executeTask(mBackgroundTasks.mLicenseReaderTask);
-    }
-  }
 
   public synchronized boolean initializeAppName(String appName, InitializationListener listener) {
     mInitializationListener = listener;
@@ -796,15 +701,6 @@ public abstract class CommonApplication extends Application  implements LicenseR
   // /////////////////////////////////////////////////////////////////////////
   // callbacks
 
-  @Override
-  public void readLicenseComplete(String result) {
-    if (mLicenseReaderListener != null) {
-      mLicenseReaderListener.readLicenseComplete(result);
-    }
-    mBackgroundTasks.mLicenseReaderTask = null;
-  }
-
-  
   @Override
   public void initializationComplete(boolean overallSuccess, ArrayList<String> result) {
     if (mInitializationListener != null) {
