@@ -36,7 +36,6 @@ import org.opendatakit.common.android.logic.CommonToolProperties;
 import org.opendatakit.common.android.logic.PropertiesSingleton;
 import org.opendatakit.common.android.task.InitializationTask;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
-import org.opendatakit.common.android.utilities.WebLogger;
 import org.opendatakit.common.android.views.ICallbackFragment;
 import org.opendatakit.common.android.views.ODKWebView;
 import org.opendatakit.database.DatabaseConsts;
