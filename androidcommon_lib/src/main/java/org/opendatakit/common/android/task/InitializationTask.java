@@ -23,15 +23,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -62,7 +55,8 @@ import android.os.RemoteException;
  *
  * @author mitchellsundt@gmail.com
  */
-public class InitializationTask extends AsyncTask<Void, String, ArrayList<String>> implements ImportListener {
+public class InitializationTask extends AsyncTask<Void, String, ArrayList<String>>
+    implements ImportListener {
 
   private static final String t = "InitializationTask";
 
@@ -70,9 +64,11 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
   private InitializationListener mStateListener;
   private String appName;
 
-  private enum InitAction { DEFINE_TABLE, IMPORT_CSV };
+  private enum InitAction {DEFINE_TABLE, IMPORT_CSV}
+
+  ;
   private InitAction actionType;
-  
+
   private boolean problemDefiningTables = false;
   private boolean problemImportingCSVs = false;
   private Set<String> mFileNotFoundSet = new HashSet<String>();
@@ -81,7 +77,7 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
   private ArrayList<String> mResult = new ArrayList<String>();
 
   private boolean mPendingSuccess = false;
-  
+
   @Override
   protected ArrayList<String> doInBackground(Void... values) {
     mPendingSuccess = true;
@@ -90,8 +86,7 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
     // ///////////////////////////////////////////////
     // check that the framework zip has been exploded
     String toolName = getApplication().getToolName();
-    
-    if ( toolName.equalsIgnoreCase("Survey") ) {
+    if (toolName.equalsIgnoreCase("Survey")) {
       if (!ODKFileUtils.isConfiguredSurveyApp(appName, getApplication().getVersionCodeString())) {
         publishProgress(appContext.getString(R.string.expansion_unzipping_begins), null);
 
@@ -100,7 +95,7 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
 
         ODKFileUtils.assertConfiguredSurveyApp(appName, getApplication().getVersionCodeString());
       }
-    } else if ( toolName.equalsIgnoreCase("Tables") ) {
+    } else if (toolName.equalsIgnoreCase("Tables")) {
 
       if (!ODKFileUtils.isConfiguredTablesApp(appName, getApplication().getVersionCodeString())) {
         publishProgress(appContext.getString(R.string.expansion_unzipping_begins), null);
@@ -121,9 +116,9 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
       mPendingResult.add(appContext.getString(R.string.abort_error_accessing_database));
       return mPendingResult;
     }
-    
+
     updateFormDirs();
-    
+
     try {
       mPendingSuccess = mPendingSuccess && initTables();
     } catch (RemoteException e) {
@@ -132,71 +127,43 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
       mPendingResult.add(appContext.getString(R.string.abort_error_accessing_database));
       return mPendingResult;
     }
-    
+
     return mPendingResult;
   }
 
   interface ZipAction {
-    public void doWorker(ZipEntry entry, ZipInputStream zipInputStream, int indexIntoZip, long size) 
+    public void doWorker(ZipEntry entry, ZipInputStream zipInputStream, int indexIntoZip, long size)
         throws FileNotFoundException, IOException;
-    
+
     public void done(int totalCount);
   }
-  
+
   private final void doActionOnRawZip(int resourceId, boolean overwrite, ArrayList<String> result,
-      ZipAction action ) {
+      ZipAction action) {
     String message = null;
-    AssetFileDescriptor fd = null;
+    InputStream rawInputStream = null;
     try {
-      fd = appContext.getResources().openRawResourceFd(resourceId);
-      final long size = fd.getLength(); // apparently over-counts by 2x?
-      InputStream rawInputStream = null;
+      rawInputStream = appContext.getResources().openRawResource(resourceId);
+      ZipInputStream zipInputStream = null;
+      ZipEntry entry = null;
       try {
-        rawInputStream = fd.createInputStream();
-        ZipInputStream zipInputStream = null;
-        ZipEntry entry = null;
-        try {
+        int countFiles = 0;
 
-          // count the number of files in the zip
-          zipInputStream = new ZipInputStream(rawInputStream);
-          int countFiles = 0;
-          while ((entry = zipInputStream.getNextEntry()) != null) {
-            message = null;
-            if (isCancelled()) {
-              message = "cancelled";
-              result.add(entry.getName() + " " + message);
-              break;
-            }
-            ++countFiles;
-            action.doWorker(entry, zipInputStream, countFiles, size);
-          }
-          zipInputStream.close();
-
-          action.done(countFiles);
-        } catch (IOException e) {
-          WebLogger.getLogger(appName).printStackTrace(e);
-          mPendingSuccess = false;
-          if (e.getCause() != null) {
-            message = e.getCause().getMessage();
-          } else {
-            message = e.getMessage();
-          }
-          if (entry != null) {
+        zipInputStream = new ZipInputStream(rawInputStream);
+        while ((entry = zipInputStream.getNextEntry()) != null) {
+          message = null;
+          if (isCancelled()) {
+            message = "cancelled";
             result.add(entry.getName() + " " + message);
-          } else {
-            result.add("Error accessing zipfile resource " + message);
+            break;
           }
-        } finally {
-          if (zipInputStream != null) {
-            try {
-              zipInputStream.close();
-            } catch (IOException e) {
-              WebLogger.getLogger(appName).printStackTrace(e);
-              WebLogger.getLogger(appName).e(t, "Closing of ZipFile failed: " + e.toString());
-            }
-          }
+          ++countFiles;
+          action.doWorker(entry, zipInputStream, countFiles, 0);
         }
-      } catch (Exception e) {
+        zipInputStream.close();
+
+        action.done(countFiles);
+      } catch (IOException e) {
         WebLogger.getLogger(appName).printStackTrace(e);
         mPendingSuccess = false;
         if (e.getCause() != null) {
@@ -204,25 +171,37 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
         } else {
           message = e.getMessage();
         }
-        result.add("Error accessing zipfile resource " + message);
+        if (entry != null) {
+          result.add(entry.getName() + " " + message);
+        } else {
+          result.add("Error accessing zipfile resource " + message);
+        }
       } finally {
-        if (rawInputStream != null) {
+        if (zipInputStream != null) {
           try {
-            rawInputStream.close();
+            zipInputStream.close();
           } catch (IOException e) {
             WebLogger.getLogger(appName).printStackTrace(e);
+            WebLogger.getLogger(appName).e(t, "Closing of ZipFile failed: " + e.toString());
           }
         }
       }
+    } catch (Exception e) {
+      WebLogger.getLogger(appName).printStackTrace(e);
+      mPendingSuccess = false;
+      if (e.getCause() != null) {
+        message = e.getCause().getMessage();
+      } else {
+        message = e.getMessage();
+      }
+      result.add("Error accessing zipfile resource " + message);
     } finally {
-      if (fd != null) {
+      if (rawInputStream != null) {
         try {
-          fd.close();
+          rawInputStream.close();
         } catch (IOException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
         }
-      } else {
-        result.add("Error accessing zipfile resource.");
       }
     }
   }
@@ -231,7 +210,8 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
     int totalFiles = -1;
 
     @Override
-    public void doWorker(ZipEntry entry, ZipInputStream zipInputStream, int indexIntoZip, long size) {
+    public void doWorker(ZipEntry entry, ZipInputStream zipInputStream, int indexIntoZip,
+        long size) {
       // no-op
     }
 
@@ -239,32 +219,38 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
     public void done(int totalCount) {
       totalFiles = totalCount;
     }
-  };
-  
-  private final void extractFromRawZip(int resourceId, final boolean overwrite, ArrayList<String> result) {
+  }
+
+  ;
+
+  private final void extractFromRawZip(int resourceId, final boolean overwrite,
+      ArrayList<String> result) {
 
     final ZipEntryCounter countTotal = new ZipEntryCounter();
-    
-    if ( resourceId == -1 ) {
+
+    if (resourceId == -1) {
       return;
     }
-    
-    doActionOnRawZip(resourceId, overwrite, result, countTotal );
-    
-    if ( countTotal.totalFiles == -1 ) {
+
+    doActionOnRawZip(resourceId, overwrite, result, countTotal);
+
+    if (countTotal.totalFiles == -1) {
       return;
     }
-    
+
     ZipAction worker = new ZipAction() {
 
       long bytesProcessed = 0L;
       long lastBytesProcessedThousands = 0L;
-      
+
       @Override
-      public void doWorker(ZipEntry entry, ZipInputStream zipInputStream, int indexIntoZip, long size) throws IOException {
+      public void doWorker(ZipEntry entry, ZipInputStream zipInputStream, int indexIntoZip,
+          long size) throws IOException {
+
         File tempFile = new File(ODKFileUtils.getAppFolder(appName), entry.getName());
-        String formattedString = appContext.getString(
-            R.string.expansion_unzipping_without_detail, entry.getName(), indexIntoZip, countTotal.totalFiles);
+        String formattedString = appContext
+            .getString(R.string.expansion_unzipping_without_detail, entry.getName(), indexIntoZip,
+                countTotal.totalFiles);
         String detail;
         if (entry.isDirectory()) {
           detail = appContext.getString(R.string.expansion_create_dir_detail);
@@ -280,8 +266,8 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
             bytesProcessed += bread;
             long curThousands = (bytesProcessed / 1000L);
             if (curThousands != lastBytesProcessedThousands) {
-              detail = appContext.getString(R.string.expansion_unzipping_detail,
-                  bytesProcessed, size);
+              detail = appContext
+                  .getString(R.string.expansion_unzipping_detail, bytesProcessed, indexIntoZip);
               publishProgress(formattedString, detail);
               lastBytesProcessedThousands = curThousands;
             }
@@ -290,8 +276,8 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
           out.flush();
           out.close();
 
-          detail = appContext.getString(R.string.expansion_unzipping_detail, bytesProcessed,
-              size);
+          detail = appContext
+              .getString(R.string.expansion_unzipping_detail, bytesProcessed, indexIntoZip);
           publishProgress(formattedString, detail);
         }
         WebLogger.getLogger(appName).i(t, "Extracted ZipEntry: " + entry.getName());
@@ -299,14 +285,14 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
 
       @Override
       public void done(int totalCount) {
-        String completionString = appContext.getString(R.string.expansion_unzipping_complete,
-            totalCount);
+        String completionString = appContext
+            .getString(R.string.expansion_unzipping_complete, totalCount);
         publishProgress(completionString, null);
       }
-      
+
     };
-    
-    doActionOnRawZip(resourceId, overwrite, result, worker );
+
+    doActionOnRawZip(resourceId, overwrite, result, worker);
   }
 
   /**
@@ -323,23 +309,24 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
     ArrayList<Uri> badEntries = new ArrayList<Uri>();
     Cursor c = null;
     try {
-      c = appContext.getContentResolver().query(
-          Uri.withAppendedPath(formsProviderContentUri, appName), null, null, null, null);
+      c = appContext.getContentResolver()
+          .query(Uri.withAppendedPath(formsProviderContentUri, appName), null, null, null, null);
 
       if (c == null) {
-        WebLogger.getLogger(appName).w(t,
-            "removeStaleFormInfo " + appName + " null cursor returned from query.");
+        WebLogger.getLogger(appName)
+            .w(t, "removeStaleFormInfo " + appName + " null cursor returned from query.");
         return;
       }
 
       if (c.moveToFirst()) {
         do {
-          String tableId = ODKCursorUtils.getIndexAsString(c,
-              c.getColumnIndex(FormsColumns.TABLE_ID));
-          String formId = ODKCursorUtils.getIndexAsString(c,
-              c.getColumnIndex(FormsColumns.FORM_ID));
-          Uri otherUri = Uri.withAppendedPath( Uri.withAppendedPath(
-              Uri.withAppendedPath(formsProviderContentUri, appName), tableId), formId);
+          String tableId = ODKCursorUtils
+              .getIndexAsString(c, c.getColumnIndex(FormsColumns.TABLE_ID));
+          String formId = ODKCursorUtils
+              .getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_ID));
+          Uri otherUri = Uri.withAppendedPath(
+              Uri.withAppendedPath(Uri.withAppendedPath(formsProviderContentUri, appName), tableId),
+              formId);
 
           String examString = appContext.getString(R.string.examining_form, tableId, formId);
           publishProgress(examString, null);
@@ -355,8 +342,8 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
             // ////////////////////////////////
             // formdef.json exists. See if it is
             // unchanged...
-            String json_md5 = ODKCursorUtils.getIndexAsString(c,
-                c.getColumnIndex(FormsColumns.JSON_MD5_HASH));
+            String json_md5 = ODKCursorUtils
+                .getIndexAsString(c, c.getColumnIndex(FormsColumns.JSON_MD5_HASH));
             String fileMd5 = ODKFileUtils.getMd5Hash(appName, formDefJson);
             if (json_md5.equals(fileMd5)) {
               // it is unchanged -- no need to rescan it
@@ -366,8 +353,8 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
         } while (c.moveToNext());
       }
     } catch (Exception e) {
-      WebLogger.getLogger(appName).e(t,
-          "removeStaleFormInfo " + appName + " exception: " + e.toString());
+      WebLogger.getLogger(appName)
+          .e(t, "removeStaleFormInfo " + appName + " exception: " + e.toString());
       WebLogger.getLogger(appName).printStackTrace(e);
     } finally {
       if (c != null && !c.isClosed()) {
@@ -377,13 +364,13 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
 
     // delete the other entries (and directories)
     for (Uri badUri : badEntries) {
-      WebLogger.getLogger(appName).i(t,
-          "removeStaleFormInfo: " + appName + " deleting: " + badUri.toString());
+      WebLogger.getLogger(appName)
+          .i(t, "removeStaleFormInfo: " + appName + " deleting: " + badUri.toString());
       try {
         appContext.getContentResolver().delete(badUri, null, null);
       } catch (Exception e) {
-        WebLogger.getLogger(appName).e(t,
-            "removeStaleFormInfo " + appName + " exception: " + e.toString());
+        WebLogger.getLogger(appName)
+            .e(t, "removeStaleFormInfo " + appName + " exception: " + e.toString());
         WebLogger.getLogger(appName).printStackTrace(e);
         // and continue -- don't throw an error
       }
@@ -396,10 +383,9 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
    * mediaPath there.
    *
    * @param mediaPath
-   * @param baseStaleMediaPath
-   *          -- the stale directory corresponding to the mediaPath container
+   * @param baseStaleMediaPath -- the stale directory corresponding to the mediaPath container
    * @return the directory within the stale directory that the mediaPath was
-   *         renamed to.
+   * renamed to.
    * @throws IOException
    */
   private final File moveToStaleDirectory(File mediaPath, String baseStaleMediaPath)
@@ -408,16 +394,17 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
     // Move it to the stale directory.
     // Delete all records referring to this directory.
     int i = 0;
-    File tempMediaPath = new File(baseStaleMediaPath + mediaPath.getName() + "_"
-        + Integer.toString(i));
+    File tempMediaPath = new File(
+        baseStaleMediaPath + mediaPath.getName() + "_" + Integer.toString(i));
     while (tempMediaPath.exists()) {
       ++i;
-      tempMediaPath = new File(baseStaleMediaPath + mediaPath.getName() + "_" + Integer.toString(i));
+      tempMediaPath = new File(
+          baseStaleMediaPath + mediaPath.getName() + "_" + Integer.toString(i));
     }
     FileUtils.moveDirectory(mediaPath, tempMediaPath);
     return tempMediaPath;
   }
-  
+
   private String displayTablesProgress;
   private String tableIdInProgress;
   private Map<String, Boolean> importStatus = new TreeMap<String, Boolean>();
@@ -437,7 +424,7 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
     // that
     // changed it will be triggering a reload of it through other means.
     actionType = InitAction.DEFINE_TABLE;
-    
+
     CsvUtil util = new CsvUtil(getApplication(), appName);
     File tablesDir = new File(ODKFileUtils.getTablesFolder(appName));
     File[] tableIdDirs = tablesDir.listFiles(new FileFilter() {
@@ -473,8 +460,9 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
       if (definitionCsv.exists() && definitionCsv.isFile() && propertiesCsv.exists()
           && propertiesCsv.isFile()) {
 
-        String formattedString = appContext.getString(R.string.scanning_for_table_definitions,
-            tableId, (i + 1), tableIdDirs.length);
+        String formattedString = appContext
+            .getString(R.string.scanning_for_table_definitions, tableId, (i + 1),
+                tableIdDirs.length);
         String detail = appContext.getString(R.string.processing_file);
         displayTablesProgress = formattedString;
         tableIdInProgress = tableId;
@@ -491,7 +479,6 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
 
   }
 
-  
   private final boolean initTables() throws RemoteException {
 
     final String EMPTY_STRING = "";
@@ -501,9 +488,9 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
     final String KEY_SUFFIX_CSV_FILENAME = ".filename";
 
     actionType = InitAction.IMPORT_CSV;
-    
+
     /** Stores the table's key to its filename. */
-    Map<String, String> mKeyToFileMap = new HashMap<String,String>();
+    Map<String, String> mKeyToFileMap = new HashMap<String, String>();
 
     // /////////////////////////////////////////
     // /////////////////////////////////////////
@@ -578,8 +565,8 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
           }
 
           // update dialog message with current filename
-          String formattedString = appContext.getString(R.string.importing_file_without_detail, 
-              curFileCount, fileCount, filename);
+          String formattedString = appContext
+              .getString(R.string.importing_file_without_detail, curFileCount, fileCount, filename);
           displayTablesProgress = formattedString;
           publishProgress(formattedString, detail);
           ImportRequest request = null;
@@ -589,17 +576,18 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
           // and fileQualifier is not 'properties', then assume it is the
           // new-style CSV format.
           //
-          String assetsCsvDirPath = ODKFileUtils.asRelativePath(appName, 
-              new File(ODKFileUtils.getAssetsCsvFolder(appName)));
-          if ( filename.startsWith(assetsCsvDirPath) ) {
+          String assetsCsvDirPath = ODKFileUtils
+              .asRelativePath(appName, new File(ODKFileUtils.getAssetsCsvFolder(appName)));
+          if (filename.startsWith(assetsCsvDirPath)) {
             // get past the file separator
-            String csvFilename = filename.substring(assetsCsvDirPath.length()+1);
+            String csvFilename = filename.substring(assetsCsvDirPath.length() + 1);
             String[] terms = csvFilename.split("\\.");
             if (terms.length == 2 && terms[1].equals("csv")) {
               String tableId = terms[0];
               String fileQualifier = null;
               request = new ImportRequest(tableId, fileQualifier);
-            } else if (terms.length == 3 && terms[1].equals("properties") && terms[2].equals("csv")) {
+            } else if (terms.length == 3 && terms[1].equals("properties") && terms[2]
+                .equals("csv")) {
               String tableId = terms[0];
               String fileQualifier = null;
               request = new ImportRequest(tableId, fileQualifier);
@@ -607,7 +595,8 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
               String tableId = terms[0];
               String fileQualifier = terms[1];
               request = new ImportRequest(tableId, fileQualifier);
-            } else if (terms.length == 4 && terms[2].equals("properties") && terms[3].equals("csv")) {
+            } else if (terms.length == 4 && terms[2].equals("properties") && terms[3]
+                .equals("csv")) {
               String tableId = terms[0];
               String fileQualifier = terms[1];
               request = new ImportRequest(tableId, fileQualifier);
@@ -616,13 +605,14 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
             if (request != null) {
               tableIdInProgress = request.getTableId();
               boolean success = false;
-              success = cu.importSeparable(this, request.getTableId(), request.getFileQualifier(),
-                  true);
+              success = cu
+                  .importSeparable(this, request.getTableId(), request.getFileQualifier(), true);
               importStatus.put(key, success);
               if (success) {
                 detail = appContext.getString(R.string.import_success);
-                publishProgress(appContext.getString(R.string.importing_file_without_detail,
-                    curFileCount, fileCount, filename), detail);
+                publishProgress(appContext
+                    .getString(R.string.importing_file_without_detail, curFileCount, fileCount,
+                        filename), detail);
               }
             }
           }
@@ -641,7 +631,7 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
   }
 
   private final void updateFormDirs() {
-    
+
     // /////////////////////////////////////////
     // /////////////////////////////////////////
     // /////////////////////////////////////////
@@ -689,23 +679,23 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
     // to the FormsProvider
     for (int i = 0; i < formDirs.size(); ++i) {
       File formDir = formDirs.get(i);
-      
+
       String formId = formDir.getName();
       String tableId = formDir.getParentFile().getParentFile().getName();
-      
+
       // specifically target this form...
       WebLogger.getLogger(appName).i(t, "updateFormInfo: form: " + formDir.getAbsolutePath());
 
-      String examString = appContext.getString(R.string.updating_form_information,
-          formDir.getName(), i + 1, formDirs.size());
+      String examString = appContext
+          .getString(R.string.updating_form_information, formDir.getName(), i + 1, formDirs.size());
       publishProgress(examString, null);
 
-      updateFormDir(tableId, formId, formDir, true, 
+      updateFormDir(tableId, formId, formDir, true,
           ODKFileUtils.getPendingDeletionTablesFolder(appName) + File.separator);
     }
 
   }
-  
+
   /**
    * Scan the given formDir and update the Forms database. If it is the
    * formsFolder, then any 'framework' forms should be forbidden. If it is not
@@ -715,74 +705,77 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
    * @param formId
    * @param formDir
    * @param isFormsFolder
-   * @param baseStaleMediaPath
-   *          -- path prefix to the stale forms/framework directory.
+   * @param baseStaleMediaPath -- path prefix to the stale forms/framework directory.
    */
-  private final void updateFormDir(String tableId, String formId, File formDir, boolean isFormsFolder, String baseStaleMediaPath) {
+  private final void updateFormDir(String tableId, String formId, File formDir,
+      boolean isFormsFolder, String baseStaleMediaPath) {
     Uri formsProviderContentUri = Uri.parse("content://" + FormsProviderAPI.AUTHORITY);
     String formDirectoryPath = formDir.getAbsolutePath();
     WebLogger.getLogger(appName).i(t, "updateFormDir: " + formDirectoryPath);
 
     String successMessage = appContext.getString(R.string.form_register_success, tableId, formId);
     String failureMessage = appContext.getString(R.string.form_register_failure, tableId, formId);
-    
+
     Cursor c = null;
     try {
       String selection = FormsColumns.TABLE_ID + "=? AND " + FormsColumns.FORM_ID + "=?";
       String[] selectionArgs = { tableId, formId };
-      c = appContext.getContentResolver().query(
-          Uri.withAppendedPath(formsProviderContentUri, appName), null, selection, selectionArgs,
-          null);
+      c = appContext.getContentResolver()
+          .query(Uri.withAppendedPath(formsProviderContentUri, appName), null, selection,
+              selectionArgs, null);
 
       if (c == null) {
-        WebLogger.getLogger(appName).w(t,
-            "updateFormDir: " + formDirectoryPath + " null cursor -- cannot update!");
+        WebLogger.getLogger(appName)
+            .w(t, "updateFormDir: " + formDirectoryPath + " null cursor -- cannot update!");
         mPendingResult.add(failureMessage);
         return;
       }
 
       if (c.getCount() > 1) {
         c.close();
-        WebLogger.getLogger(appName).w(t,
-            "updateFormDir: " + formDirectoryPath
-                + " multiple records from cursor -- delete all and restore!");
+        WebLogger.getLogger(appName).w(t, "updateFormDir: " + formDirectoryPath
+            + " multiple records from cursor -- delete all and restore!");
         // we have multiple records for this one directory.
         // Rename the directory. Delete the records, and move the
         // directory back.
         File tempMediaPath = moveToStaleDirectory(formDir, baseStaleMediaPath);
-        
-        appContext.getContentResolver().delete(
-            Uri.withAppendedPath(formsProviderContentUri, appName), selection, selectionArgs);
-        
+
+        appContext.getContentResolver()
+            .delete(Uri.withAppendedPath(formsProviderContentUri, appName), selection,
+                selectionArgs);
+
         FileUtils.moveDirectory(tempMediaPath, formDir);
 
         ContentValues cv = new ContentValues();
         cv.put(FormsColumns.TABLE_ID, tableId);
         cv.put(FormsColumns.FORM_ID, formId);
-        appContext.getContentResolver().insert(Uri.withAppendedPath(formsProviderContentUri, appName), cv );
+        appContext.getContentResolver()
+            .insert(Uri.withAppendedPath(formsProviderContentUri, appName), cv);
       } else if (c.getCount() == 1) {
         c.close();
         ContentValues cv = new ContentValues();
         cv.put(FormsColumns.TABLE_ID, tableId);
         cv.put(FormsColumns.FORM_ID, formId);
-        appContext.getContentResolver().update(Uri.withAppendedPath(formsProviderContentUri, appName), cv, null, null);
+        appContext.getContentResolver()
+            .update(Uri.withAppendedPath(formsProviderContentUri, appName), cv, null, null);
       } else if (c.getCount() == 0) {
         c.close();
         ContentValues cv = new ContentValues();
         cv.put(FormsColumns.TABLE_ID, tableId);
         cv.put(FormsColumns.FORM_ID, formId);
-        appContext.getContentResolver().insert(Uri.withAppendedPath(formsProviderContentUri, appName), cv );
+        appContext.getContentResolver()
+            .insert(Uri.withAppendedPath(formsProviderContentUri, appName), cv);
       }
     } catch (IOException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
-      WebLogger.getLogger(appName).e(t,
-          "updateFormDir: " + formDirectoryPath + " exception: " + e.toString());
+      WebLogger.getLogger(appName)
+          .e(t, "updateFormDir: " + formDirectoryPath + " exception: " + e.toString());
       mPendingResult.add(failureMessage);
       return;
     } catch (IllegalArgumentException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
-      WebLogger.getLogger(appName).e(t,
-          "updateFormDir: " + formDirectoryPath + " exception: " + e.toString());
+      WebLogger.getLogger(appName)
+          .e(t, "updateFormDir: " + formDirectoryPath + " exception: " + e.toString());
       try {
         FileUtils.deleteDirectory(formDir);
         WebLogger.getLogger(appName).i(t,
@@ -791,16 +784,15 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
       } catch (IOException e1) {
         WebLogger.getLogger(appName).printStackTrace(e1);
         WebLogger.getLogger(appName).i(t,
-            "updateFormDir: " + formDirectoryPath
-                + " Removing -- unable to delete form directory: " + formDir.getName() + " error: "
-                + e.toString());
+            "updateFormDir: " + formDirectoryPath + " Removing -- unable to delete form directory: "
+                + formDir.getName() + " error: " + e.toString());
       }
       mPendingResult.add(failureMessage);
       return;
     } catch (Exception e) {
       WebLogger.getLogger(appName).printStackTrace(e);
-      WebLogger.getLogger(appName).e(t,
-          "updateFormDir: " + formDirectoryPath + " exception: " + e.toString());
+      WebLogger.getLogger(appName)
+          .e(t, "updateFormDir: " + formDirectoryPath + " exception: " + e.toString());
       mPendingResult.add(failureMessage);
       return;
     } finally {
@@ -841,8 +833,8 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
     synchronized (this) {
       if (mStateListener != null) {
         // update progress and total
-        mStateListener.initializationProgressUpdate(values[0]
-            + ((values[1] != null) ? "\n(" + values[1] + ")" : ""));
+        mStateListener.initializationProgressUpdate(
+            values[0] + ((values[1] != null) ? "\n(" + values[1] + ")" : ""));
       }
     }
 
@@ -853,21 +845,22 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
     publishProgress(displayTablesProgress, displayDetail);
   }
 
-
   @Override
   public void importComplete(boolean outcome) {
-    if ( actionType == InitAction.IMPORT_CSV ) {
-      if ( outcome ) {
+    if (actionType == InitAction.IMPORT_CSV) {
+      if (outcome) {
         mPendingResult.add(appContext.getString(R.string.import_csv_success, tableIdInProgress));
       } else {
         mPendingResult.add(appContext.getString(R.string.import_csv_failure, tableIdInProgress));
       }
       problemImportingCSVs = problemImportingCSVs || !outcome;
     } else {
-      if ( outcome ) {
-        mPendingResult.add(appContext.getString(R.string.defining_tableid_success, tableIdInProgress));
+      if (outcome) {
+        mPendingResult
+            .add(appContext.getString(R.string.defining_tableid_success, tableIdInProgress));
       } else {
-        mPendingResult.add(appContext.getString(R.string.defining_tableid_failure, tableIdInProgress));
+        mPendingResult
+            .add(appContext.getString(R.string.defining_tableid_failure, tableIdInProgress));
       }
       problemDefiningTables = problemDefiningTables || !outcome;
     }
