@@ -106,8 +106,18 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
         ODKFileUtils.assertConfiguredTablesApp(appName, getApplication().getVersionCodeString());
       }
 
+    } else if (toolName.equalsIgnoreCase("Scan")) {
+
+      if (!ODKFileUtils.isConfiguredScanApp(appName, getApplication().getVersionCodeString())) {
+        publishProgress(appContext.getString(R.string.expansion_unzipping_begins), null);
+
+        extractFromRawZip(getApplication().getSystemZipResourceId(), true, mPendingResult);
+        extractFromRawZip(getApplication().getConfigZipResourceId(), false, mPendingResult);
+
+        ODKFileUtils.assertConfiguredScanApp(appName, getApplication().getVersionCodeString());
+      }
     }
-    
+
     try {
       updateTableDirs();
     } catch (RemoteException e) {
