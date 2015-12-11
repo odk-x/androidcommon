@@ -3,8 +3,6 @@
     <string name="app_name">ODK Common</string>
     <string name="app_userLabel">OpenDataKit</string>
     
-    <string name="ok">OK</string>
-    <string name="cancel">Cancel</string>
     <string name="enter_new_password">Enter new password</string>
     <string name="verify_new_password">Re-enter new password</string>
     <string name="password">Password</string>

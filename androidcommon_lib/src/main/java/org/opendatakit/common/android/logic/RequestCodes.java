@@ -14,6 +14,9 @@
 
 package org.opendatakit.common.android.logic;
 
+/**
+ * Typical onActivityResult request codes for use in various applications.
+ */
 public enum RequestCodes {
   AUTH_DIALOG, ALERT_DIALOG, CONFIRMATION_DIALOG, PROGRESS_DIALOG
 }
