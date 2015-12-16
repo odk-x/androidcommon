@@ -19,6 +19,7 @@ public class DependencyChecker {
     private static final String oiFileMgr = "org.openintents.filemanager";
     private static final String coreServices = "org.opendatakit.core";
     private static final String tables = "tables";
+    private static final String scan = "scan";
 
     private final Activity activity;
     private final Context context;
@@ -33,7 +34,9 @@ public class DependencyChecker {
         boolean oiInstalled;
         boolean coreInstalled;
 
-        if (tables.equals(((CommonApplication)context).getToolName())) { // need to check for OI and Core
+        if (tables.equals(((CommonApplication)context).getToolName()) ||
+            scan.equals(((CommonApplication)context).getToolName())) { // need to check
+        // for OI and Core
             oiInstalled = isPackageInstalled(oiFileMgr);
         } else { // only need to check for Core
             oiInstalled = true;
