@@ -144,10 +144,10 @@ public class OdkData {
 
       if (rowId != null && !rowId.isEmpty()) {
          query(tableId, DataTableColumns.ID + "=?", new String[]{rowId}, null, null,
-             DataTableColumns.SAVEPOINT_TIMESTAMP, descOrder, true, callbackJSON, null, false);
+             DataTableColumns.SAVEPOINT_TIMESTAMP, descOrder, true, callbackJSON);
       } else {
          query(tableId, whereClause, selArgs, groupBy, havingClause, orderByElemKey, orderByDir,
-             true, callbackJSON, null, false);
+             true, callbackJSON);
       }
    }
 
@@ -164,19 +164,12 @@ public class OdkData {
     * @param includeKeyValueStoreMap true if the keyValueStoreMap should be returned
     * @param callbackJSON            The JSON object used by the JS layer to recover the callback function
     *                                that can process the response
-    * @param transId                 null or the id of an open transaction if action should occur on an existing transaction.
-    * @param leaveTransactionOpen    null or false close the transaction or use a transient one. true will return
-    *                                the transId and leave transaction open.
-    *                                <p/>
-    *                                transId and leaveTransactionOpen are used only if the user wants to explicitly control db transactions
     */
    public void query(String tableId, String whereClause, String[] sqlBindParams, String[] groupBy,
        String having, String orderByElementKey, String orderByDirection,
-       boolean includeKeyValueStoreMap, String callbackJSON, String transId,
-       Boolean leaveTransactionOpen) {
+       boolean includeKeyValueStoreMap, String callbackJSON) {
       ExecutorRequest request = new ExecutorRequest(tableId, whereClause, sqlBindParams, groupBy,
-          having, orderByElementKey, orderByDirection, includeKeyValueStoreMap, callbackJSON,
-          transId, leaveTransactionOpen);
+          having, orderByElementKey, orderByDirection, includeKeyValueStoreMap, callbackJSON);
 
       queueRequest(request);
    }
@@ -188,17 +181,44 @@ public class OdkData {
     * @param sqlBindParams        The array of bind parameter values (including any in the having clause)
     * @param callbackJSON         The JSON object used by the JS layer to recover the callback function
     *                             that can process the response
-    * @param transId              null or the id of an open transaction if action should occur on an existing transaction.
-    * @param leaveTransactionOpen null or false close the transaction or use a transient one. true will return
-    *                             the transId and leave transaction open.
     * @return see description in class header
-    * <p/>
-    * transId and leaveTransactionOpen are used only if the user wants to explicitly control db transactions
     */
-   public void rawQuery(String sqlCommand, String[] sqlBindParams, String callbackJSON,
-       String transId, Boolean leaveTransactionOpen) {
-      ExecutorRequest request = new ExecutorRequest(sqlCommand, sqlBindParams, callbackJSON,
-          transId, leaveTransactionOpen);
+   public void rawQuery(String sqlCommand, String[] sqlBindParams, String callbackJSON) {
+      ExecutorRequest request = new ExecutorRequest(sqlCommand, sqlBindParams, callbackJSON);
+
+      queueRequest(request);
+   }
+
+  /**
+   * Get all rows that match the given rowId.
+   * This can be zero, one or more. It is more than one if there
+   * is a sync conflict or if there are edit checkpoints.
+   *
+   * @param tableId              The table being updated
+   * @param rowId                The rowId of the row being added.
+   * @param callbackJSON         The JSON object used by the JS layer to recover the callback function
+   *                             that can process the response
+   */
+  public void getRows(String tableId, String rowId, String callbackJSON) {
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_GET_ROWS, tableId,
+        null, rowId, callbackJSON);
+
+    queueRequest(request);
+  }
+
+   /**
+    * Get the most recent checkpoint or last state for a row in the table.
+    * Throws an exception if this row is in conflict.
+    * Returns an empty rowset if the rowId is not present in the table.
+    *
+    * @param tableId              The table being updated
+    * @param rowId                The rowId of the row being added.
+    * @param callbackJSON         The JSON object used by the JS layer to recover the callback function
+    *                             that can process the response
+    */
+   public void getMostRecentRow(String tableId, String rowId, String callbackJSON) {
+      ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_GET_MOST_RECENT_ROW, tableId,
+          null, rowId, callbackJSON);
 
       queueRequest(request);
    }
@@ -211,17 +231,11 @@ public class OdkData {
     * @param rowId                The rowId of the row being changed.
     * @param callbackJSON         The JSON object used by the JS layer to recover the callback function
     *                             that can process the response
-    * @param transId              null or the id of an open transaction if action should occur on an existing transaction.
-    * @param leaveTransactionOpen null or false close the transaction or use a transient one. true will return
-    *                             the transId and leave transaction open.
     * @return see description in class header
-    * <p/>
-    * transId and leaveTransactionOpen are used only if the user wants to explicitly control db transactions
     */
-   public void updateRow(String tableId, String stringifiedJSON, String rowId, String callbackJSON,
-       String transId, Boolean leaveTransactionOpen) {
+   public void updateRow(String tableId, String stringifiedJSON, String rowId, String callbackJSON) {
       ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_UPDATE_ROW,
-          tableId, stringifiedJSON, rowId, callbackJSON, transId, leaveTransactionOpen);
+          tableId, stringifiedJSON, rowId, callbackJSON);
 
       queueRequest(request);
    }
@@ -234,16 +248,10 @@ public class OdkData {
     * @param rowId                The rowId of the row being deleted.
     * @param callbackJSON         The JSON object used by the JS layer to recover the callback function
     *                             that can process the response
-    * @param transId              null or the id of an open transaction if action should occur on an existing transaction.
-    * @param leaveTransactionOpen null or false close the transaction or use a transient one. true will return
-    *                             the transId and leave transaction open.
-    *                             <p/>
-    *                             transId and leaveTransactionOpen are used only if the user wants to explicitly control db transactions
     */
-   public void deleteRow(String tableId, String stringifiedJSON, String rowId, String callbackJSON,
-       String transId, Boolean leaveTransactionOpen) {
+   public void deleteRow(String tableId, String stringifiedJSON, String rowId, String callbackJSON) {
       ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_DELETE_ROW,
-          tableId, stringifiedJSON, rowId, callbackJSON, transId, leaveTransactionOpen);
+          tableId, stringifiedJSON, rowId, callbackJSON);
 
       queueRequest(request);
    }
@@ -256,16 +264,10 @@ public class OdkData {
     * @param rowId                The rowId of the row being added.
     * @param callbackJSON         The JSON object used by the JS layer to recover the callback function
     *                             that can process the response
-    * @param transId              null or the id of an open transaction if action should occur on an existing transaction.
-    * @param leaveTransactionOpen null or false close the transaction or use a transient one. true will return
-    *                             the transId and leave transaction open.
-    *                             <p/>
-    *                             transId and leaveTransactionOpen are used only if the user wants to explicitly control db transactions
     */
-   public void addRow(String tableId, String stringifiedJSON, String rowId, String callbackJSON,
-       String transId, Boolean leaveTransactionOpen) {
+   public void addRow(String tableId, String stringifiedJSON, String rowId, String callbackJSON) {
       ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_ADD_ROW, tableId,
-          stringifiedJSON, rowId, callbackJSON, transId, leaveTransactionOpen);
+          stringifiedJSON, rowId, callbackJSON);
 
       queueRequest(request);
    }
@@ -278,16 +280,11 @@ public class OdkData {
     * @param rowId                The rowId of the row being added.
     * @param callbackJSON         The JSON object used by the JS layer to recover the callback function
     *                             that can process the response
-    * @param transId              null or the id of an open transaction if action should occur on an existing transaction.
-    * @param leaveTransactionOpen null or false close the transaction or use a transient one. true will return
-    *                             the transId and leave transaction open.
-    *                             <p/>
-    *                             transId and leaveTransactionOpen are used only if the user wants to explicitly control db transactions
     */
    public void addCheckpoint(String tableId, String stringifiedJSON, String rowId,
-       String callbackJSON, String transId, Boolean leaveTransactionOpen) {
+       String callbackJSON) {
       ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_ADD_CHECKPOINT,
-          tableId, stringifiedJSON, rowId, callbackJSON, transId, leaveTransactionOpen);
+          tableId, stringifiedJSON, rowId, callbackJSON);
 
       queueRequest(request);
    }
@@ -296,18 +293,16 @@ public class OdkData {
     * Save checkpoint as incomplete. In the process, it applies any changes indicated by the stringifiedJSON.
     *
     * @param tableId              The table being updated
+    * @param stringifiedJSON      key-value map of values to store or update. If missing, the value remains unchanged.
     * @param rowId                The rowId of the row being saved-as-incomplete.
     * @param callbackJSON         The JSON object used by the JS layer to recover the callback function
     *                             that can process the response
-    * @param transId              null or the id of an open transaction if action should occur on an existing transaction.
-    * @param leaveTransactionOpen null or false close the transaction or use a transient one. true will return
-    *                             the transId and leave transaction open.
     */
-   public void saveCheckpointAsIncomplete(String tableId, String rowId, String callbackJSON,
-       String transId, Boolean leaveTransactionOpen) {
+   public void saveCheckpointAsIncomplete(String tableId, String stringifiedJSON, String rowId,
+       String callbackJSON) {
       ExecutorRequest request = new ExecutorRequest(
-          ExecutorRequestType.USER_TABLE_SAVE_CHECKPOINT_AS_INCOMPLETE, tableId, rowId,
-          callbackJSON, transId, leaveTransactionOpen);
+          ExecutorRequestType.USER_TABLE_SAVE_CHECKPOINT_AS_INCOMPLETE, tableId,
+          stringifiedJSON, rowId, callbackJSON);
 
       queueRequest(request);
    }
@@ -316,55 +311,45 @@ public class OdkData {
     * Save checkpoint as complete.
     *
     * @param tableId              The table being updated
+    * @param stringifiedJSON      key-value map of values to store or update. If missing, the value remains unchanged.
     * @param rowId                The rowId of the row being marked-as-complete.
     * @param callbackJSON         The JSON object used by the JS layer to recover the callback function
     *                             that can process the response
-    * @param transId              null or the id of an open transaction if action should occur on an existing transaction.
-    * @param leaveTransactionOpen null or false close the transaction or use a transient one. true will return
-    *                             the transId and leave transaction open.
     */
-   public void saveCheckpointAsComplete(String tableId, String rowId, String callbackJSON,
-       String transId, Boolean leaveTransactionOpen) {
+   public void saveCheckpointAsComplete(String tableId, String stringifiedJSON, String rowId, String callbackJSON) {
       ExecutorRequest request = new ExecutorRequest(
-          ExecutorRequestType.USER_TABLE_SAVE_CHECKPOINT_AS_COMPLETE, tableId, rowId, callbackJSON,
-          transId, leaveTransactionOpen);
+          ExecutorRequestType.USER_TABLE_SAVE_CHECKPOINT_AS_COMPLETE, tableId, stringifiedJSON,
+          rowId, callbackJSON);
 
       queueRequest(request);
    }
+
+  /**
+   * Delete all checkpoint.  Checkpoints accumulate; this removes all of them.
+   *
+   * @param tableId              The table being updated
+   * @param rowId                The rowId of the row being saved-as-incomplete.
+   * @param callbackJSON         The JSON object used by the JS layer to recover the callback function
+   *                             that can process the response
+   */
+  public void deleteAllCheckpoints(String tableId, String rowId, String callbackJSON) {
+    ExecutorRequest request = new ExecutorRequest(
+        ExecutorRequestType.USER_TABLE_DELETE_ALL_CHECKPOINTS, tableId, null, rowId, callbackJSON);
+
+    queueRequest(request);
+  }
 
    /**
     * Delete last checkpoint.  Checkpoints accumulate; this removes the most recent one, leaving earlier ones.
     *
     * @param tableId              The table being updated
     * @param rowId                The rowId of the row being saved-as-incomplete.
-    * @param deleteAllCheckpoints true if all checkpoints should be deleted, not just the last one.
     * @param callbackJSON         The JSON object used by the JS layer to recover the callback function
     *                             that can process the response
-    * @param transId              null or the id of an open transaction if action should occur on an existing transaction.
-    * @param leaveTransactionOpen null or false close the transaction or use a transient one. true will return
-    *                             the transId and leave transaction open.
-    *                             <p/>
-    *                             transId and leaveTransactionOpen are used only if the user wants to explicitly control db transactions
     */
-   public void deleteLastCheckpoint(String tableId, String rowId, boolean deleteAllCheckpoints,
-       String callbackJSON, String transId, Boolean leaveTransactionOpen) {
+   public void deleteLastCheckpoint(String tableId, String rowId, String callbackJSON) {
       ExecutorRequest request = new ExecutorRequest(
-          ExecutorRequestType.USER_TABLE_DELETE_LAST_CHECKPOINT, tableId, rowId,
-          deleteAllCheckpoints, callbackJSON, transId, leaveTransactionOpen);
-
-      queueRequest(request);
-   }
-
-   /**
-    * Close transaction
-    *
-    * @param transId           the id of an open transaction.
-    * @param commitTransaction true if the transaction should be committed; false if it should be rolled back.
-    * @param callbackJSON      The JSON object used by the JS layer to recover the callback function
-    *                          that can process the response
-    */
-   public void closeTransaction(String transId, boolean commitTransaction, String callbackJSON) {
-      ExecutorRequest request = new ExecutorRequest(transId, commitTransaction, callbackJSON);
+          ExecutorRequestType.USER_TABLE_DELETE_LAST_CHECKPOINT, tableId, null, rowId, callbackJSON);
 
       queueRequest(request);
    }

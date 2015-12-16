@@ -53,8 +53,6 @@ public class ExecutorRequest {
 
     // For most interactions
     public final String callbackJSON;
-    public final String transId;
-    public final Boolean leaveTransactionOpen;
 
     public ExecutorRequest(ExecutorContext oldContext) {
         this.executorRequestType = ExecutorRequestType.UPDATE_EXECUTOR_CONTEXT;
@@ -64,8 +62,6 @@ public class ExecutorRequest {
         this.sqlCommand = null;
         this.sqlBindParams = null;
         this.callbackJSON = null;
-        this.transId = null;
-        this.leaveTransactionOpen = null;
         this.tableId = null;
         this.whereClause = null;
         this.groupBy = null;
@@ -86,20 +82,13 @@ public class ExecutorRequest {
      * @param sqlBindParams The array of bind parameter values (including any in the having clause)
      * @param callbackJSON The JSON object used by the JS layer to recover the callback function
      *                     that can process the response
-     * @param transId null or the id of an open transaction if action should occur on an existing transaction.
-     * @param leaveTransactionOpen null or false close the transaction or use a transient one. true will return
-     *                             the transId and leave transaction open.
-     *
-     * transId and leaveTransactionOpen are used only if the user wants to explicitly control db transactions
      */
     public ExecutorRequest(String sqlCommand, String[] sqlBindParams,
-                           String callbackJSON, String transId, Boolean leaveTransactionOpen) {
+                           String callbackJSON) {
         this.executorRequestType = ExecutorRequestType.RAW_QUERY;
         this.sqlCommand = sqlCommand;
         this.sqlBindParams = sqlBindParams;
         this.callbackJSON = callbackJSON;
-        this.transId = transId;
-        this.leaveTransactionOpen = leaveTransactionOpen;
 
         // unused:
         this.oldContext = null;
@@ -129,15 +118,11 @@ public class ExecutorRequest {
      * @param includeKeyValueStoreMap true if the keyValueStoreMap should be returned
      * @param callbackJSON The JSON object used by the JS layer to recover the callback function
      *                     that can process the response
-     * @param transId null or the id of an open transaction if action should occur on an existing transaction.
-     * @param leaveTransactionOpen null or false close the transaction or use a transient one. true will return
-     *                             the transId and leave transaction open.
-     * transId and leaveTransactionOpen are used only if the user wants to explicitly control db transactions
      */
     public ExecutorRequest(String tableId, String whereClause, String[] sqlBindParams,
                            String[] groupBy, String having, String orderByElementKey, String orderByDirection,
                            boolean includeKeyValueStoreMap,
-                           String callbackJSON, String transId, Boolean leaveTransactionOpen) {
+                           String callbackJSON) {
         this.executorRequestType = ExecutorRequestType.USER_TABLE_QUERY;
         this. tableId = tableId;
         this.whereClause = whereClause;
@@ -148,8 +133,6 @@ public class ExecutorRequest {
         this.orderByDirection = orderByDirection;
         this.includeKeyValueStoreMap = includeKeyValueStoreMap;
         this.callbackJSON = callbackJSON;
-        this.transId = transId;
-        this.leaveTransactionOpen = leaveTransactionOpen;
 
         // unused:
         this.oldContext = null;
@@ -161,37 +144,33 @@ public class ExecutorRequest {
     }
 
     /**
-     * Add or modify a row in the table
+     * Add or modify a row in the table, or save-as-incomplete or save-as-complete
      *
      * @param executorRequestType The type of request. One of:
      *                    <ul><li>USER_TABLE_UPDATE_ROW</li>
      *                    <li>USER_TABLE_DELETE_ROW</li>
+     *                    <li>USER_TABLE_GET_MOST_RECENT_ROW</li>
      *                    <li>USER_TABLE_ADD_ROW</li>
      *                    <li>USER_TABLE_ADD_CHECKPOINT</li>
      *                    <li>USER_TABLE_SAVE_CHECKPOINT_AS_INCOMPLETE</li>
      *                    <li>USER_TABLE_SAVE_CHECKPOINT_AS_COMPLETE</li>
+     *                    <li>USER_TABLE_DELETE_ALL_CHECKPOINTS</li>
      *                    <li>USER_TABLE_DELETE_LAST_CHECKPOINT</li></ul>
      * @param tableId  The table being updated
      * @param stringifiedJSON key-value map of values to store or update. If missing, the value remains unchanged.
-     *                        This field is ignored when performing USER_TABLE_DELETE_LAST_CHECKPOINT.
+     *                        This field is ignored when performing
+     *                        USER_TABLE_DELETE_LAST_CHECKPOINT or USER_TABLE_GET_MOST_RECENT_ROW
      * @param rowId The rowId of the row being deleted.
-     * @param transId null or the id of an open transaction if action should occur on an existing transaction.
      * @param callbackJSON The JSON object used by the JS layer to recover the callback function
      *                     that can process the response
-     * @param leaveTransactionOpen null or false close the transaction or use a transient one. true will return
-     *                             the transId and leave transaction open.
-     *
-     * transId and leaveTransactionOpen are used only if the user wants to explicitly control db transactions
      */
     public ExecutorRequest(ExecutorRequestType executorRequestType, String tableId, String stringifiedJSON, String rowId,
-        String callbackJSON, String transId, Boolean leaveTransactionOpen) {
+        String callbackJSON) {
         this.executorRequestType = executorRequestType;
         this.tableId = tableId;
         this.stringifiedJSON = stringifiedJSON;
         this.rowId = rowId;
         this.callbackJSON = callbackJSON;
-        this.transId = transId;
-        this.leaveTransactionOpen = leaveTransactionOpen;
 
         // unused:
         this.oldContext = null;
@@ -205,119 +184,5 @@ public class ExecutorRequest {
         this.includeKeyValueStoreMap = false;
         this.deleteAllCheckpoints = false;
         this.commitTransaction = false;
-    }
-
-    /**
-     * Add or modify a row in the table
-     *
-     * @param executorRequestType The type of request. Must be:
-     *                    <ul><li>USER_TABLE_DELETE_LAST_CHECKPOINT</li></ul>
-     * @param tableId  The table being updated
-     * @param rowId The rowId of the row being deleted.
-     * @param deleteAllCheckpoints true if all checkpoints should be deleted, not just the last one.
-     * @param transId null or the id of an open transaction if action should occur on an existing transaction.
-     * @param callbackJSON The JSON object used by the JS layer to recover the callback function
-     *                     that can process the response
-     * @param leaveTransactionOpen null or false close the transaction or use a transient one. true will return
-     *                             the transId and leave transaction open.
-     *
-     * transId and leaveTransactionOpen are used only if the user wants to explicitly control db transactions
-     */
-    public ExecutorRequest(ExecutorRequestType executorRequestType, String tableId, String rowId, boolean deleteAllCheckpoints,
-                           String callbackJSON, String transId, Boolean leaveTransactionOpen) {
-        if ( executorRequestType != ExecutorRequestType.USER_TABLE_DELETE_LAST_CHECKPOINT) {
-            throw new IllegalArgumentException("expected USER_TABLE_DELETE_LAST_CHECKPOINT");
-        }
-        this.executorRequestType = executorRequestType;
-        this.tableId = tableId;
-        this.rowId = rowId;
-        this.deleteAllCheckpoints = deleteAllCheckpoints;
-        this.callbackJSON = callbackJSON;
-        this.transId = transId;
-        this.leaveTransactionOpen = leaveTransactionOpen;
-
-        // unused:
-        this.oldContext = null;
-        this.sqlCommand = null;
-        this.whereClause = null;
-        this.sqlBindParams = null;
-        this.groupBy = null;
-        this.having = null;
-        this.orderByElementKey = null;
-        this.orderByDirection = null;
-        this.includeKeyValueStoreMap = false;
-        this.stringifiedJSON = null;
-        this.commitTransaction = false;
-    }
-
-    /**
-     * Save checkpoint as incomplete or complete
-     *
-     * @param executorRequestType The type of request. One of:
-     *                    <li>USER_TABLE_SAVE_CHECKPOINT_AS_INCOMPLETE</li>
-     *                    <li>USER_TABLE_SAVE_CHECKPOINT_AS_COMPLETE</li>
-     * @param tableId  The table being updated
-     * @param rowId The rowId of the row being deleted.
-     * @param transId null or the id of an open transaction if action should occur on an existing transaction.
-     * @param callbackJSON The JSON object used by the JS layer to recover the callback function
-     *                     that can process the response
-     * @param leaveTransactionOpen null or false close the transaction or use a transient one. true will return
-     *                             the transId and leave transaction open.
-     *
-     * transId and leaveTransactionOpen are used only if the user wants to explicitly control db transactions
-     */
-    public ExecutorRequest(ExecutorRequestType executorRequestType, String tableId, String rowId,
-        String callbackJSON, String transId, Boolean leaveTransactionOpen) {
-        this.executorRequestType = executorRequestType;
-        this.tableId = tableId;
-        this.rowId = rowId;
-        this.callbackJSON = callbackJSON;
-        this.transId = transId;
-        this.leaveTransactionOpen = leaveTransactionOpen;
-
-        // unused:
-        this.stringifiedJSON = null;
-        this.oldContext = null;
-        this.sqlCommand = null;
-        this.whereClause = null;
-        this.sqlBindParams = null;
-        this.groupBy = null;
-        this.having = null;
-        this.orderByElementKey = null;
-        this.orderByDirection = null;
-        this.includeKeyValueStoreMap = false;
-        this.deleteAllCheckpoints = false;
-        this.commitTransaction = false;
-    }
-
-    /**
-     * Close transaction
-     *
-     * @param transId the id of an open transaction.
-     * @param commitTransaction true if the transaction should be committed; false if it should be rolled back.
-     * @param callbackJSON The JSON object used by the JS layer to recover the callback function
-     *                     that can process the response
-     */
-    public ExecutorRequest(String transId, boolean commitTransaction, String callbackJSON) {
-        this.executorRequestType = ExecutorRequestType.CLOSE_TRANSACTION;
-        this.transId = transId;
-        this.commitTransaction = false;
-        this.callbackJSON = callbackJSON;
-
-        // unused:
-        this.oldContext = null;
-        this.sqlCommand = null;
-        this.tableId = null;
-        this.whereClause = null;
-        this.sqlBindParams = null;
-        this.groupBy = null;
-        this.having = null;
-        this.orderByElementKey = null;
-        this.orderByDirection = null;
-        this.includeKeyValueStoreMap = false;
-        this.stringifiedJSON = null;
-        this.rowId = null;
-        this.deleteAllCheckpoints = false;
-        this.leaveTransactionOpen = null;
     }
 }

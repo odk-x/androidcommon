@@ -90,32 +90,16 @@ public abstract class ExecutorProcessor implements Runnable {
 
     try {
       // we have a request and a viable database interface...
-      transId = request.transId;
-      if (transId == null) {
-        if (request.executorRequestType == ExecutorRequestType.CLOSE_TRANSACTION) {
-          context.reportError(request.callbackJSON, null, "Close Transaction did not specify a transId");
-          context.popRequest(true);
-          return;
-        }
-
-        dbHandle = dbInterface.openDatabase(context.getAppName());
-        if (dbHandle == null) {
-          context.reportError(request.callbackJSON, null, "Unable to open database connection");
-          context.popRequest(true);
-          return;
-        }
-         dbInterface.beginTransaction(context.getAppName(), dbHandle);
-
-        transId = UUID.randomUUID().toString();
-        context.registerActiveConnection(transId, dbHandle);
-      } else {
-        dbHandle = context.getActiveConnection(transId);
-        if (dbHandle == null) {
-          context.reportError(request.callbackJSON, null, "transId is no longer valid");
-          context.popRequest(true);
-          return;
-        }
+      dbHandle = dbInterface.openDatabase(context.getAppName());
+      if (dbHandle == null) {
+        context.reportError(request.callbackJSON, null, "Unable to open database connection");
+        context.popRequest(true);
+        return;
       }
+       dbInterface.beginTransaction(context.getAppName(), dbHandle);
+
+      transId = UUID.randomUUID().toString();
+      context.registerActiveConnection(transId, dbHandle);
 
       switch (request.executorRequestType) {
         case UPDATE_EXECUTOR_CONTEXT:
@@ -127,7 +111,13 @@ public abstract class ExecutorProcessor implements Runnable {
         case USER_TABLE_QUERY:
           userTableQuery();
           break;
-        case USER_TABLE_UPDATE_ROW:
+      case USER_TABLE_GET_ROWS:
+          getRows();
+          break;
+      case USER_TABLE_GET_MOST_RECENT_ROW:
+          getMostRecentRow();
+          break;
+      case USER_TABLE_UPDATE_ROW:
           updateRow();
           break;
         case USER_TABLE_DELETE_ROW:
@@ -148,15 +138,9 @@ public abstract class ExecutorProcessor implements Runnable {
         case USER_TABLE_DELETE_LAST_CHECKPOINT:
           deleteLastCheckpoint();
           break;
-        case CLOSE_TRANSACTION:
-          closeTransaction();
-          break;
       }
     } catch (RemoteException e) {
-      if (request.transId != null) {
-        reportErrorAndCleanUp("unexpected remote exception");
-      }
-      // TODO: figure out what to do...
+      reportErrorAndCleanUp("unexpected remote exception");
     }
   }
 
@@ -166,20 +150,14 @@ public abstract class ExecutorProcessor implements Runnable {
    * @param errorMessage
    */
   private void reportErrorAndCleanUp(String errorMessage) {
-    String transIdReported = transId;
     try {
-      if ((request.leaveTransactionOpen == null) || (request.leaveTransactionOpen == false)) {
-        transIdReported = null;
-        dbInterface.closeTransactionAndDatabase(context.getAppName(), dbHandle, false);
-      }
+      dbInterface.closeDatabase(context.getAppName(), dbHandle);
     } catch (RemoteException e) {
       WebLogger.getLogger(context.getAppName()).printStackTrace(e);
       WebLogger.getLogger(context.getAppName()).w(TAG, "error while releasing database conneciton");
     } finally {
-      if (transIdReported == null) {
-        context.removeActiveConnection(transId);
-      }
-      context.reportError(request.callbackJSON, transIdReported, errorMessage);
+      context.removeActiveConnection(transId);
+      context.reportError(request.callbackJSON, null, errorMessage);
       context.popRequest(true);
     }
   }
@@ -192,24 +170,18 @@ public abstract class ExecutorProcessor implements Runnable {
    */
   private void reportSuccessAndCleanUp(ArrayList<List<Object>> data, Map<String, Object> metadata) {
     boolean successful = false;
-    String transIdReported = transId;
     try {
-      if ((request.leaveTransactionOpen == null) || (request.leaveTransactionOpen == false)) {
-        transIdReported = null;
-        dbInterface.closeTransactionAndDatabase(context.getAppName(), dbHandle, true);
-      }
+      dbInterface.closeDatabase(context.getAppName(), dbHandle);
       successful = true;
     } catch (RemoteException e) {
       WebLogger.getLogger(context.getAppName()).printStackTrace(e);
       WebLogger.getLogger(context.getAppName()).w(TAG, "error while releasing database connection");
     } finally {
-      if (transIdReported == null) {
-        context.removeActiveConnection(transId);
-      }
+      context.removeActiveConnection(transId);
       if (successful) {
-        context.reportSuccess(request.callbackJSON, transIdReported, data, metadata);
+        context.reportSuccess(request.callbackJSON, null, data, metadata);
       } else {
-        context.reportError(request.callbackJSON, transIdReported,
+        context.reportError(request.callbackJSON, null,
                 "error while commiting transaction and closing database");
       }
       context.popRequest(true);
@@ -278,11 +250,15 @@ public abstract class ExecutorProcessor implements Runnable {
       columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
       context.putOrderedColumns(request.tableId, columns);
     }
-    UserTable userTable = dbInterface.rawSqlQuery(context.getAppName(), dbHandle,
-            request.tableId, columns, request.whereClause, request.sqlBindParams,
-            request.groupBy, request.having, request.orderByElementKey, request.orderByDirection);
+    UserTable userTable = dbInterface
+        .rawSqlQuery(context.getAppName(), dbHandle, request.tableId, columns, request.whereClause,
+            request.sqlBindParams, request.groupBy, request.having, request.orderByElementKey,
+            request.orderByDirection);
 
+    reportSuccessAndCleanUp(userTable);
+  }
 
+  private void reportSuccessAndCleanUp(UserTable userTable) throws RemoteException {
     List<KeyValueStoreEntry> entries = null;
 
     // We are assuming that we always have the KVS
@@ -401,6 +377,47 @@ public abstract class ExecutorProcessor implements Runnable {
 
   protected abstract void extendQueryMetadata(OdkDbHandle dbHandle, List<KeyValueStoreEntry> entries, UserTable userTable, Map<String, Object> metadata);
 
+
+  private void getRows() throws RemoteException {
+    if (request.tableId == null) {
+      reportErrorAndCleanUp("tableId cannot be null");
+      return;
+    }
+    if (request.rowId == null) {
+      reportErrorAndCleanUp("rowId cannot be null");
+      return;
+    }
+    OrderedColumns columns = context.getOrderedColumns(request.tableId);
+    if (columns == null) {
+      columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
+      context.putOrderedColumns(request.tableId, columns);
+    }
+    UserTable t = dbInterface
+        .getRowsWithId(context.getAppName(), dbHandle, request.tableId, columns, request.rowId);
+
+    reportSuccessAndCleanUp(t);
+  }
+
+  private void getMostRecentRow() throws RemoteException {
+    if (request.tableId == null) {
+      reportErrorAndCleanUp("tableId cannot be null");
+      return;
+    }
+    if (request.rowId == null) {
+      reportErrorAndCleanUp("rowId cannot be null");
+      return;
+    }
+    OrderedColumns columns = context.getOrderedColumns(request.tableId);
+    if (columns == null) {
+      columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
+      context.putOrderedColumns(request.tableId, columns);
+    }
+    UserTable t = dbInterface
+        .getMostRecentRowWithId(context.getAppName(), dbHandle, request.tableId, columns, request.rowId);
+
+    reportSuccessAndCleanUp(t);
+  }
+
   private void updateRow() throws RemoteException {
     if (request.tableId == null) {
       reportErrorAndCleanUp("tableId cannot be null");
@@ -417,10 +434,10 @@ public abstract class ExecutorProcessor implements Runnable {
     }
 
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
-    dbInterface.updateDataInExistingDBTableWithId(context.getAppName(), dbHandle, request.tableId,
-            columns, cvValues, request.rowId);
+    UserTable t = dbInterface
+        .updateRowWithId(context.getAppName(), dbHandle, request.tableId, columns, cvValues, request.rowId);
 
-    reportSuccessAndCleanUp(null, null);
+    reportSuccessAndCleanUp(t);
   }
 
   private void deleteRow() throws RemoteException {
@@ -439,8 +456,8 @@ public abstract class ExecutorProcessor implements Runnable {
     }
 
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
-    dbInterface.deleteDataInExistingDBTableWithId(context.getAppName(), dbHandle, request.tableId,
-            request.rowId);
+    dbInterface
+        .deleteRowWithId(context.getAppName(), dbHandle, request.tableId, columns, request.rowId);
 
     reportSuccessAndCleanUp(null, null);
   }
@@ -461,10 +478,10 @@ public abstract class ExecutorProcessor implements Runnable {
     }
 
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
-    dbInterface.insertDataIntoExistingDBTableWithId(context.getAppName(), dbHandle, request.tableId,
-            columns, cvValues, request.rowId);
+    UserTable t = dbInterface
+        .insertRowWithId(context.getAppName(), dbHandle, request.tableId, columns, cvValues, request.rowId);
 
-    reportSuccessAndCleanUp(null, null);
+    reportSuccessAndCleanUp(t);
   }
 
   private void addCheckpoint() throws RemoteException {
@@ -483,10 +500,10 @@ public abstract class ExecutorProcessor implements Runnable {
     }
 
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
-    dbInterface.insertCheckpointRowIntoExistingDBTableWithId(context.getAppName(), dbHandle, request.tableId,
-            columns, cvValues, request.rowId);
+    UserTable t = dbInterface
+        .insertCheckpointRowWithId(context.getAppName(), dbHandle, request.tableId, columns, cvValues, request.rowId);
 
-    reportSuccessAndCleanUp(null, null);
+    reportSuccessAndCleanUp(t);
   }
 
   private void saveCheckpointAsIncomplete() throws RemoteException {
@@ -504,11 +521,11 @@ public abstract class ExecutorProcessor implements Runnable {
       context.putOrderedColumns(request.tableId, columns);
     }
 
-    //ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
-    dbInterface.saveAsIncompleteMostRecentCheckpointDataInDBTableWithId(context.getAppName(), dbHandle, request.tableId,
-            request.rowId);
+    ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
+    UserTable t = dbInterface.saveAsIncompleteMostRecentCheckpointRowWithId(context.getAppName(),
+        dbHandle, request.tableId, columns, cvValues, request.rowId);
 
-    reportSuccessAndCleanUp(null, null);
+    reportSuccessAndCleanUp(t);
   }
 
   private void saveCheckpointAsComplete() throws RemoteException {
@@ -526,11 +543,11 @@ public abstract class ExecutorProcessor implements Runnable {
       context.putOrderedColumns(request.tableId, columns);
     }
 
-    //ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
-    dbInterface.saveAsCompleteMostRecentCheckpointDataInDBTableWithId(context.getAppName(), dbHandle, request.tableId,
-            request.rowId);
+    ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
+    UserTable t = dbInterface.saveAsCompleteMostRecentCheckpointRowWithId(context.getAppName(),
+        dbHandle, request.tableId, columns, cvValues, request.rowId);
 
-    reportSuccessAndCleanUp(null, null);
+    reportSuccessAndCleanUp(t);
   }
 
   private void deleteLastCheckpoint() throws RemoteException {
@@ -543,32 +560,38 @@ public abstract class ExecutorProcessor implements Runnable {
       return;
     }
 
-    if ( request.deleteAllCheckpoints != true ) {
-      dbInterface.deleteLastCheckpointRowWithId(context.getAppName(), dbHandle, request.tableId,
-              request.rowId);
-    } else {
-      OrderedColumns columns = context.getOrderedColumns(request.tableId);
-      if (columns == null) {
-        columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
-        context.putOrderedColumns(request.tableId, columns);
-      }
-
-      //ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
-      dbInterface.deleteCheckpointRowsWithId(context.getAppName(), dbHandle, request.tableId,
-              request.rowId);
+    OrderedColumns columns = context.getOrderedColumns(request.tableId);
+    if (columns == null) {
+      columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
+      context.putOrderedColumns(request.tableId, columns);
     }
 
-    reportSuccessAndCleanUp(null, null);
+    UserTable t = dbInterface.deleteLastCheckpointRowWithId(context.getAppName(), dbHandle,
+        request.tableId, columns, request.rowId);
+    reportSuccessAndCleanUp(t);
   }
 
-  private void closeTransaction() throws RemoteException {
-    try {
-      dbInterface.closeTransactionAndDatabase(context.getAppName(), dbHandle, request.commitTransaction);
-    } finally {
-      context.removeActiveConnection(transId);
-      context.reportSuccess(request.callbackJSON, null, null, null);
-      context.popRequest(true);
+  private void deleteAllCheckpoints() throws RemoteException {
+    if ( request.tableId == null ) {
+      reportErrorAndCleanUp("tableId cannot be null");
+      return;
     }
+    if ( request.rowId == null ) {
+      reportErrorAndCleanUp("rowId cannot be null");
+      return;
+    }
+
+    OrderedColumns columns = context.getOrderedColumns(request.tableId);
+    if (columns == null) {
+      columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
+      context.putOrderedColumns(request.tableId, columns);
+    }
+
+    //ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
+    UserTable t = dbInterface.deleteAllCheckpointRowsWithId(context.getAppName(), dbHandle,
+        request.tableId, columns, request.rowId);
+
+    reportSuccessAndCleanUp(t);
   }
 
 }

@@ -787,7 +787,7 @@ public class CsvUtil {
           // uncommitted edits. For now, we just add our csv import to those,
           // rather
           // than resolve the problems.
-          UserTable table = context.getDatabase().getDataInExistingDBTableWithId(appName, db,
+          UserTable table = context.getDatabase().getRowsWithId(appName, db,
               tableId, orderedDefns, v_id);
           if (table.getNumberOfRows() > 1) {
             throw new IllegalStateException(
@@ -841,7 +841,7 @@ public class CsvUtil {
 
             if (syncState == SyncState.new_row) {
               // we do the actual update here
-              context.getDatabase().updateDataInExistingDBTableWithId(appName, db, tableId, orderedDefns,
+              context.getDatabase().updateRowWithId(appName, db, tableId, orderedDefns,
                   cv, v_id);
             }
             // otherwise, do NOT update the row.
@@ -870,7 +870,7 @@ public class CsvUtil {
 
             cv.put(DataTableColumns.ID, v_id);
 
-            context.getDatabase().insertDataIntoExistingDBTableWithId(appName, db, tableId, orderedDefns,
+            context.getDatabase().insertRowWithId(appName, db, tableId, orderedDefns,
                 cv, v_id);
           }
           

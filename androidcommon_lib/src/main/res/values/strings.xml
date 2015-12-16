@@ -3,23 +3,16 @@
     <string name="app_name">ODK Common</string>
     <string name="app_userLabel">OpenDataKit</string>
     
-    <string name="ok">OK</string>
-    <string name="cancel">Cancel</string>
     <string name="enter_new_password">Enter new password</string>
     <string name="verify_new_password">Re-enter new password</string>
     <string name="password">Password</string>
     <string name="username">Username</string>
-    <string name="still_reading_license_file">Sorry, the license file is still being read.</string>
- 	<string name="about">About</string>
- 	<string name="waiting_for_license">Retrieving license info &#8230;</string>
-	<string name="read_license_success">Read license file successfully</string>
-	<string name="read_license_fail">Failed to read license file</string>
-    
+
 <string name="expansion_unzipping_begins">Unzipping resources. Scanning zip directory.</string>
 <string name="searching_for_form_defs">Searching for new form definitions &#8230;</string>
 <string name="expansion_unzipping_without_detail">Unzipping resources. Extracting %1$s (%2$d of %3$d)</string>
 <string name="expansion_create_dir_detail">Creating directory</string>
-<string name="expansion_unzipping_detail">at byte %1$d out of %2$d compressed bytes overall</string>
+<string name="expansion_unzipping_detail">at byte %1$d, file %2$d</string>
 <string name="expansion_unzipping_complete">Unzipping resources completed.</string> 
 <string name="searching_for_deleted_forms">Searching for deleted forms &#8230;</string>
 <string name="examining_form">Verifying form %2$s for table %1$s exists &#8230;</string>    
