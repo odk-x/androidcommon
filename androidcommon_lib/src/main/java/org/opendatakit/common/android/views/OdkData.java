@@ -16,6 +16,7 @@ package org.opendatakit.common.android.views;
 
 import android.app.Activity;
 import android.os.Bundle;
+import org.opendatakit.IntentConsts;
 import org.opendatakit.common.android.provider.DataTableColumns;
 
 public class OdkData {
@@ -134,7 +135,8 @@ public class OdkData {
          throw new IllegalArgumentException("Tables view launched without tableId specified");
       }
 
-      String rowId = bundle.getString(IntentKeys.ROW_ID);
+      // This was changed to use
+      String rowId = bundle.getString(IntentConsts.INTENT_KEY_INSTANCE_ID);
       String whereClause = bundle.getString(IntentKeys.SQL_WHERE);
       String[] selArgs = bundle.getStringArray(IntentKeys.SQL_SELECTION_ARGS);
       String[] groupBy = bundle.getStringArray(IntentKeys.SQL_GROUP_BY_ARGS);
