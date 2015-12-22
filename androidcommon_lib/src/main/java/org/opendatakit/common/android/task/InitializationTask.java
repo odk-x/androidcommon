@@ -479,7 +479,7 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
         publishProgress(formattedString, detail);
 
         try {
-          util.updateTablePropertiesFromCsv(this, tableId);
+          util.updateTablePropertiesFromCsv(tableId);
         } catch (IOException e) {
           mPendingResult.add(appContext.getString(R.string.defining_tableid_error, tableId));
           WebLogger.getLogger(appName).e(t, "Unexpected error during update from csv");
