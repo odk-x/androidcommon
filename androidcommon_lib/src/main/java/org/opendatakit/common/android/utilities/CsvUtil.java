@@ -282,8 +282,9 @@ public class CsvUtil {
     WebLogger.getLogger(appName).i(TAG, "writePropertiesCsv: tableId: " + tableId);
 
     /**
-     * Since the md5Hash of the file identifies identical properties, ensure
-     * that the list of KVS entries is in alphabetical order.
+     * Get all the KVS entries and scan through, replacing all choice list
+     * choiceListId with the underlying choice list.  On input, these are split
+     * off and replaced by choiceListIds.
      */
     List<KeyValueStoreEntry> kvsEntries =
         context.getDatabase().getDBTableMetadata(appName, db, tableId, null, null, null);
