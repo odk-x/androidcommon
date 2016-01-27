@@ -96,7 +96,6 @@ public abstract class ExecutorProcessor implements Runnable {
         context.popRequest(true);
         return;
       }
-       dbInterface.beginTransaction(context.getAppName(), dbHandle);
 
       transId = UUID.randomUUID().toString();
       context.registerActiveConnection(transId, dbHandle);
