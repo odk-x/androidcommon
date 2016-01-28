@@ -19,7 +19,6 @@ import org.opendatakit.dbshim.service.OdkDbShimInterface;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
@@ -300,53 +299,4 @@ public class ODKWebView extends WebView {
       }
     }
   }
-
-  /**
-   * Tell the enclosing activity that we should restore this WebView to visible
-   * and make any custom view gone.
-   *
-   * NOTE: Only Invoked by ODKWebChromeClient.
-   */
-  void swapOffCustomView() {
-    log.i(t, "swapOffCustomView");
-    activity.swapOffCustomView();
-  }
-
-  /**
-   * Tell the enclosing activity that we should make the indicated view visible
-   * and this one gone.
-   *
-   * NOTE: Only Invoked by ODKWebChromeClient.
-   *
-   * @param view
-   */
-  void swapToCustomView(View view) {
-    log.i(t, "swapToCustomView");
-    activity.swapToCustomView(view);
-  }
-
-  /**
-   * Ask the browser for an icon to represent a <video> element. This icon will
-   * be used if the Web page did not specify a poster attribute.
-   *
-   * NOTE: Only Invoked by ODKWebChromeClient.
-   *
-   * @return Bitmap The icon or null if no such icon is available.
-   */
-  Bitmap getDefaultVideoPoster() {
-    return activity.getDefaultVideoPoster();
-  }
-
-  /**
-   * Ask the host application for a custom progress view to show while a <video>
-   * is loading.
-   *
-   * NOTE: Only Invoked by ODKWebChromeClient.
-   *
-   * @return View The progress view.
-   */
-  View getVideoLoadingProgressView() {
-    return activity.getVideoLoadingProgressView();
-  }
-
 }

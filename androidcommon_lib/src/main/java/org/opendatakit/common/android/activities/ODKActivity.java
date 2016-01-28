@@ -109,14 +109,6 @@ public interface ODKActivity extends IAppAwareActivity, IInitResumeActivity {
    */
   public String getFirstQueuedAction();
 
-  public void swapToCustomView(View view);
-
-  public void swapOffCustomView();
-
-  public View getVideoLoadingProgressView();
-
-  public Bitmap getDefaultVideoPoster();
-
   // for FormChooserListFragment
   public void chooseForm(Uri formUri);
 
