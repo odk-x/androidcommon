@@ -17,6 +17,7 @@ package org.opendatakit.common.android.views;
 import android.app.Activity;
 import android.os.Bundle;
 import org.opendatakit.IntentConsts;
+import org.opendatakit.common.android.activities.IOdkDataActivity;
 import org.opendatakit.common.android.provider.DataTableColumns;
 
 public class OdkData {
@@ -78,24 +79,21 @@ public class OdkData {
       public static final String SQL_ORDER_BY_DIRECTION = "sqlOrderByDirection";
    }
 
-   protected Activity mActivity;
+   protected IOdkDataActivity mActivity;
 
    private static final String TAG = OdkData.class.getSimpleName();
 
-   private final ICallbackFragment mFragment;
-
    private ExecutorContext context;
 
-   public OdkData(ICallbackFragment fragment, Activity activity) {
-      mFragment = fragment;
+   public OdkData(IOdkDataActivity activity) {
       mActivity = activity;
       // change to support multiple data objects within a single webpage
-      context = ExecutorContext.getContext(mFragment);
+      context = ExecutorContext.getContext(mActivity);
    }
 
    public synchronized void refreshContext() {
       if ( !context.isAlive() ) {
-         context = ExecutorContext.getContext(mFragment);
+         context = ExecutorContext.getContext(mActivity);
       }
    }
 
@@ -117,7 +115,7 @@ public class OdkData {
     * @return null if there is no result, otherwise the responseJSON of the last action
     */
    public String getResponseJSON() {
-      return mFragment.getResponseJSON();
+      return mActivity.getResponseJSON();
    }
 
    /**
@@ -128,7 +126,7 @@ public class OdkData {
     *
     */
    public void getViewData(String callbackJSON) {
-      Bundle bundle = this.mActivity.getIntent().getExtras();
+      Bundle bundle = this.mActivity.getIntentExtras();
 
       String tableId = bundle.getString(IntentKeys.TABLE_ID);
       if (tableId == null || tableId.isEmpty()) {
@@ -179,14 +177,19 @@ public class OdkData {
    /**
     * Raw SQL query
     *
+    * @param tableId              The tableId whose metadata should be returned. If a result
+    *                             column matches the column name in this tableId, then the data
+    *                             type interpretations for that column will be applied to the result
+    *                             column (e.g., integer, number, array, object conversions).
     * @param sqlCommand           The Select statement to issue. It can reference any table in the database, including system tables.
     * @param sqlBindParams        The array of bind parameter values (including any in the having clause)
     * @param callbackJSON         The JSON object used by the JS layer to recover the callback function
     *                             that can process the response
     * @return see description in class header
     */
-   public void rawQuery(String sqlCommand, String[] sqlBindParams, String callbackJSON) {
-      ExecutorRequest request = new ExecutorRequest(sqlCommand, sqlBindParams, callbackJSON);
+   public void rawQuery(String tableId, String sqlCommand, String[] sqlBindParams, String callbackJSON) {
+      ExecutorRequest request = new ExecutorRequest(tableId,
+          sqlCommand, sqlBindParams, callbackJSON);
 
       queueRequest(request);
    }

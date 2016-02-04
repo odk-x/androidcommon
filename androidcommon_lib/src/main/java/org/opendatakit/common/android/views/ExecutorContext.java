@@ -15,6 +15,7 @@
 package org.opendatakit.common.android.views;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.opendatakit.common.android.activities.IOdkDataActivity;
 import org.opendatakit.common.android.data.OrderedColumns;
 import org.opendatakit.common.android.listener.DatabaseConnectionListener;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
@@ -40,14 +41,14 @@ public class ExecutorContext implements DatabaseConnectionListener {
         }
         currentContext = ctxt;
         // register for database connection status changes
-        ctxt.fragment.registerDatabaseConnectionBackgroundListener(ctxt);
+        ctxt.activity.registerDatabaseConnectionBackgroundListener(ctxt);
     }
 
     /**
-     * The fragment containing the web view.
+     * The activity containing the web view.
      * Specifically, the API we need to access.
      */
-    private final ICallbackFragment fragment;
+    private final IOdkDataActivity activity;
 
   /**
    * The mutex used to guard all of the private data structures:
@@ -80,13 +81,13 @@ public class ExecutorContext implements DatabaseConnectionListener {
     private Map<String, OdkDbHandle> activeConnections = new HashMap<String, OdkDbHandle>();
     private Map<String, OrderedColumns> mCachedOrderedDefns = new HashMap<String, OrderedColumns>();
 
-    private ExecutorContext(ICallbackFragment fragment) {
-        this.fragment = fragment;
+    private ExecutorContext(IOdkDataActivity fragment) {
+        this.activity = fragment;
         updateCurrentContext(this);
     }
 
-    public static synchronized ExecutorContext getContext(ICallbackFragment fragment) {
-      if ( currentContext != null && (currentContext.fragment == fragment)) {
+    public static synchronized ExecutorContext getContext(IOdkDataActivity fragment) {
+      if ( currentContext != null && (currentContext.activity == fragment)) {
         return currentContext;
       } else {
         return new ExecutorContext(fragment);
@@ -98,7 +99,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
    */
   private void triggerExecutorProcessor() {
       // processor is most often NOT discarded
-      ExecutorProcessor processor = fragment.newExecutorProcessor(this);
+      ExecutorProcessor processor = activity.newExecutorProcessor(this);
       synchronized (mutex) {
         // we might have drained the queue -- or not.
         if ( !worker.isShutdown() && !worker.isTerminated() && !workQueue.isEmpty() ) {
@@ -113,7 +114,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
    */
   public void queueRequest(ExecutorRequest request) {
       // processor is most often NOT discarded
-      ExecutorProcessor processor = fragment.newExecutorProcessor(this);
+      ExecutorProcessor processor = activity.newExecutorProcessor(this);
       synchronized (mutex) {
         if ( !worker.isShutdown() && !worker.isTerminated()) {
           // push the request
@@ -143,7 +144,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
    */
   public void popRequest(boolean trigger) {
     // processor is most often NOT discarded
-    ExecutorProcessor processor = (trigger ? fragment.newExecutorProcessor(this) : null);
+    ExecutorProcessor processor = (trigger ? activity.newExecutorProcessor(this) : null);
     synchronized (mutex) {
       if ( !workQueue.isEmpty() ) {
         workQueue.removeFirst();
@@ -244,11 +245,11 @@ public class ExecutorContext implements DatabaseConnectionListener {
    * @return
    */
     public OdkDbInterface getDatabase() {
-        return fragment.getDatabase();
+        return activity.getDatabase();
     }
 
     public String getAppName() {
-        return fragment.getAppName();
+        return activity.getAppName();
     }
 
     public void releaseResources(String reason) {
@@ -316,7 +317,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
           WebLogger.getLogger(currentContext.getAppName()).printStackTrace(e);
           throw new IllegalStateException("should never have a conversion error");
         }
-        fragment.signalResponseAvailable(responseStr);
+        activity.signalResponseAvailable(responseStr);
       }
     }
 
@@ -341,7 +342,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
           WebLogger.getLogger(currentContext.getAppName()).printStackTrace(e);
           throw new IllegalStateException("should never have a conversion error");
         }
-        fragment.signalResponseAvailable(responseStr);
+        activity.signalResponseAvailable(responseStr);
     }
 
     @Override
@@ -351,7 +352,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
 
     @Override
     public void databaseUnavailable() {
-        new ExecutorContext(fragment);
+        new ExecutorContext(activity);
     }
 
    public synchronized boolean isAlive() {

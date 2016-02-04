@@ -15,9 +15,8 @@
  */
 package org.opendatakit.common.android.views;
 
-import org.opendatakit.dbshim.service.OdkDbShimInterface;
+import org.opendatakit.common.android.activities.IOdkSurveyActivity;
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Context;
 import android.os.Build;
 import android.os.Bundle;
@@ -26,7 +25,6 @@ import android.util.AttributeSet;
 import android.view.View;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
-import org.opendatakit.common.android.activities.ODKActivity;
 import org.opendatakit.common.android.application.CommonApplication;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
@@ -35,7 +33,7 @@ import org.opendatakit.common.android.utilities.WebLoggerIf;
 import java.util.LinkedList;
 
 /**
- * NOTE: assumes that the Context implements ODKActivity.
+ * NOTE: assumes that the Context implements IOdkSurveyActivity.
  *
  * Wrapper for a raw WebView. The enclosing application should only call:
  * initialize(appName) addJavascriptInterface(class,name)
@@ -54,10 +52,10 @@ public class ODKWebView extends WebView {
   private static final String BASE_STATE = "BASE_STATE";
   private static final String JAVASCRIPT_REQUESTS_WAITING_FOR_PAGE_LOAD = "JAVASCRIPT_REQUESTS_WAITING_FOR_PAGE_LOAD";
 
-  private final ODKActivity activity;
+  private final IOdkSurveyActivity activity;
   private WebLoggerIf log;
   private ODKShimJavascriptCallback shim;
-  private ODKDbShimJavascriptCallback dbShim;
+  private OdkCommon odkCommon;
   private OdkData odkData;
   private String loadPageUrl = null;
   private boolean isLoadPageFrameworkFinished = false;
@@ -66,26 +64,13 @@ public class ODKWebView extends WebView {
   private boolean isFirstPageLoad = true;
   private final LinkedList<String> javascriptRequestsWaitingForPageLoad = new LinkedList<String>();
 
-  public void serviceChange( boolean ready, OdkDbShimInterface dbShimBinder, ICallbackFragment fragment ) {
-    if ( ready && dbShimBinder != null && fragment != null ) {
-      dbShim = new ODKDbShimJavascriptCallback(ODKWebView.this, activity, dbShimBinder);
-      addJavascriptInterface(dbShim, "dbshim");
-      odkData = new OdkData(fragment, (Activity)activity);
-      addJavascriptInterface(odkData.getJavascriptInterfaceWithWeakReference(), "odkDataIf");
+  public void serviceChange( boolean ready) {
+    if ( ready ) {
       loadPage();
     } else {
       resetLoadPageStatus(loadPageUrl);
     }
   }
-  
-  public void beforeDbShimServiceDisconnected() {
-    if ( dbShim != null ) {
-      dbShim.immediateRollbackOutstandingTransactions();
-    }
-    dbShim = null;
-  }
-  // TODO: the interaction with the landing.js needs to be updated
-  // this is not 100% reliable because of that interaction.
 
   @Override
   protected Parcelable onSaveInstanceState () {
@@ -145,9 +130,9 @@ public class ODKWebView extends WebView {
     if ( Build.VERSION.SDK_INT < 11 ) {
       throw new IllegalStateException("pre-3.0 not supported!");
     }
-    // Context is ALWAYS an ODKActivity...
+    // Context is ALWAYS an IOdkSurveyActivity...
 
-    activity = (ODKActivity) context;
+    activity = (IOdkSurveyActivity) context;
     String appName = activity.getAppName();
     log = WebLogger.getLogger(appName);
     log.i(t, "ODKWebView()");
@@ -160,7 +145,7 @@ public class ODKWebView extends WebView {
     ws.setAppCacheEnabled(true);
     ws.setAppCachePath(ODKFileUtils.getAppCacheFolder(appName));
     ws.setCacheMode(WebSettings.LOAD_DEFAULT);
-    ws.setDatabaseEnabled(true);
+    ws.setDatabaseEnabled(false);
     ws.setDefaultFixedFontSize(((CommonApplication) context.getApplicationContext()).getQuestionFontsize(appName));
     ws.setDefaultFontSize(((CommonApplication) context.getApplicationContext()).getQuestionFontsize(appName));
     ws.setDomStorageEnabled(true);
@@ -185,6 +170,13 @@ public class ODKWebView extends WebView {
     setWebChromeClient(new ODKWebChromeClient(this));
     setWebViewClient(new ODKWebViewClient(this));
 
+    // set up the odkCommonIf
+    odkCommon = new OdkCommon(activity);
+    addJavascriptInterface(odkCommon.getJavascriptInterfaceWithWeakReference(), "odkCommonIf");
+
+    odkData = new OdkData(activity);
+    addJavascriptInterface(odkData.getJavascriptInterfaceWithWeakReference(), "odkDataIf");
+
     // stomp on the shim object...
     shim = new ODKShimJavascriptCallback(this,activity);
     addJavascriptInterface(shim, "shim");
@@ -206,7 +198,7 @@ public class ODKWebView extends WebView {
   public void signalQueuedActionAvailable() {
     // NOTE: this is asynchronous
     log.i(t, "signalQueuedActionAvailable()");
-    loadJavascriptUrl("javascript:window.landing.signalQueuedActionAvailable()");
+    loadJavascriptUrl("javascript:window.odkCommon.signalQueuedActionAvailable()");
   }
 
   // called to invoke a javascript method inside the webView
@@ -231,8 +223,8 @@ public class ODKWebView extends WebView {
      * NOTE: Reload the web framework only if it has changed.
      */
 
-    if ( dbShim == null ) {
-      // do not initiate reload until we have the dbShim set up...
+    if ( activity.getDatabase() == null ) {
+      // do not initiate reload until we have the database set up...
       return;
     }
 

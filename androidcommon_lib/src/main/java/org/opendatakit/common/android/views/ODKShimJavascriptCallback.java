@@ -14,16 +14,9 @@
 
 package org.opendatakit.common.android.views;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.json.JSONTokener;
-import org.opendatakit.common.android.activities.ODKActivity;
-import org.opendatakit.common.android.provider.DataTableColumns;
-import org.opendatakit.common.android.provider.FormsProviderAPI;
-import org.opendatakit.common.android.utilities.ODKFileUtils;
+import org.opendatakit.common.android.activities.IOdkSurveyActivity;
 import org.opendatakit.common.android.utilities.WebLogger;
 
-import android.os.Build;
 import org.opendatakit.common.android.utilities.WebLoggerIf;
 
 /**
@@ -37,104 +30,23 @@ public class ODKShimJavascriptCallback {
   public static final String t = "ODKShimJavascriptCallback";
 
   private ODKWebView mWebView;
-  private ODKActivity mActivity;
+  private IOdkSurveyActivity mActivity;
   private final WebLoggerIf log;
 
-  public ODKShimJavascriptCallback(ODKWebView webView, ODKActivity activity) {
+  public ODKShimJavascriptCallback(ODKWebView webView, IOdkSurveyActivity activity) {
     mWebView = webView;
     mActivity = activity;
     log = WebLogger.getLogger(mActivity.getAppName());
   }
 
-  public void remove() {
-    log.i(t, "remove");
-    mWebView = null;
-    mActivity = null;
-  }
-
   @android.webkit.JavascriptInterface
-  public String getBaseUrl() {
-    return ODKFileUtils.getRelativeSystemPath();
-  }
-
-  /**
-   * <p>
-   * Get information about the platform we are running on.
-   * </p>
-   *
-   * <pre>
-   * {"container":"Android",
-   *  "version":"2.2.3",
-   *  "appName":"myapp"
-   *  }
-   * </pre>
-   *
-   * Version should map to the capabilities of the WebKit or browser in which
-   * the form is rendered. For Android, this is part of the operating system and
-   * is not updated separately, so its version is the OS build version.
-   *
-   * @return JSONstring as defined above.
-   */
-  @android.webkit.JavascriptInterface
-  public String getPlatformInfo() {
+  public void clearAuxillaryHash() {
     if (mWebView == null) {
-      log.i(t, "getPlatformInfo -- interface removed");
-      return "{}";
+      log.w("shim", "clearInstanceId -- interface removed");
+      return;
     }
-    log("I", "getPlatformInfo");
-    // @formatter:off
-	 return "{\"container\":\"Android\"," +
-		      "\"version\":\""	+ Build.VERSION.RELEASE + "\"," +
-            "\"appName\":\"" + mActivity.getAppName() + "\"," +
-		      ((mActivity.getActiveUser() == null) ? 
-		          "\"activeUser\":\"" + DataTableColumns.DEFAULT_SAVEPOINT_CREATOR + "\"," :
-                "\"activeUser\":\"" + mActivity.getActiveUser() + "\",") +
-            "\"baseUri\":\"" + mActivity.getWebViewContentUri() + mActivity.getAppName() + "/\"," +
-            "\"formsUri\":\"" + FormsProviderAPI.CONTENT_URI.toString() + "\"," +
-	         "\"logLevel\":\"D\"}";
-    // @formatter:on
-  }
-
-  @android.webkit.JavascriptInterface
-  public void log(String level, String loggingString) {
-    char l = (level == null) ? 'I' : level.charAt(0);
-    switch (l) {
-    case 'A':
-      log.a("shim", loggingString);
-      break;
-    case 'D':
-      log.d("shim", loggingString);
-      break;
-    case 'E':
-      log.e("shim", loggingString);
-      break;
-    case 'I':
-      log.i("shim", loggingString);
-      break;
-    case 'S':
-      log.s("shim", loggingString);
-      break;
-    case 'V':
-      log.v("shim", loggingString);
-      break;
-    case 'W':
-      log.w("shim", loggingString);
-      break;
-    default:
-      log.i("shim", loggingString);
-      break;
-    }
-  }
-
-  @android.webkit.JavascriptInterface
-  public String getProperty(String propertyId) {
-    if (mWebView == null) {
-      log.i(t, "getProperty -- interface removed");
-      return null;
-    }
-    log("I", "getProperty(" + propertyId + ")");
-
-    return mActivity.getProperty(propertyId);
+    log.d("shim", "DO: clearAuxillaryHash()");
+    mActivity.clearAuxillaryHash();
   }
 
   @android.webkit.JavascriptInterface
@@ -314,48 +226,6 @@ public class ODKShimJavascriptCallback {
   }
 
   @android.webkit.JavascriptInterface
-  public void setSessionVariable(String refId, String elementPath, String jsonValue) {
-    if (mWebView == null) {
-      log.w("shim", "setSessionVariable -- interface removed");
-      return;
-    }
-    if (!mActivity.getRefId().equals(refId)) {
-      log.w("shim", "IGNORED: setSessionVariable(" + refId + ", " + elementPath + ",...)");
-      return;
-    }
-    log.d("shim", "DO: setSessionVariable(" + refId + ", " + elementPath + ",...)");
-    mActivity.setSessionVariable(elementPath, jsonValue);
-  }
-
-  @android.webkit.JavascriptInterface
-  public String getSessionVariable(String refId, String elementPath) {
-    if (mWebView == null) {
-      log.w("shim", "getSessionVariable -- interface removed");
-      return null;
-    }
-    if (!mActivity.getRefId().equals(refId)) {
-      log.w("shim", "IGNORED: getSessionVariable(" + refId + ", " + elementPath + ")");
-      return null;
-    }
-    log.d("shim", "DO: getSessionVariable(" + refId + ", " + elementPath + ")");
-    return mActivity.getSessionVariable(elementPath);
-  }
-
-  @android.webkit.JavascriptInterface
-  public String getFirstQueuedAction(String refId) {
-    if (mWebView == null) {
-      log.w("shim", "getFirstQueuedAction -- interface removed");
-      return null;
-    }
-    if (!mActivity.getRefId().equals(refId)) {
-      log.w("shim", "IGNORED: getFirstQueuedAction(" + refId + ")");
-      return null;
-    }
-    String outcome = mActivity.getFirstQueuedAction();
-    return outcome;
-  }
-
-  @android.webkit.JavascriptInterface
   public void frameworkHasLoaded(String refId, boolean outcome) {
     if (mWebView == null) {
       log.w("shim", "frameworkHasLoaded -- interface removed");
@@ -428,33 +298,4 @@ public class ODKShimJavascriptCallback {
     log.d("shim", "DO: saveAllChangesFailed(" + refId + ", " + instanceId + ")");
     mActivity.saveAllChangesFailed(instanceId);
   }
-
-  @android.webkit.JavascriptInterface
-  public String doAction(String refId, String page, String path, String action, String jsonMap) {
-    if (mWebView == null) {
-      log.w("shim", "doAction -- interface removed");
-      return "IGNORE";
-    }
-    if (!mActivity.getRefId().equals(refId)) {
-      log.w("shim", "IGNORED: doAction(" + refId + ", " + page + ", " + path + ", " + action
-          + ", ...)");
-      return "IGNORE";
-    }
-
-    JSONObject valueMap = null;
-    try {
-      if (jsonMap != null && jsonMap.length() != 0) {
-        valueMap = (JSONObject) new JSONTokener(jsonMap).nextValue();
-      }
-    } catch (JSONException e) {
-      e.printStackTrace();
-      log.e("shim", "ERROR: doAction(" + refId + ", " + page + ", " + path + ", " + action
-          + ", ...) " + e.toString());
-      return "ERROR";
-    }
-
-    log.d("shim", "DO: doAction(" + refId + ", " + page + ", " + path + ", " + action + ", ...)");
-    return mActivity.doAction(page, path, action, valueMap);
-  }
-
 }

@@ -29,19 +29,16 @@ import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
 import android.webkit.WebView;
-import org.opendatakit.common.android.activities.ODKActivity;
 import org.opendatakit.common.android.listener.DatabaseConnectionListener;
 import org.opendatakit.common.android.listener.InitializationListener;
 import org.opendatakit.common.android.logic.CommonToolProperties;
 import org.opendatakit.common.android.logic.PropertiesSingleton;
 import org.opendatakit.common.android.task.InitializationTask;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
-import org.opendatakit.common.android.views.ICallbackFragment;
+import org.opendatakit.common.android.utilities.PRNGFixes;
 import org.opendatakit.common.android.views.ODKWebView;
 import org.opendatakit.database.DatabaseConsts;
 import org.opendatakit.database.service.OdkDbInterface;
-import org.opendatakit.dbshim.DbShimConsts;
-import org.opendatakit.dbshim.service.OdkDbShimInterface;
 import org.opendatakit.webkitserver.WebkitServerConsts;
 import org.opendatakit.webkitserver.service.OdkWebkitServerInterface;
 
@@ -54,7 +51,6 @@ public abstract class CommonApplication extends AppAwareApplication implements
   
   public static final String PERMISSION_WEBSERVER = "org.opendatakit.webkitserver.RUN_WEBSERVER";
   public static final String PERMISSION_DATABASE = "org.opendatakit.database.RUN_DATABASE";
-  public static final String PERMISSION_DBSHIM = "org.opendatakit.dbshim.RUN_DBSHIM";
 
   // Support for mocking the remote interfaces that are actually accessed
   // vs. the WebKit service, which is merely started.
@@ -65,7 +61,6 @@ public abstract class CommonApplication extends AppAwareApplication implements
   
   // Hack for handling mock interfaces...
   private static OdkDbInterface mockDatabaseService = null;
-  private static OdkDbShimInterface mockShimService = null;
   private static OdkWebkitServerInterface mockWebkitServerService = null;
   
   public static void setMocked() {
@@ -92,10 +87,6 @@ public abstract class CommonApplication extends AppAwareApplication implements
     CommonApplication.mockDatabaseService = mock;
   }
 
-  public static void setMockDbShim(OdkDbShimInterface mock) {
-    CommonApplication.mockShimService = mock;
-  }
-
   public static void setMockWebkitServer(OdkWebkitServerInterface mock) {
     CommonApplication.mockWebkitServerService = mock;
   }
@@ -105,11 +96,6 @@ public abstract class CommonApplication extends AppAwareApplication implements
     if (name.equals(WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS)) {
       className = new ComponentName(WebkitServerConsts.WEBKITSERVER_SERVICE_PACKAGE,
           WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS);
-    }
-
-    if (name.equals(DbShimConsts.DBSHIM_SERVICE_CLASS)) {
-      className = new ComponentName(DbShimConsts.DBSHIM_SERVICE_PACKAGE,
-          DbShimConsts.DBSHIM_SERVICE_CLASS);
     }
 
     if (name.equals(DatabaseConsts.DATABASE_SERVICE_CLASS)) {
@@ -129,11 +115,6 @@ public abstract class CommonApplication extends AppAwareApplication implements
     if (name.equals(WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS)) {
       className = new ComponentName(WebkitServerConsts.WEBKITSERVER_SERVICE_PACKAGE,
           WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS);
-    }
-
-    if (name.equals(DbShimConsts.DBSHIM_SERVICE_CLASS)) {
-      className = new ComponentName(DbShimConsts.DBSHIM_SERVICE_PACKAGE,
-          DbShimConsts.DBSHIM_SERVICE_CLASS);
     }
 
     if (name.equals(DatabaseConsts.DATABASE_SERVICE_CLASS)) {
@@ -190,8 +171,6 @@ public abstract class CommonApplication extends AppAwareApplication implements
 
     private ServiceConnectionWrapper webkitfilesServiceConnection = null;
     private OdkWebkitServerInterface webkitfilesService = null;
-    private ServiceConnectionWrapper dbShimServiceConnection = null;
-    private OdkDbShimInterface dbShimService = null;
     private ServiceConnectionWrapper databaseServiceConnection = null;
     private OdkDbInterface databaseService = null;
     private boolean isDestroying = false;
@@ -227,6 +206,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
   
   public CommonApplication() {
     super();
+    PRNGFixes.apply();
   }
   
   @SuppressLint("NewApi")
@@ -387,32 +367,17 @@ public abstract class CommonApplication extends AppAwareApplication implements
       e.printStackTrace();
     }
   }
-  
-  private void unbindDbShimBinderWrapper() {
-    try {
-      ServiceConnectionWrapper tmp = mBackgroundServices.dbShimServiceConnection;
-      mBackgroundServices.dbShimServiceConnection = null;
-      if ( tmp != null ) {
-        unbindService(tmp);
-      }
-    } catch ( Exception e ) {
-      // ignore
-      e.printStackTrace();
-    }
-  }
-  
+
   private void shutdownServices() {
-    Log.i(t, "shutdownServices - Releasing WebServer and DbShim service");
+    Log.i(t, "shutdownServices - Releasing WebServer and database service");
     mBackgroundServices.isDestroying = true;
     mBackgroundServices.webkitfilesService = null;
-    mBackgroundServices.dbShimService = null;
     mBackgroundServices.databaseService = null;
     // release interfaces held by the view
     configureView();
     // release the webkitfilesService
     unbindWebkitfilesServiceWrapper();
     unbindDatabaseBinderWrapper();
-    unbindDbShimBinderWrapper();
   }
   
   private void bindToService() {
@@ -424,8 +389,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
       PackageManager pm = getPackageManager();
       boolean useWebServer = (pm.checkPermission(PERMISSION_WEBSERVER, getPackageName()) == PackageManager.PERMISSION_GRANTED);
       boolean useDatabase = (pm.checkPermission(PERMISSION_DATABASE, getPackageName()) == PackageManager.PERMISSION_GRANTED);
-      boolean useDbShim = (pm.checkPermission(PERMISSION_DBSHIM, getPackageName()) == PackageManager.PERMISSION_GRANTED);
-      
+
           // do something
       
       if (useWebServer && mBackgroundServices.webkitfilesService == null && 
@@ -442,21 +406,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
                 | ((Build.VERSION.SDK_INT >= 14) ? Context.BIND_ADJUST_WITH_ACTIVITY : 0));
       }
 
-      if (useDbShim && mBackgroundServices.dbShimService == null && 
-          mBackgroundServices.dbShimServiceConnection == null) {
-        Log.i(t, "Attempting bind to DbShim service");
-        mBackgroundServices.dbShimServiceConnection = new ServiceConnectionWrapper();
-        Intent bind_intent = new Intent();
-        bind_intent.setClassName(DbShimConsts.DBSHIM_SERVICE_PACKAGE,
-            DbShimConsts.DBSHIM_SERVICE_CLASS);
-        bindService(
-            bind_intent,
-            mBackgroundServices.dbShimServiceConnection,
-            Context.BIND_AUTO_CREATE
-                | ((Build.VERSION.SDK_INT >= 14) ? Context.BIND_ADJUST_WITH_ACTIVITY : 0));
-      }
-
-      if (useDatabase && mBackgroundServices.databaseService == null && 
+      if (useDatabase && mBackgroundServices.databaseService == null &&
           mBackgroundServices.databaseServiceConnection == null) {
         Log.i(t, "Attempting bind to Database service");
         mBackgroundServices.databaseServiceConnection = new ServiceConnectionWrapper();
@@ -483,11 +433,6 @@ public abstract class CommonApplication extends AppAwareApplication implements
       mBackgroundServices.webkitfilesService = (service == null) ? null : OdkWebkitServerInterface.Stub.asInterface(service);
     }
 
-    if (className.getClassName().equals(DbShimConsts.DBSHIM_SERVICE_CLASS)) {
-      Log.i(t, "Bound to DbShim service");
-      mBackgroundServices.dbShimService = (service == null) ? null : OdkDbShimInterface.Stub.asInterface(service);
-    }
-
     if (className.getClassName().equals(DatabaseConsts.DATABASE_SERVICE_CLASS)) {
       Log.i(t, "Bound to Database service");
       mBackgroundServices.databaseService = (service == null) ? null : OdkDbInterface.Stub.asInterface(service);
@@ -506,14 +451,6 @@ public abstract class CommonApplication extends AppAwareApplication implements
     }
   }
   
-  private OdkDbShimInterface getDbShim() {
-    if ( isMocked ) {
-      return mockShimService;
-    } else {
-      return mBackgroundServices.dbShimService;
-    }
-  }
-  
   private OdkWebkitServerInterface getWebkitServer() {
     if ( isMocked ) {
       return mockWebkitServerService;
@@ -527,20 +464,14 @@ public abstract class CommonApplication extends AppAwareApplication implements
       Log.i(t, "configureView - possibly updating service information within ODKWebView");
       if ( getWebKitResourceId() != -1 ) {
         View v = activeActivity.findViewById(getWebKitResourceId());
-        ICallbackFragment fragment = null;
-        if ( activeActivity instanceof ODKActivity) {
-          fragment = ((ODKActivity) activeActivity).getCallbackFragment();
-        }
         if (v != null && v instanceof ODKWebView) {
           ODKWebView wv = (ODKWebView) v;
           if (mBackgroundServices.isDestroying) {
-            wv.serviceChange(false, null, null);
+            wv.serviceChange(false);
           } else {
             OdkWebkitServerInterface webkitServerIf = getWebkitServer();
-            OdkDbShimInterface dbShimIf = getDbShim();
             OdkDbInterface dbIf = getDatabase();
-            wv.serviceChange(webkitServerIf != null &&
-                dbShimIf != null && dbIf != null, dbShimIf, fragment);
+            wv.serviceChange(webkitServerIf != null && dbIf != null);
           }
         }
       }
@@ -556,16 +487,6 @@ public abstract class CommonApplication extends AppAwareApplication implements
       }
       mBackgroundServices.webkitfilesService = null;
       unbindWebkitfilesServiceWrapper();
-    }
-
-    if (className.getClassName().equals(DbShimConsts.DBSHIM_SERVICE_CLASS)) {
-      if (mBackgroundServices.isDestroying) {
-        Log.i(t, "Unbound from DbShim service (intentionally)");
-      } else {
-        Log.w(t, "Unbound from DbShim service (unexpected)");
-      }
-      mBackgroundServices.dbShimService = null;
-      unbindDbShimBinderWrapper();
     }
 
     if (className.getClassName().equals(DatabaseConsts.DATABASE_SERVICE_CLASS)) {

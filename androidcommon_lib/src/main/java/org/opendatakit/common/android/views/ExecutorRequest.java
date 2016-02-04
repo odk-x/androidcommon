@@ -78,21 +78,25 @@ public class ExecutorRequest {
     /**
      * Raw SQL query
      *
+     * @param tableId              The tableId whose metadata should be returned. If a result
+     *                             column matches the column name in this tableId, then the data
+     *                             type interpretations for that column will be applied to the result
+     *                             column (e.g., integer, number, array, object conversions).
      * @param sqlCommand The Select statement to issue. It can reference any table in the database, including system tables.
      * @param sqlBindParams The array of bind parameter values (including any in the having clause)
      * @param callbackJSON The JSON object used by the JS layer to recover the callback function
      *                     that can process the response
      */
-    public ExecutorRequest(String sqlCommand, String[] sqlBindParams,
+    public ExecutorRequest(String tableId, String sqlCommand, String[] sqlBindParams,
                            String callbackJSON) {
         this.executorRequestType = ExecutorRequestType.RAW_QUERY;
+        this.tableId = tableId;
         this.sqlCommand = sqlCommand;
         this.sqlBindParams = sqlBindParams;
         this.callbackJSON = callbackJSON;
 
         // unused:
         this.oldContext = null;
-        this.tableId = null;
         this.whereClause = null;
         this.groupBy = null;
         this.having = null;
