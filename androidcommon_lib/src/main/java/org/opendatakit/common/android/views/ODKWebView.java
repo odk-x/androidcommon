@@ -15,7 +15,9 @@
  */
 package org.opendatakit.common.android.views;
 
-import org.opendatakit.common.android.activities.IOdkSurveyActivity;
+import org.opendatakit.common.android.activities.IAppAwareActivity;
+import org.opendatakit.common.android.activities.IOdkCommonActivity;
+import org.opendatakit.common.android.activities.IOdkDataActivity;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Build;
@@ -46,15 +48,13 @@ import java.util.LinkedList;
  *
  */
 @SuppressLint("SetJavaScriptEnabled")
-public class ODKWebView extends WebView {
+public abstract class ODKWebView extends WebView {
 
   private static final String t = "ODKWebView";
   private static final String BASE_STATE = "BASE_STATE";
   private static final String JAVASCRIPT_REQUESTS_WAITING_FOR_PAGE_LOAD = "JAVASCRIPT_REQUESTS_WAITING_FOR_PAGE_LOAD";
 
-  private final IOdkSurveyActivity activity;
-  private WebLoggerIf log;
-  private ODKShimJavascriptCallback shim;
+  protected WebLoggerIf log;
   private OdkCommon odkCommon;
   private OdkData odkData;
   private String loadPageUrl = null;
@@ -64,12 +64,27 @@ public class ODKWebView extends WebView {
   private boolean isFirstPageLoad = true;
   private final LinkedList<String> javascriptRequestsWaitingForPageLoad = new LinkedList<String>();
 
-  public void serviceChange( boolean ready) {
-    if ( ready ) {
+  /**
+   * @return if the webpage has a framework that will call back to notify that it has loaded,
+   * then return true. Otherwise, when onPageLoad() completes, we assume the webpage is ready
+   * for action.
+   */
+  public abstract boolean hasPageFramework();
+
+  public abstract void loadPage();
+
+  public abstract void clearPage();
+
+  public void serviceChange(boolean ready) {
+    if (ready) {
       loadPage();
     } else {
       resetLoadPageStatus(loadPageUrl);
     }
+  }
+
+  public String getLoadPageUrl() {
+    return loadPageUrl;
   }
 
   @Override
@@ -126,14 +141,13 @@ public class ODKWebView extends WebView {
 
   public ODKWebView(Context context, AttributeSet attrs) {
     super(context, attrs);
-    
+
     if ( Build.VERSION.SDK_INT < 11 ) {
       throw new IllegalStateException("pre-3.0 not supported!");
     }
-    // Context is ALWAYS an IOdkSurveyActivity...
+    // Context is ALWAYS an IOdkDataActivity, IOdkCommonActivity, IAppAwareActivity, IInitResumeActivity...
 
-    activity = (IOdkSurveyActivity) context;
-    String appName = activity.getAppName();
+    String appName = ((IAppAwareActivity) context).getAppName();
     log = WebLogger.getLogger(appName);
     log.i(t, "ODKWebView()");
 
@@ -171,15 +185,11 @@ public class ODKWebView extends WebView {
     setWebViewClient(new ODKWebViewClient(this));
 
     // set up the odkCommonIf
-    odkCommon = new OdkCommon(activity);
+    odkCommon = new OdkCommon((IOdkCommonActivity) context);
     addJavascriptInterface(odkCommon.getJavascriptInterfaceWithWeakReference(), "odkCommonIf");
 
-    odkData = new OdkData(activity);
+    odkData = new OdkData((IOdkDataActivity) context);
     addJavascriptInterface(odkData.getJavascriptInterfaceWithWeakReference(), "odkDataIf");
-
-    // stomp on the shim object...
-    shim = new ODKShimJavascriptCallback(this,activity);
-    addJavascriptInterface(shim, "shim");
   }
 
   public final WebLoggerIf getLogger() {
@@ -214,55 +224,30 @@ public class ODKWebView extends WebView {
 
   public void gotoUrlHash(String hash) {
     log.i(t, "gotoUrlHash: " + hash);
-    activity.queueUrlChange(hash);
+    ((IOdkCommonActivity) getContext()).queueUrlChange(hash);
     signalQueuedActionAvailable();
   }
 
-  public synchronized void loadPage() {
-    /**
-     * NOTE: Reload the web framework only if it has changed.
-     */
-
-    if ( activity.getDatabase() == null ) {
-      // do not initiate reload until we have the database set up...
-      return;
+  public void pageFinished(String url) {
+    if ( !hasPageFramework() ) {
+	  // if we get an onPageFinished() callback on the WebViewClient that matches our 
+	  // intended load-page URL, then we should consider the page as having been loaded.
+	  String intendedPageToLoad = getLoadPageUrl();
+	  if ( url != null && intendedPageToLoad != null && url.equals(intendedPageToLoad) ) {
+		frameworkHasLoaded();
+	  }
     }
-
-    log.i(t, "loadPage: current loadPageUrl: " + loadPageUrl);
-    String baseUrl = activity.getUrlBaseLocation(isLoadPageFrameworkFinished && loadPageUrl != null);
-    String hash = activity.getUrlLocationHash();
-
-    if ( baseUrl != null ) {
-      resetLoadPageStatus(baseUrl);
-
-      log.i(t, "loadPage: full reload: " + baseUrl + hash);
-
-      loadUrl(baseUrl + hash);
-    } else if ( isLoadPageFrameworkFinished ) {
-      log.i(t,  "loadPage: delegate to gotoUrlHash: " + hash);
-      gotoUrlHash(hash);
-    } else {
-      log.w(t, "loadPage: framework did not load -- cannot load anything!");
-    }
+    // otherwise, wait for the framework to tell us it has fully loaded.
   }
 
-  public synchronized void clearPage() {
-    log.i(t, "clearPage: current loadPageUrl: " + loadPageUrl);
-    String baseUrl = activity.getUrlBaseLocation(false);
-
-    if ( baseUrl != null ) {
-      resetLoadPageStatus(baseUrl);
-      log.i(t, "clearPage: full reload: " + baseUrl);
-      loadUrl(baseUrl);
-    } else {
-      log.w(t, "clearPage: framework did not load -- cannot load anything!");
-    }
+  protected boolean hasPageFrameworkFinishedLoading() {
+    return isLoadPageFrameworkFinished;
   }
 
-  synchronized void frameworkHasLoaded() {
+  public synchronized void frameworkHasLoaded() {
     isLoadPageFrameworkFinished = true;
     if (!isLoadPageFinished && !isJavascriptFlushActive) {
-      log.i(t, "loadPageFinished: BEGINNING FLUSH refId: " + activity.getRefId());
+      log.i(t, "loadPageFinished: BEGINNING FLUSH");
       isJavascriptFlushActive = true;
       while (isJavascriptFlushActive && !javascriptRequestsWaitingForPageLoad.isEmpty()) {
         String s = javascriptRequestsWaitingForPageLoad.removeFirst();
@@ -273,11 +258,11 @@ public class ODKWebView extends WebView {
       isJavascriptFlushActive = false;
       isFirstPageLoad = false;
     } else {
-      log.i(t, "loadPageFinished: IGNORING completion event refId: " + activity.getRefId());
+      log.i(t, "loadPageFinished: IGNORING completion event");
     }
   }
 
-  private synchronized void resetLoadPageStatus(String baseUrl) {
+  protected synchronized void resetLoadPageStatus(String baseUrl) {
     isLoadPageFrameworkFinished = false;
     isLoadPageFinished = false;
     loadPageUrl = baseUrl;

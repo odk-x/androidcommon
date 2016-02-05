@@ -48,6 +48,7 @@ public class ODKWebViewClient extends WebViewClient {
   @Override
   public void onPageFinished(WebView view, String url) {
     wrappedView.getLogger().i(t, "onPageFinished: " + url + " ms: " + Long.toString(System.currentTimeMillis()));
+    wrappedView.pageFinished(url);
     super.onPageFinished(view, url);
   }
 
