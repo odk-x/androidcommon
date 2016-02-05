@@ -73,7 +73,25 @@ public abstract class ODKWebView extends WebView {
 
   public abstract void loadPage();
 
-  public abstract void clearPage();
+  public abstract void reloadPage();
+
+  /**
+   * Return whether or not the webkit is active. It is active
+   * if it has a page loaded, or being loaded, into it.
+   *
+   * @return
+   */
+  public boolean isInactive() {
+    return (loadPageUrl == null);
+  }
+
+  /**
+   * Stop all handling of calls from the Webkit Javascript
+   * to any of the injected Java interfaces.
+   */
+  public void setInactive() {
+    loadPageUrl = null;
+  }
 
   public void serviceChange(boolean ready) {
     if (ready) {
@@ -185,11 +203,17 @@ public abstract class ODKWebView extends WebView {
     setWebViewClient(new ODKWebViewClient(this));
 
     // set up the odkCommonIf
-    odkCommon = new OdkCommon((IOdkCommonActivity) context);
+    odkCommon = new OdkCommon((IOdkCommonActivity) context, this);
     addJavascriptInterface(odkCommon.getJavascriptInterfaceWithWeakReference(), "odkCommonIf");
 
-    odkData = new OdkData((IOdkDataActivity) context);
+    odkData = new OdkData((IOdkDataActivity) context, this);
     addJavascriptInterface(odkData.getJavascriptInterfaceWithWeakReference(), "odkDataIf");
+  }
+
+  @Override public void destroy() {
+    // bare minimum time to mark this as inactive.
+    setInactive();
+    super.destroy();
   }
 
   public final WebLoggerIf getLogger() {
