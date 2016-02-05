@@ -225,7 +225,7 @@ public abstract class ODKWebView extends WebView {
    * a doAction call or a Java-initiated Url change) is
    * available.
    * <p>The Javascript side should call 
-   * shim.getFirstQueuedAction() to retrieve the action.
+   * odkCommon.getFirstQueuedAction() to retrieve the action.
    * If the returned value is a string, it is a Url change
    * request. if it is a struct, it is a doAction result.
    */

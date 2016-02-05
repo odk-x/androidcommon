@@ -68,8 +68,6 @@ public class OdkCommon {
    */
   public String getPlatformInfo() {
     String appName = mActivity.getAppName();
-    // This is based on:
-    // org.opendatakit.survey.android.views.ODKShimJavascriptCallback
     Map<String, String> platformInfo = new HashMap<String, String>();
     platformInfo.put(PlatformInfoKeys.VERSION, Build.VERSION.RELEASE);
     platformInfo.put(PlatformInfoKeys.CONTAINER, "Android");
@@ -117,28 +115,28 @@ public class OdkCommon {
     char l = (level == null) ? 'I' : level.charAt(0);
     switch (l) {
     case 'A':
-      WebLogger.getLogger(this.mActivity.getAppName()).a("shim", loggingString);
+      WebLogger.getLogger(this.mActivity.getAppName()).a("odkCommon", loggingString);
       break;
     case 'D':
-      WebLogger.getLogger(this.mActivity.getAppName()).d("shim", loggingString);
+      WebLogger.getLogger(this.mActivity.getAppName()).d("odkCommon", loggingString);
       break;
     case 'E':
-      WebLogger.getLogger(this.mActivity.getAppName()).e("shim", loggingString);
+      WebLogger.getLogger(this.mActivity.getAppName()).e("odkCommon", loggingString);
       break;
     case 'I':
-      WebLogger.getLogger(this.mActivity.getAppName()).i("shim", loggingString);
+      WebLogger.getLogger(this.mActivity.getAppName()).i("odkCommon", loggingString);
       break;
     case 'S':
-      WebLogger.getLogger(this.mActivity.getAppName()).s("shim", loggingString);
+      WebLogger.getLogger(this.mActivity.getAppName()).s("odkCommon", loggingString);
       break;
     case 'V':
-      WebLogger.getLogger(this.mActivity.getAppName()).v("shim", loggingString);
+      WebLogger.getLogger(this.mActivity.getAppName()).v("odkCommon", loggingString);
       break;
     case 'W':
-      WebLogger.getLogger(this.mActivity.getAppName()).w("shim", loggingString);
+      WebLogger.getLogger(this.mActivity.getAppName()).w("odkCommon", loggingString);
       break;
     default:
-      WebLogger.getLogger(this.mActivity.getAppName()).i("shim", loggingString);
+      WebLogger.getLogger(this.mActivity.getAppName()).i("odkCommon", loggingString);
       break;
     }
   }

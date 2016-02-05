@@ -245,7 +245,75 @@ public abstract class ExecutorProcessor implements Runnable {
     RawUserTable rawUserTable = dbInterface.arbitraryQuery(context.getAppName(), dbHandle,
         request.sqlCommand, request.sqlBindParams);
 
-    reportRawSuccessAndCleanUp(columns, rawUserTable);
+    if ( rawUserTable == null ) {
+      reportErrorAndCleanUp("Unable to complete rawQuery");
+    } else {
+      reportRawSuccessAndCleanUp(columns, rawUserTable);
+    }
+  }
+
+  private void populateKeyValueStoreList(Map<String, Object> metadata,
+      List<KeyValueStoreEntry> entries) {
+    // keyValueStoreList
+    if (entries != null) {
+      // It is unclear how to most easily represent the KVS for access.
+      // We use the convention in ODK Survey, which is a list of maps,
+      // one per KVS row, with integer, number and boolean resolved to JS
+      // types. objects and arrays are left unchanged.
+      List<Map<String, Object>> kvsArray = new ArrayList<Map<String, Object>>();
+      for (KeyValueStoreEntry entry : entries) {
+        Object value = null;
+        try {
+          ElementDataType type = ElementDataType.valueOf(entry.type);
+          if (entry.value != null) {
+            if (type == ElementDataType.integer) {
+              value = Integer.parseInt(entry.value);
+            } else if (type == ElementDataType.bool) {
+              // This is broken - a value
+              // of "TRUE" is returned some times
+              value = entry.value;
+              if (value != null) {
+                try {
+                  value = DataHelper.intToBool(Integer.parseInt(entry.value));
+                } catch (Exception e) {
+                  WebLogger.getLogger(context.getAppName()).e(TAG,
+                      "ElementDataType: " + entry.type + " could not be converted from int");
+                  try {
+                    value = DataHelper.stringToBool(entry.value);
+                  } catch (Exception e2) {
+                    WebLogger.getLogger(context.getAppName()).e(TAG,
+                        "ElementDataType: " + entry.type + " could not be converted from string");
+                    e2.printStackTrace();
+                  }
+                }
+              }
+            } else if (type == ElementDataType.number) {
+              value = Double.parseDouble(entry.value);
+            } else if (type == ElementDataType.string) {
+              value = entry.value;
+            } else {
+              // array, object, rowpath, configpath
+              value = entry.value;
+            }
+          }
+        } catch (IllegalArgumentException e) {
+          // ignore?
+          value = entry.value;
+          WebLogger.getLogger(context.getAppName()).e(TAG, "Unrecognized ElementDataType: " + entry.type);
+          WebLogger.getLogger(context.getAppName()).printStackTrace(e);
+        }
+
+        Map<String, Object> anEntry = new HashMap<String, Object>();
+        anEntry.put("partition", entry.partition);
+        anEntry.put("aspect", entry.aspect);
+        anEntry.put("key", entry.key);
+        anEntry.put("type", entry.type);
+        anEntry.put("value", value);
+
+        kvsArray.add(anEntry);
+      }
+      metadata.put("keyValueStoreList", kvsArray);
+    }
   }
 
   private void reportRawSuccessAndCleanUp(OrderedColumns columnDefinitions, RawUserTable userTable) throws RemoteException {
@@ -317,65 +385,7 @@ public abstract class ExecutorProcessor implements Runnable {
     TreeMap<String, Object> orderedColumns = columnDefinitions.getDataModel();
     metadata.put("orderedColumns", orderedColumns);
     // keyValueStoreList
-    if (entries != null) {
-      // It is unclear how to most easily represent the KVS for access.
-      // We use the convention in ODK Survey, which is a list of maps,
-      // one per KVS row, with integer, number and boolean resolved to JS
-      // types. objects and arrays are left unchanged.
-      List<Map<String, Object>> kvsArray = new ArrayList<Map<String, Object>>();
-      for (KeyValueStoreEntry entry : entries) {
-        Object value = null;
-        try {
-          ElementDataType type = ElementDataType.valueOf(entry.type);
-          if (entry.value != null) {
-            if (type == ElementDataType.integer) {
-              value = Integer.parseInt(entry.value);
-            } else if (type == ElementDataType.bool) {
-              // This is broken - a value
-              // of "TRUE" is returned some times
-              value = entry.value;
-              if (value != null) {
-                try {
-                  value = DataHelper.intToBool(Integer.parseInt(entry.value));
-                } catch (Exception e) {
-                  WebLogger.getLogger(context.getAppName()).e(TAG,
-                      "ElementDataType: " + entry.type + " could not be converted from int");
-                  try {
-                    value = DataHelper.stringToBool(entry.value);
-                  } catch (Exception e2) {
-                    WebLogger.getLogger(context.getAppName()).e(TAG,
-                        "ElementDataType: " + entry.type + " could not be converted from string");
-                    e2.printStackTrace();
-                  }
-                }
-              }
-            } else if (type == ElementDataType.number) {
-              value = Double.parseDouble(entry.value);
-            } else if (type == ElementDataType.string) {
-              value = entry.value;
-            } else {
-              // array, object, rowpath, configpath
-              value = entry.value;
-            }
-          }
-        } catch (IllegalArgumentException e) {
-          // ignore?
-          value = entry.value;
-          WebLogger.getLogger(context.getAppName()).e(TAG, "Unrecognized ElementDataType: " + entry.type);
-          WebLogger.getLogger(context.getAppName()).printStackTrace(e);
-        }
-
-        Map<String, Object> anEntry = new HashMap<String, Object>();
-        anEntry.put("partition", entry.partition);
-        anEntry.put("aspect", entry.aspect);
-        anEntry.put("key", entry.key);
-        anEntry.put("type", entry.type);
-        anEntry.put("value", value);
-
-        kvsArray.add(anEntry);
-      }
-      metadata.put("keyValueStoreList", kvsArray);
-    }
+    populateKeyValueStoreList(metadata, entries);
 
     // raw queries are not extended.
     reportSuccessAndCleanUp(data, metadata);
@@ -391,12 +401,16 @@ public abstract class ExecutorProcessor implements Runnable {
       columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
       context.putOrderedColumns(request.tableId, columns);
     }
-    UserTable userTable = dbInterface
+    UserTable t = dbInterface
         .rawSqlQuery(context.getAppName(), dbHandle, request.tableId, columns, request.whereClause,
             request.sqlBindParams, request.groupBy, request.having, request.orderByElementKey,
             request.orderByDirection);
 
-    reportSuccessAndCleanUp(userTable);
+    if ( t == null ) {
+      reportErrorAndCleanUp("Unable to query " + request.tableId);
+    } else {
+      reportSuccessAndCleanUp(t);
+    }
   }
 
   private void reportSuccessAndCleanUp(UserTable userTable) throws RemoteException {
@@ -456,65 +470,7 @@ public abstract class ExecutorProcessor implements Runnable {
     TreeMap<String, Object> orderedColumns = columnDefinitions.getDataModel();
     metadata.put("orderedColumns", orderedColumns);
     // keyValueStoreList
-    if (entries != null) {
-      // It is unclear how to most easily represent the KVS for access.
-      // We use the convention in ODK Survey, which is a list of maps,
-      // one per KVS row, with integer, number and boolean resolved to JS
-      // types. objects and arrays are left unchanged.
-      List<Map<String, Object>> kvsArray = new ArrayList<Map<String, Object>>();
-      for (KeyValueStoreEntry entry : entries) {
-        Object value = null;
-        try {
-          ElementDataType type = ElementDataType.valueOf(entry.type);
-          if (entry.value != null) {
-            if (type == ElementDataType.integer) {
-              value = Integer.parseInt(entry.value);
-            } else if (type == ElementDataType.bool) {
-              // This is broken - a value
-              // of "TRUE" is returned some times
-              value = entry.value;
-              if (value != null) {
-                try {
-                  value = DataHelper.intToBool(Integer.parseInt(entry.value));
-                } catch (Exception e) {
-                  WebLogger.getLogger(context.getAppName()).e(TAG,
-                      "ElementDataType: " + entry.type + " could not be converted from int");
-                  try {
-                    value = DataHelper.stringToBool(entry.value);
-                  } catch (Exception e2) {
-                    WebLogger.getLogger(context.getAppName()).e(TAG,
-                        "ElementDataType: " + entry.type + " could not be converted from string");
-                    e2.printStackTrace();
-                  }
-                }
-              }
-            } else if (type == ElementDataType.number) {
-              value = Double.parseDouble(entry.value);
-            } else if (type == ElementDataType.string) {
-              value = entry.value;
-            } else {
-              // array, object, rowpath, configpath
-              value = entry.value;
-            }
-          }
-        } catch (IllegalArgumentException e) {
-          // ignore?
-          value = entry.value;
-          WebLogger.getLogger(context.getAppName()).e(TAG, "Unrecognized ElementDataType: " + entry.type);
-          WebLogger.getLogger(context.getAppName()).printStackTrace(e);
-        }
-
-        Map<String, Object> anEntry = new HashMap<String, Object>();
-        anEntry.put("partition", entry.partition);
-        anEntry.put("aspect", entry.aspect);
-        anEntry.put("key", entry.key);
-        anEntry.put("type", entry.type);
-        anEntry.put("value", value);
-
-        kvsArray.add(anEntry);
-      }
-      metadata.put("keyValueStoreList", kvsArray);
-    }
+    populateKeyValueStoreList(metadata, entries);
 
     // extend the metadata with whatever else this app needs....
     // e.g., row and column color maps
@@ -542,7 +498,12 @@ public abstract class ExecutorProcessor implements Runnable {
     UserTable t = dbInterface
         .getRowsWithId(context.getAppName(), dbHandle, request.tableId, columns, request.rowId);
 
-    reportSuccessAndCleanUp(t);
+    if ( t == null ) {
+      reportErrorAndCleanUp("Unable to getRows for " +
+          request.tableId + "._id = " +  request.rowId);
+    } else {
+      reportSuccessAndCleanUp(t);
+    }
   }
 
   private void getMostRecentRow() throws RemoteException {
@@ -562,7 +523,12 @@ public abstract class ExecutorProcessor implements Runnable {
     UserTable t = dbInterface
         .getMostRecentRowWithId(context.getAppName(), dbHandle, request.tableId, columns, request.rowId);
 
-    reportSuccessAndCleanUp(t);
+    if ( t == null ) {
+      reportErrorAndCleanUp("Unable to getMostRecentRow for " +
+          request.tableId + "._id = " +  request.rowId);
+    } else {
+      reportSuccessAndCleanUp(t);
+    }
   }
 
   private void updateRow() throws RemoteException {
@@ -584,7 +550,12 @@ public abstract class ExecutorProcessor implements Runnable {
     UserTable t = dbInterface
         .updateRowWithId(context.getAppName(), dbHandle, request.tableId, columns, cvValues, request.rowId);
 
-    reportSuccessAndCleanUp(t);
+    if ( t == null ) {
+      reportErrorAndCleanUp("Unable to updateRow for " +
+          request.tableId + "._id = " +  request.rowId);
+    } else {
+      reportSuccessAndCleanUp(t);
+    }
   }
 
   private void deleteRow() throws RemoteException {
@@ -603,10 +574,15 @@ public abstract class ExecutorProcessor implements Runnable {
     }
 
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
-    dbInterface
+    UserTable t = dbInterface
         .deleteRowWithId(context.getAppName(), dbHandle, request.tableId, columns, request.rowId);
 
-    reportSuccessAndCleanUp(null, null);
+    if ( t == null ) {
+      reportErrorAndCleanUp("Unable to deleteRow for " +
+          request.tableId + "._id = " +  request.rowId);
+    } else {
+      reportSuccessAndCleanUp(t);
+    }
   }
 
   private void addRow() throws RemoteException {
@@ -628,7 +604,12 @@ public abstract class ExecutorProcessor implements Runnable {
     UserTable t = dbInterface
         .insertRowWithId(context.getAppName(), dbHandle, request.tableId, columns, cvValues, request.rowId);
 
-    reportSuccessAndCleanUp(t);
+    if ( t == null ) {
+      reportErrorAndCleanUp("Unable to addRow for " +
+          request.tableId + "._id = " +  request.rowId);
+    } else {
+      reportSuccessAndCleanUp(t);
+    }
   }
 
   private void addCheckpoint() throws RemoteException {
@@ -650,7 +631,12 @@ public abstract class ExecutorProcessor implements Runnable {
     UserTable t = dbInterface
         .insertCheckpointRowWithId(context.getAppName(), dbHandle, request.tableId, columns, cvValues, request.rowId);
 
-    reportSuccessAndCleanUp(t);
+    if ( t == null ) {
+      reportErrorAndCleanUp("Unable to addCheckpoint for " +
+          request.tableId + "._id = " +  request.rowId);
+    } else {
+      reportSuccessAndCleanUp(t);
+    }
   }
 
   private void saveCheckpointAsIncomplete() throws RemoteException {
@@ -672,7 +658,12 @@ public abstract class ExecutorProcessor implements Runnable {
     UserTable t = dbInterface.saveAsIncompleteMostRecentCheckpointRowWithId(context.getAppName(),
         dbHandle, request.tableId, columns, cvValues, request.rowId);
 
-    reportSuccessAndCleanUp(t);
+    if ( t == null ) {
+      reportErrorAndCleanUp("Unable to saveCheckpointAsIncomplete for " +
+          request.tableId + "._id = " +  request.rowId);
+    } else {
+      reportSuccessAndCleanUp(t);
+    }
   }
 
   private void saveCheckpointAsComplete() throws RemoteException {
@@ -694,7 +685,12 @@ public abstract class ExecutorProcessor implements Runnable {
     UserTable t = dbInterface.saveAsCompleteMostRecentCheckpointRowWithId(context.getAppName(),
         dbHandle, request.tableId, columns, cvValues, request.rowId);
 
-    reportSuccessAndCleanUp(t);
+    if ( t == null ) {
+      reportErrorAndCleanUp("Unable to saveCheckpointAsComplete for " +
+          request.tableId + "._id = " +  request.rowId);
+    } else {
+      reportSuccessAndCleanUp(t);
+    }
   }
 
   private void deleteLastCheckpoint() throws RemoteException {
@@ -715,7 +711,13 @@ public abstract class ExecutorProcessor implements Runnable {
 
     UserTable t = dbInterface.deleteLastCheckpointRowWithId(context.getAppName(), dbHandle,
         request.tableId, columns, request.rowId);
-    reportSuccessAndCleanUp(t);
+
+    if ( t == null ) {
+      reportErrorAndCleanUp("Unable to deleteLastCheckpoint for " +
+          request.tableId + "._id = " +  request.rowId);
+    } else {
+      reportSuccessAndCleanUp(t);
+    }
   }
 
   private void deleteAllCheckpoints() throws RemoteException {
@@ -738,7 +740,12 @@ public abstract class ExecutorProcessor implements Runnable {
     UserTable t = dbInterface.deleteAllCheckpointRowsWithId(context.getAppName(), dbHandle,
         request.tableId, columns, request.rowId);
 
-    reportSuccessAndCleanUp(t);
+    if ( t == null ) {
+      reportErrorAndCleanUp("Unable to deleteAllCheckpoints for " +
+          request.tableId + "._id = " +  request.rowId);
+    } else {
+      reportSuccessAndCleanUp(t);
+    }
   }
 
 }
