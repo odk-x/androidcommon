@@ -35,7 +35,6 @@ import org.opendatakit.common.android.logic.CommonToolProperties;
 import org.opendatakit.common.android.logic.PropertiesSingleton;
 import org.opendatakit.common.android.task.InitializationTask;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
-import org.opendatakit.common.android.utilities.PRNGFixes;
 import org.opendatakit.common.android.views.ODKWebView;
 import org.opendatakit.database.DatabaseConsts;
 import org.opendatakit.database.service.OdkDbInterface;
@@ -206,7 +205,6 @@ public abstract class CommonApplication extends AppAwareApplication implements
   
   public CommonApplication() {
     super();
-    PRNGFixes.apply();
   }
   
   @SuppressLint("NewApi")
