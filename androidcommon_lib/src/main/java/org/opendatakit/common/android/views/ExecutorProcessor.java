@@ -246,7 +246,8 @@ public abstract class ExecutorProcessor implements Runnable {
         request.sqlCommand, request.sqlBindParams);
 
     if ( rawUserTable == null ) {
-      reportErrorAndCleanUp("Unable to complete rawQuery");
+      reportErrorAndCleanUp("Unable to rawQuery against: " + request.tableId +
+          " sql: " + request.sqlCommand );
     } else {
       reportRawSuccessAndCleanUp(columns, rawUserTable);
     }
