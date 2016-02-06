@@ -266,19 +266,29 @@ public abstract class ODKWebView extends WebView {
       // intended load-page URL, then we should consider the page as having been loaded.
       String intendedPageToLoad = getLoadPageUrl();
       if (url != null && intendedPageToLoad != null) {
-        int idxSlash = url.indexOf('/');// http:/
-        if (idxSlash != -1) {
-          idxSlash = url.indexOf('/', idxSlash + 1); // http://
-          if (idxSlash != -1) {
-            idxSlash = url.indexOf('/', idxSlash + 1); // http://localhost:8365/
-            if (idxSlash != -1) {
-              idxSlash = url.indexOf('/', idxSlash + 1); // http://localhost:8365/appname/
-              String trimmedUrl = url.substring(idxSlash + 1);
-              if (trimmedUrl.equals(intendedPageToLoad)) {
-                frameworkHasLoaded();
-              }
-            }
-          }
+        // Various versions of the browser append ? or # or ?# to a naked URL
+        // Strip # of everything and ? off the query string is empty.
+        //
+        int idxHash = intendedPageToLoad.indexOf('#');
+        if ( idxHash != -1 ) {
+          intendedPageToLoad = intendedPageToLoad.substring(0, idxHash);
+        }
+        idxHash = url.indexOf('#');
+        if ( idxHash != -1 ) {
+          url = url.substring(0, idxHash);
+        }
+        int idxQuestion = intendedPageToLoad.indexOf('?');
+        if ( idxQuestion == intendedPageToLoad.length()-1 ) {
+          intendedPageToLoad = intendedPageToLoad.substring(0, idxQuestion);
+        }
+        idxQuestion = url.indexOf('?');
+        if ( idxQuestion == url.length()-1 ) {
+          url = url.substring(0, idxQuestion);
+        }
+
+        // finally, test the two URLs
+        if ( url.equals(intendedPageToLoad) ) {
+          frameworkHasLoaded();
         }
       }
     }
