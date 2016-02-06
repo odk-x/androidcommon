@@ -57,6 +57,7 @@ public abstract class ODKWebView extends WebView {
   protected WebLoggerIf log;
   private OdkCommon odkCommon;
   private OdkData odkData;
+  private boolean isInactive = false;
   private String loadPageUrl = null;
   private boolean isLoadPageFrameworkFinished = false;
   private boolean isLoadPageFinished = false;
@@ -82,7 +83,7 @@ public abstract class ODKWebView extends WebView {
    * @return
    */
   public boolean isInactive() {
-    return (loadPageUrl == null);
+    return isInactive;
   }
 
   /**
@@ -90,7 +91,7 @@ public abstract class ODKWebView extends WebView {
    * to any of the injected Java interfaces.
    */
   public void setInactive() {
-    loadPageUrl = null;
+    isInactive = true;
   }
 
   public void serviceChange(boolean ready) {
@@ -235,8 +236,15 @@ public abstract class ODKWebView extends WebView {
     loadJavascriptUrl("javascript:window.odkCommon.signalQueuedActionAvailable()");
   }
 
+  public void signalResponseAvailable() {
+    // NOTE: this is asynchronous
+    log.i(t, "signalResponseAvailable()");
+    loadJavascriptUrl("javascript:odkData.responseAvailable();");
+  }
+
   // called to invoke a javascript method inside the webView
   private synchronized void loadJavascriptUrl(String javascriptUrl) {
+    if ( isInactive() ) return; // no-op
     if (isLoadPageFinished || isJavascriptFlushActive) {
       log.i(t, "loadJavascriptUrl: IMMEDIATE: " + javascriptUrl);
       loadUrl(javascriptUrl);
@@ -254,12 +262,25 @@ public abstract class ODKWebView extends WebView {
 
   public void pageFinished(String url) {
     if ( !hasPageFramework() ) {
-	  // if we get an onPageFinished() callback on the WebViewClient that matches our 
-	  // intended load-page URL, then we should consider the page as having been loaded.
-	  String intendedPageToLoad = getLoadPageUrl();
-	  if ( url != null && intendedPageToLoad != null && url.equals(intendedPageToLoad) ) {
-		frameworkHasLoaded();
-	  }
+      // if we get an onPageFinished() callback on the WebViewClient that matches our
+      // intended load-page URL, then we should consider the page as having been loaded.
+      String intendedPageToLoad = getLoadPageUrl();
+      if (url != null && intendedPageToLoad != null) {
+        int idxSlash = url.indexOf('/');// http:/
+        if (idxSlash != -1) {
+          idxSlash = url.indexOf('/', idxSlash + 1); // http://
+          if (idxSlash != -1) {
+            idxSlash = url.indexOf('/', idxSlash + 1); // http://localhost:8365/
+            if (idxSlash != -1) {
+              idxSlash = url.indexOf('/', idxSlash + 1); // http://localhost:8365/appname/
+              String trimmedUrl = url.substring(idxSlash + 1);
+              if (trimmedUrl.equals(intendedPageToLoad)) {
+                frameworkHasLoaded();
+              }
+            }
+          }
+        }
+      }
     }
     // otherwise, wait for the framework to tell us it has fully loaded.
   }
