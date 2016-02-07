@@ -517,6 +517,14 @@ public abstract class CommonApplication extends AppAwareApplication implements
     triggerDatabaseEvent(true);
   }
 
+  public void establishDoNotFireDatabaseConnectionListener(Activity activity) {
+    databaseListenerActivity = activity;
+  }
+
+  public void fireDatabaseConnectionListener() {
+    triggerDatabaseEvent(true);
+  }
+
   /**
    * If the given activity is active, then fire the callback based upon 
    * the availability of the database.
