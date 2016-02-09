@@ -63,6 +63,7 @@ public abstract class ODKWebView extends WebView {
   private boolean isLoadPageFinished = false;
   private boolean isJavascriptFlushActive = false;
   private boolean isFirstPageLoad = true;
+  private boolean shouldForceLoadDuringReload = false;
   private final LinkedList<String> javascriptRequestsWaitingForPageLoad = new LinkedList<String>();
 
   /**
@@ -299,6 +300,14 @@ public abstract class ODKWebView extends WebView {
     return isLoadPageFrameworkFinished;
   }
 
+  public void setForceLoadDuringReload() {
+    shouldForceLoadDuringReload = true;
+  }
+
+  protected boolean shouldForceLoadDuringReload() {
+    return shouldForceLoadDuringReload;
+  }
+
   public synchronized void frameworkHasLoaded() {
     isLoadPageFrameworkFinished = true;
     if (!isLoadPageFinished && !isJavascriptFlushActive) {
@@ -322,6 +331,8 @@ public abstract class ODKWebView extends WebView {
     isLoadPageFinished = false;
     loadPageUrl = baseUrl;
     isJavascriptFlushActive = false;
+    shouldForceLoadDuringReload = false;
+
     // do not purge the list of actions if this is the first page load.
     // keep them queued until they can be issued.
     if ( !isFirstPageLoad ) {
