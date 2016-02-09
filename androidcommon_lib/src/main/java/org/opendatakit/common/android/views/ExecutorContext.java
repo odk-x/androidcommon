@@ -14,6 +14,7 @@
 
 package org.opendatakit.common.android.views;
 
+import android.os.RemoteException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.opendatakit.common.android.activities.IOdkDataActivity;
 import org.opendatakit.common.android.data.OrderedColumns;
@@ -52,7 +53,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
 
   /**
    * The mutex used to guard all of the private data structures:
-   *   worker, workQueue, activeConnections, mCacheOrderedDefns
+   *   worker, workQueue, activeConnection, mCacheOrderedDefns
    */
   private final Object mutex = new Object();
 
@@ -78,7 +79,15 @@ public class ExecutorContext implements DatabaseConnectionListener {
      */
     private final LinkedList<ExecutorRequest> workQueue = new LinkedList<ExecutorRequest>();
 
-    private Map<String, OdkDbHandle> activeConnections = new HashMap<String, OdkDbHandle>();
+  /**
+   * Because all service requests are atomic, we can share a connection
+   * across all uses. Only when we are shutting down do we then close
+   * that database connection.
+   *
+   * The current active connection.
+   */
+  private OdkDbHandle activeConnection = null;
+
     private Map<String, OrderedColumns> mCachedOrderedDefns = new HashMap<String, OrderedColumns>();
 
     private ExecutorContext(IOdkDataActivity fragment) {
@@ -161,7 +170,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
    * never throw an unexpected state exception.
    */
     private void shutdownWorker() {
-      WebLogger.getLogger(currentContext.getAppName()).i(TAG, "shutdownWorker - shutting down dataif Executor");
+      WebLogger.getLogger(currentContext.getAppName()).i(TAG, "shutdownWorker - shutting down odkDataIf Executor");
       Throwable t = null;
       synchronized (mutex) {
         if ( !worker.isShutdown() && !worker.isTerminated() ) {
@@ -176,53 +185,61 @@ public class ExecutorContext implements DatabaseConnectionListener {
 
       if ( t != null ) {
         WebLogger.getLogger(currentContext.getAppName()).w(TAG,
-                "shutdownWorker - dataif Executor threw exception while shutting down");
+                "shutdownWorker - odkDataIf Executor threw exception while shutting down");
         WebLogger.getLogger(currentContext.getAppName()).printStackTrace(t);
       }
-      WebLogger.getLogger(currentContext.getAppName()).i(TAG, "shutdownWorker - dataif Executor has been shut down.");
+      WebLogger.getLogger(currentContext.getAppName()).i(TAG, "shutdownWorker - odkDataIf Executor has been shut down.");
     }
 
   /**
-   * Get the connection on which this transaction is active.
+   * Get a new connection.
    *
-   * @param transId
    * @return OdkDbHandle
    */
-  public OdkDbHandle getActiveConnection(String transId) {
+  public OdkDbHandle getActiveConnection() {
     synchronized (mutex) {
-      return activeConnections.get(transId);
-    }
-  }
-
-  public void registerActiveConnection(String transId, OdkDbHandle dbHandle) {
-    boolean alreadyExists = false;
-    synchronized (mutex) {
-      if ( activeConnections.containsKey(transId) ) {
-        alreadyExists = true;
-      } else {
-        activeConnections.put(transId, dbHandle);
+      OdkDbInterface dbInterface;
+      if ( activeConnection == null ) {
+        dbInterface = activity.getDatabase();
+        if ( dbInterface == null ) {
+          WebLogger.getLogger(getAppName()).w(TAG,
+              "failed openDatabase -- unable to access database service");
+          return null;
+        }
+        try {
+          activeConnection = dbInterface.openDatabase(getAppName());
+        } catch (RemoteException e) {
+          WebLogger.getLogger(getAppName()).w(TAG,
+              "failed openDatabase -- " + e.getMessage());
+        }
       }
-    }
-    if ( alreadyExists ) {
-      WebLogger.getLogger(currentContext.getAppName()).e(TAG,"transaction id " + transId + " already registered!");
-      throw new IllegalArgumentException("transaction id already registered!");
+      return activeConnection;
     }
   }
 
-  private String getFirstActiveTransactionId() {
+  public void terminateActiveConnection() {
     synchronized (mutex) {
-      Set<String> transIds = activeConnections.keySet();
-      if ( transIds.isEmpty() ) {
-        return null;
-      } else {
-        return transIds.iterator().next();
+      OdkDbInterface dbInterface;
+      if ( activeConnection != null ) {
+        try {
+          dbInterface = activity.getDatabase();
+          if (dbInterface == null) {
+            // if the interface is down, the service itself will reclaim the OdkDbHandle.
+            WebLogger.getLogger(getAppName())
+                .w(TAG, "terminateActiveConnection -- unable to access database");
+            return;
+          }
+          try {
+            dbInterface.closeDatabase(getAppName(), activeConnection);
+          } catch (RemoteException e) {
+            WebLogger.getLogger(getAppName()).w(TAG,
+                "resetting connection (disconnect/reconnect?) -- unable to release "
+                    + activeConnection.getDatabaseHandle());
+          }
+        } finally {
+          activeConnection = null;
+        }
       }
-    }
-  }
-
-  public void removeActiveConnection(String transId) {
-    synchronized (mutex) {
-      activeConnections.remove(transId);
     }
   }
 
@@ -253,10 +270,9 @@ public class ExecutorContext implements DatabaseConnectionListener {
     }
 
     public void releaseResources(String reason) {
-        // TODO: rollback any transactions and close connections
       shutdownWorker();
 
-	  String errorMessage = "releaseResources - shutting down worker (" + reason +
+  	  String errorMessage = "releaseResources - shutting down worker (" + reason +
                    ") -- rolling back all transactions and releasing all connections";
       for(;;) {
         ExecutorRequest req = peekRequest();
@@ -275,27 +291,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
 
       WebLogger.getLogger(currentContext.getAppName()).i(TAG, "releaseResources - workQueue has been purged.");
 
-      for (;;) {
-        String transId = getFirstActiveTransactionId();
-        if ( transId == null ) {
-          break;
-        }
-        OdkDbHandle dbh = getActiveConnection(transId);
-        removeActiveConnection(transId);
-        if ( dbh == null ) {
-          WebLogger.getLogger(getAppName()).w(TAG, "Unexpected failure to retrieve dbHandle for " + transId);
-        }
-        OdkDbInterface dbInterface = currentContext.getDatabase();
-        if ( dbInterface != null ) {
-          try {
-            dbInterface.closeDatabase(currentContext.getAppName(), dbh);
-          } catch (Throwable t) {
-            WebLogger.getLogger(currentContext.getAppName()).w(TAG,
-                    "releaseResources - Exception thrown while trying to close dbHandle");
-            WebLogger.getLogger(currentContext.getAppName()).printStackTrace(t);
-          }
-        }
-      }
+      terminateActiveConnection();
 
       WebLogger.getLogger(currentContext.getAppName()).w(TAG,
               "releaseResources - closed all associated dbHandles");
@@ -347,12 +343,16 @@ public class ExecutorContext implements DatabaseConnectionListener {
 
     @Override
     public void databaseAvailable() {
+      // this may be called multiple times
       triggerExecutorProcessor();
     }
 
     @Override
     public void databaseUnavailable() {
-        new ExecutorContext(activity);
+      // if the service connection drops, the OdkDbHandles associated with that
+      // service interface are closed and released.
+      activeConnection = null;
+      new ExecutorContext(activity);
     }
 
    public synchronized boolean isAlive() {

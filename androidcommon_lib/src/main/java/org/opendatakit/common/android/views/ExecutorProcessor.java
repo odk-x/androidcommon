@@ -19,7 +19,6 @@ import android.os.RemoteException;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.common.android.data.*;
 import org.opendatakit.common.android.provider.DataTableColumns;
-import org.opendatakit.common.android.provider.TableDefinitionsColumns;
 import org.opendatakit.common.android.utilities.ColumnUtil;
 import org.opendatakit.common.android.utilities.DataHelper;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
@@ -61,11 +60,13 @@ public abstract class ExecutorProcessor implements Runnable {
     ADMIN_COLUMNS = Collections.unmodifiableList(adminColumns);
   }
 
-  private ExecutorContext context;
+  private final ExecutorContext context;
 
+  // this gets re-initialized with each run()
   private ExecutorRequest request;
+  // this gets re-initialized with each run()
   private OdkDbInterface dbInterface;
-  private String transId;
+  // this gets re-initialized with each run()
   private OdkDbHandle dbHandle;
 
   protected ExecutorProcessor(ExecutorContext context) {
@@ -80,6 +81,7 @@ public abstract class ExecutorProcessor implements Runnable {
       return;
     }
 
+
     dbInterface = context.getDatabase();
     if (dbInterface == null) {
       // no database to do the work...
@@ -88,15 +90,12 @@ public abstract class ExecutorProcessor implements Runnable {
 
     try {
       // we have a request and a viable database interface...
-      dbHandle = dbInterface.openDatabase(context.getAppName());
+      dbHandle = context.getActiveConnection();
       if (dbHandle == null) {
         context.reportError(request.callbackJSON, null, "Unable to open database connection");
         context.popRequest(true);
         return;
       }
-
-      transId = UUID.randomUUID().toString();
-      context.registerActiveConnection(transId, dbHandle);
 
       switch (request.executorRequestType) {
         case UPDATE_EXECUTOR_CONTEXT:
@@ -147,16 +146,8 @@ public abstract class ExecutorProcessor implements Runnable {
    * @param errorMessage
    */
   private void reportErrorAndCleanUp(String errorMessage) {
-    try {
-      dbInterface.closeDatabase(context.getAppName(), dbHandle);
-    } catch (RemoteException e) {
-      WebLogger.getLogger(context.getAppName()).printStackTrace(e);
-      WebLogger.getLogger(context.getAppName()).w(TAG, "error while releasing database conneciton");
-    } finally {
-      context.removeActiveConnection(transId);
-      context.reportError(request.callbackJSON, null, errorMessage);
-      context.popRequest(true);
-    }
+    context.reportError(request.callbackJSON, null, errorMessage);
+    context.popRequest(true);
   }
 
   /**
@@ -166,23 +157,8 @@ public abstract class ExecutorProcessor implements Runnable {
    * @param metadata
    */
   private void reportSuccessAndCleanUp(ArrayList<List<Object>> data, Map<String, Object> metadata) {
-    boolean successful = false;
-    try {
-      dbInterface.closeDatabase(context.getAppName(), dbHandle);
-      successful = true;
-    } catch (RemoteException e) {
-      WebLogger.getLogger(context.getAppName()).printStackTrace(e);
-      WebLogger.getLogger(context.getAppName()).w(TAG, "error while releasing database connection");
-    } finally {
-      context.removeActiveConnection(transId);
-      if (successful) {
-        context.reportSuccess(request.callbackJSON, null, data, metadata);
-      } else {
-        context.reportError(request.callbackJSON, null,
-                "error while commiting transaction and closing database");
-      }
-      context.popRequest(true);
-    }
+    context.reportSuccess(request.callbackJSON, null, data, metadata);
+    context.popRequest(true);
   }
 
   /**
