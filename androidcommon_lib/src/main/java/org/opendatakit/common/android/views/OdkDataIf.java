@@ -126,7 +126,7 @@ public class OdkDataIf {
   }
 
   /**
-   * Raw SQL query
+   * Arbitrary SQL query
    *
    * @param tableId       The tableId whose metadata should be returned. If a result
    *                      column matches the column name in this tableId, then the data
@@ -137,11 +137,11 @@ public class OdkDataIf {
    * @param callbackJSON  The JSON object used by the JS layer to recover the callback function
    *                      that can process the response
    */
-  @android.webkit.JavascriptInterface public void rawQuery(String tableId, String sqlCommand,
+  @android.webkit.JavascriptInterface public void arbitraryQuery(String tableId, String sqlCommand,
       String[] sqlBindParams, String callbackJSON) throws RemoteException {
     if (isInactive())
       return;
-    weakData.get().rawQuery(tableId, sqlCommand, sqlBindParams, callbackJSON);
+    weakData.get().arbitraryQuery(tableId, sqlCommand, sqlBindParams, callbackJSON);
   }
 
   /**

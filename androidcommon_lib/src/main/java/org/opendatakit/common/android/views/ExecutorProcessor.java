@@ -101,8 +101,8 @@ public abstract class ExecutorProcessor implements Runnable {
         case UPDATE_EXECUTOR_CONTEXT:
           updateExecutorContext();
           break;
-        case RAW_QUERY:
-          rawQuery();
+        case ARBITRARY_QUERY:
+          arbitraryQuery();
           break;
         case USER_TABLE_QUERY:
           userTableQuery();
@@ -208,7 +208,7 @@ public abstract class ExecutorProcessor implements Runnable {
     context.popRequest(false);
   }
 
-  private void rawQuery() throws RemoteException {
+  private void arbitraryQuery() throws RemoteException {
     if (request.tableId == null) {
       reportErrorAndCleanUp("tableId cannot be null");
       return;
@@ -225,7 +225,7 @@ public abstract class ExecutorProcessor implements Runnable {
       reportErrorAndCleanUp("Unable to rawQuery against: " + request.tableId +
           " sql: " + request.sqlCommand );
     } else {
-      reportRawSuccessAndCleanUp(columns, rawUserTable);
+      reportArbitraryQuerySuccessAndCleanUp(columns, rawUserTable);
     }
   }
 
@@ -293,7 +293,7 @@ public abstract class ExecutorProcessor implements Runnable {
     }
   }
 
-  private void reportRawSuccessAndCleanUp(OrderedColumns columnDefinitions, RawUserTable userTable) throws RemoteException {
+  private void reportArbitraryQuerySuccessAndCleanUp(OrderedColumns columnDefinitions, RawUserTable userTable) throws RemoteException {
     List<KeyValueStoreEntry> entries = null;
 
     // We are assuming that we always have the KVS
@@ -359,7 +359,7 @@ public abstract class ExecutorProcessor implements Runnable {
     // elementKey -> index in row within row list
     metadata.put("elementKeyMap", elementKeyToIndexMap);
     // orderedColumns -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
-    TreeMap<String, Object> orderedColumns = columnDefinitions.getDataModel();
+    TreeMap<String, Object> orderedColumns = columnDefinitions.getExtendedDataModel();
     metadata.put("orderedColumns", orderedColumns);
     // keyValueStoreList
     populateKeyValueStoreList(metadata, entries);
@@ -444,7 +444,7 @@ public abstract class ExecutorProcessor implements Runnable {
     // elementKey -> index in row within row list
     metadata.put("elementKeyMap", elementKeyToIndexMap);
     // orderedColumns -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
-    TreeMap<String, Object> orderedColumns = columnDefinitions.getDataModel();
+    TreeMap<String, Object> orderedColumns = columnDefinitions.getExtendedDataModel();
     metadata.put("orderedColumns", orderedColumns);
     // keyValueStoreList
     populateKeyValueStoreList(metadata, entries);

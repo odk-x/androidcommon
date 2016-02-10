@@ -192,19 +192,20 @@ public class OdkData {
   }
 
   /**
-   * Raw SQL query
+   * Arbitrary SQL query
    *
    * @param tableId       The tableId whose metadata should be returned. If a result
    *                      column matches the column name in this tableId, then the data
    *                      type interpretations for that column will be applied to the result
    *                      column (e.g., integer, number, array, object conversions).
-   * @param sqlCommand    The Select statement to issue. It can reference any table in the database, including system tables.
+   * @param sqlCommand    The Select statement to issue. It can reference any table in the database,
+   *                      including system tables.
    * @param sqlBindParams The array of bind parameter values (including any in the having clause)
    * @param callbackJSON  The JSON object used by the JS layer to recover the callback function
    *                      that can process the response
    * @return see description in class header
    */
-  public void rawQuery(String tableId, String sqlCommand, String[] sqlBindParams,
+  public void arbitraryQuery(String tableId, String sqlCommand, String[] sqlBindParams,
       String callbackJSON) {
     ExecutorRequest request = new ExecutorRequest(tableId, sqlCommand, sqlBindParams, callbackJSON);
 

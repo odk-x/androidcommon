@@ -76,7 +76,7 @@ public class ExecutorRequest {
     }
 
     /**
-     * Raw SQL query
+     * Arbitrary SQL query
      *
      * @param tableId              The tableId whose metadata should be returned. If a result
      *                             column matches the column name in this tableId, then the data
@@ -89,7 +89,7 @@ public class ExecutorRequest {
      */
     public ExecutorRequest(String tableId, String sqlCommand, String[] sqlBindParams,
                            String callbackJSON) {
-        this.executorRequestType = ExecutorRequestType.RAW_QUERY;
+        this.executorRequestType = ExecutorRequestType.ARBITRARY_QUERY;
         this.tableId = tableId;
         this.sqlCommand = sqlCommand;
         this.sqlBindParams = sqlBindParams;

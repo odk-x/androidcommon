@@ -21,7 +21,7 @@ package org.opendatakit.common.android.views;
  */
 public enum ExecutorRequestType {
     UPDATE_EXECUTOR_CONTEXT,
-    RAW_QUERY,
+    ARBITRARY_QUERY,
     USER_TABLE_QUERY,
     USER_TABLE_GET_ROWS,
     USER_TABLE_GET_MOST_RECENT_ROW,
