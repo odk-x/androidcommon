@@ -169,6 +169,17 @@ public class OdkData {
   }
 
   /**
+   * Get all the tableIds in the system.
+   *
+   * @param callbackJSON
+   */
+  public void getAllTableIds(String callbackJSON) {
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.GET_ALL_TABLE_IDS, callbackJSON);
+
+    queueRequest(request);
+  }
+
+  /**
    * Query the database using sql.
    *
    * @param tableId                 The table being queried. This is a user-defined table.

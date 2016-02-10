@@ -102,6 +102,18 @@ public class OdkDataIf {
   }
 
   /**
+   * Get all the tableIds in the system.
+   *
+   * @param callbackJSON The JSON object used by the JS layer to recover the callback function
+   *                                that can process the response
+   */
+  @android.webkit.JavascriptInterface public void getAllTableIds(String callbackJSON) {
+    if (isInactive())
+      return;
+    weakData.get().getAllTableIds(callbackJSON);
+  }
+
+  /**
    * Query the database using sql.
    *
    * @param tableId                 The table being queried. This is a user-defined table.

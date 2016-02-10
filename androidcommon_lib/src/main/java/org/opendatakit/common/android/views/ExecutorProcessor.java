@@ -101,6 +101,9 @@ public abstract class ExecutorProcessor implements Runnable {
         case UPDATE_EXECUTOR_CONTEXT:
           updateExecutorContext();
           break;
+        case GET_ALL_TABLE_IDS:
+          getAllTableIds();
+          break;
         case ARBITRARY_QUERY:
           arbitraryQuery();
           break;
@@ -206,6 +209,15 @@ public abstract class ExecutorProcessor implements Runnable {
   private void updateExecutorContext() {
     request.oldContext.releaseResources("switching to new WebFragment");
     context.popRequest(false);
+  }
+
+  private void getAllTableIds() throws RemoteException {
+    List<String> tableIds = dbInterface.getAllTableIds(context.getAppName(), dbHandle);
+    if ( tableIds == null ) {
+      reportErrorAndCleanUp("Unable to obtain list of all tableIds");
+    } else {
+      reportListOfTableIdsSuccessAndCleanUp(tableIds);
+    }
   }
 
   private void arbitraryQuery() throws RemoteException {
@@ -366,6 +378,16 @@ public abstract class ExecutorProcessor implements Runnable {
 
     // raw queries are not extended.
     reportSuccessAndCleanUp(data, metadata);
+  }
+
+  private void reportListOfTableIdsSuccessAndCleanUp(List<String> tableIds) throws
+      RemoteException {
+
+    Map<String, Object> metadata = new HashMap<String, Object>();
+    metadata.put("tableIds", tableIds);
+
+    // raw queries are not extended.
+    reportSuccessAndCleanUp(null, metadata);
   }
 
   private void userTableQuery() throws RemoteException {

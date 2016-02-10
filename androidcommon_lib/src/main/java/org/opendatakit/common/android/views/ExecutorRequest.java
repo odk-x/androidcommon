@@ -189,4 +189,25 @@ public class ExecutorRequest {
         this.deleteAllCheckpoints = false;
         this.commitTransaction = false;
     }
+
+    public ExecutorRequest(ExecutorRequestType executorRequestType, String callbackJSON) {
+        this.executorRequestType = executorRequestType;
+        this.tableId = null;
+        this.stringifiedJSON = null;
+        this.rowId = null;
+        this.callbackJSON = callbackJSON;
+
+        // unused:
+        this.oldContext = null;
+        this.sqlCommand = null;
+        this.whereClause = null;
+        this.sqlBindParams = null;
+        this.groupBy = null;
+        this.having = null;
+        this.orderByElementKey = null;
+        this.orderByDirection = null;
+        this.includeKeyValueStoreMap = false;
+        this.deleteAllCheckpoints = false;
+        this.commitTransaction = false;
+    }
 }
