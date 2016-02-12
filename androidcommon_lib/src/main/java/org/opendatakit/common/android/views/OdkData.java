@@ -19,6 +19,7 @@ import android.os.Bundle;
 import org.opendatakit.IntentConsts;
 import org.opendatakit.common.android.activities.IOdkDataActivity;
 import org.opendatakit.common.android.provider.DataTableColumns;
+import org.opendatakit.common.android.utilities.WebLogger;
 
 import java.lang.ref.WeakReference;
 
@@ -119,6 +120,10 @@ public class OdkData {
     context.releaseResources("Shutting down context");
   }
 
+  private void logDebug(String loggingString) {
+    WebLogger.getLogger(this.mActivity.getAppName()).d("odkData", loggingString);
+  }
+
   private void queueRequest(ExecutorRequest request) {
     context.queueRequest(request);
   }
@@ -143,6 +148,7 @@ public class OdkData {
    * failure callback functions to manipulate the data for their views
    */
   public void getViewData(String callbackJSON) {
+    logDebug("getViewData");
     Bundle bundle = this.mActivity.getIntentExtras();
 
     String tableId = bundle.getString(IntentKeys.TABLE_ID);
@@ -174,6 +180,7 @@ public class OdkData {
    * @param callbackJSON
    */
   public void getAllTableIds(String callbackJSON) {
+    logDebug("getAllTableIds");
     ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.GET_ALL_TABLE_IDS, callbackJSON);
 
     queueRequest(request);
@@ -196,6 +203,7 @@ public class OdkData {
   public void query(String tableId, String whereClause, String[] sqlBindParams, String[] groupBy,
       String having, String orderByElementKey, String orderByDirection,
       boolean includeKeyValueStoreMap, String callbackJSON) {
+    logDebug("query: " + tableId + " whereClause: " + whereClause);
     ExecutorRequest request = new ExecutorRequest(tableId, whereClause, sqlBindParams, groupBy,
         having, orderByElementKey, orderByDirection, includeKeyValueStoreMap, callbackJSON);
 
@@ -218,6 +226,7 @@ public class OdkData {
    */
   public void arbitraryQuery(String tableId, String sqlCommand, String[] sqlBindParams,
       String callbackJSON) {
+    logDebug("arbitraryQuery: " + tableId + " sqlCommand: " + sqlCommand);
     ExecutorRequest request = new ExecutorRequest(tableId, sqlCommand, sqlBindParams, callbackJSON);
 
     queueRequest(request);
@@ -234,6 +243,7 @@ public class OdkData {
    *                     that can process the response
    */
   public void getRows(String tableId, String rowId, String callbackJSON) {
+    logDebug("getRows: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_GET_ROWS, tableId,
         null, rowId, callbackJSON);
 
@@ -251,6 +261,7 @@ public class OdkData {
    *                     that can process the response
    */
   public void getMostRecentRow(String tableId, String rowId, String callbackJSON) {
+    logDebug("getMostRecentRow: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(
         ExecutorRequestType.USER_TABLE_GET_MOST_RECENT_ROW, tableId, null, rowId, callbackJSON);
 
@@ -268,6 +279,7 @@ public class OdkData {
    * @return see description in class header
    */
   public void updateRow(String tableId, String stringifiedJSON, String rowId, String callbackJSON) {
+    logDebug("updateRow: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_UPDATE_ROW,
         tableId, stringifiedJSON, rowId, callbackJSON);
 
@@ -284,6 +296,7 @@ public class OdkData {
    *                        that can process the response
    */
   public void deleteRow(String tableId, String stringifiedJSON, String rowId, String callbackJSON) {
+    logDebug("deleteRow: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_DELETE_ROW,
         tableId, stringifiedJSON, rowId, callbackJSON);
 
@@ -300,6 +313,7 @@ public class OdkData {
    *                        that can process the response
    */
   public void addRow(String tableId, String stringifiedJSON, String rowId, String callbackJSON) {
+    logDebug("addRow: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_ADD_ROW, tableId,
         stringifiedJSON, rowId, callbackJSON);
 
@@ -317,6 +331,7 @@ public class OdkData {
    */
   public void addCheckpoint(String tableId, String stringifiedJSON, String rowId,
       String callbackJSON) {
+    logDebug("addCheckpoint: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_ADD_CHECKPOINT,
         tableId, stringifiedJSON, rowId, callbackJSON);
 
@@ -334,6 +349,7 @@ public class OdkData {
    */
   public void saveCheckpointAsIncomplete(String tableId, String stringifiedJSON, String rowId,
       String callbackJSON) {
+    logDebug("saveCheckpointAsIncomplete: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(
         ExecutorRequestType.USER_TABLE_SAVE_CHECKPOINT_AS_INCOMPLETE, tableId, stringifiedJSON,
         rowId, callbackJSON);
@@ -352,6 +368,7 @@ public class OdkData {
    */
   public void saveCheckpointAsComplete(String tableId, String stringifiedJSON, String rowId,
       String callbackJSON) {
+    logDebug("saveCheckpointAsComplete: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(
         ExecutorRequestType.USER_TABLE_SAVE_CHECKPOINT_AS_COMPLETE, tableId, stringifiedJSON, rowId,
         callbackJSON);
@@ -368,6 +385,7 @@ public class OdkData {
    *                     that can process the response
    */
   public void deleteAllCheckpoints(String tableId, String rowId, String callbackJSON) {
+    logDebug("deleteAllCheckpoints: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(
         ExecutorRequestType.USER_TABLE_DELETE_ALL_CHECKPOINTS, tableId, null, rowId, callbackJSON);
 
@@ -383,6 +401,7 @@ public class OdkData {
    *                     that can process the response
    */
   public void deleteLastCheckpoint(String tableId, String rowId, String callbackJSON) {
+    logDebug("deleteLastCheckpoint: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(
         ExecutorRequestType.USER_TABLE_DELETE_LAST_CHECKPOINT, tableId, null, rowId, callbackJSON);
 

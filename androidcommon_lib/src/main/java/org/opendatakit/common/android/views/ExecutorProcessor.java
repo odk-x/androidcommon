@@ -73,14 +73,12 @@ public abstract class ExecutorProcessor implements Runnable {
     this.context = context;
   }
 
-  @Override
-  public void run() {
+  @Override public void run() {
     this.request = context.peekRequest();
     if (request == null) {
       // no work to do...
       return;
     }
-
 
     dbInterface = context.getDatabase();
     if (dbInterface == null) {
@@ -98,45 +96,50 @@ public abstract class ExecutorProcessor implements Runnable {
       }
 
       switch (request.executorRequestType) {
-        case UPDATE_EXECUTOR_CONTEXT:
-          updateExecutorContext();
-          break;
-        case GET_ALL_TABLE_IDS:
-          getAllTableIds();
-          break;
-        case ARBITRARY_QUERY:
-          arbitraryQuery();
-          break;
-        case USER_TABLE_QUERY:
-          userTableQuery();
-          break;
+      case UPDATE_EXECUTOR_CONTEXT:
+        updateExecutorContext();
+        break;
+      case GET_ALL_TABLE_IDS:
+        getAllTableIds();
+        break;
+      case ARBITRARY_QUERY:
+        arbitraryQuery();
+        break;
+      case USER_TABLE_QUERY:
+        userTableQuery();
+        break;
       case USER_TABLE_GET_ROWS:
-          getRows();
-          break;
+        getRows();
+        break;
       case USER_TABLE_GET_MOST_RECENT_ROW:
-          getMostRecentRow();
-          break;
+        getMostRecentRow();
+        break;
       case USER_TABLE_UPDATE_ROW:
-          updateRow();
-          break;
-        case USER_TABLE_DELETE_ROW:
-          deleteRow();
-          break;
-        case USER_TABLE_ADD_ROW:
-          addRow();
-          break;
-        case USER_TABLE_ADD_CHECKPOINT:
-          addCheckpoint();
-          break;
-        case USER_TABLE_SAVE_CHECKPOINT_AS_INCOMPLETE:
-          saveCheckpointAsIncomplete();
-          break;
-        case USER_TABLE_SAVE_CHECKPOINT_AS_COMPLETE:
-          saveCheckpointAsComplete();
-          break;
-        case USER_TABLE_DELETE_LAST_CHECKPOINT:
-          deleteLastCheckpoint();
-          break;
+        updateRow();
+        break;
+      case USER_TABLE_DELETE_ROW:
+        deleteRow();
+        break;
+      case USER_TABLE_ADD_ROW:
+        addRow();
+        break;
+      case USER_TABLE_ADD_CHECKPOINT:
+        addCheckpoint();
+        break;
+      case USER_TABLE_SAVE_CHECKPOINT_AS_INCOMPLETE:
+        saveCheckpointAsIncomplete();
+        break;
+      case USER_TABLE_SAVE_CHECKPOINT_AS_COMPLETE:
+        saveCheckpointAsComplete();
+        break;
+      case USER_TABLE_DELETE_ALL_CHECKPOINTS:
+        deleteAllCheckpoints();
+        break;
+      case USER_TABLE_DELETE_LAST_CHECKPOINT:
+        deleteLastCheckpoint();
+        break;
+      default:
+        reportErrorAndCleanUp("ExecutorProcessor: unimplemented request!");
       }
     } catch (RemoteException e) {
       reportErrorAndCleanUp("unexpected remote exception");
@@ -213,7 +216,7 @@ public abstract class ExecutorProcessor implements Runnable {
 
   private void getAllTableIds() throws RemoteException {
     List<String> tableIds = dbInterface.getAllTableIds(context.getAppName(), dbHandle);
-    if ( tableIds == null ) {
+    if (tableIds == null) {
       reportErrorAndCleanUp("Unable to obtain list of all tableIds");
     } else {
       reportListOfTableIdsSuccessAndCleanUp(tableIds);
@@ -230,12 +233,12 @@ public abstract class ExecutorProcessor implements Runnable {
       columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
       context.putOrderedColumns(request.tableId, columns);
     }
-    RawUserTable rawUserTable = dbInterface.arbitraryQuery(context.getAppName(), dbHandle,
-        request.sqlCommand, request.sqlBindParams);
+    RawUserTable rawUserTable = dbInterface
+        .arbitraryQuery(context.getAppName(), dbHandle, request.sqlCommand, request.sqlBindParams);
 
-    if ( rawUserTable == null ) {
+    if (rawUserTable == null) {
       reportErrorAndCleanUp("Unable to rawQuery against: " + request.tableId +
-          " sql: " + request.sqlCommand );
+          " sql: " + request.sqlCommand);
     } else {
       reportArbitraryQuerySuccessAndCleanUp(columns, rawUserTable);
     }
@@ -288,7 +291,8 @@ public abstract class ExecutorProcessor implements Runnable {
         } catch (IllegalArgumentException e) {
           // ignore?
           value = entry.value;
-          WebLogger.getLogger(context.getAppName()).e(TAG, "Unrecognized ElementDataType: " + entry.type);
+          WebLogger.getLogger(context.getAppName())
+              .e(TAG, "Unrecognized ElementDataType: " + entry.type);
           WebLogger.getLogger(context.getAppName()).printStackTrace(e);
         }
 
@@ -305,61 +309,63 @@ public abstract class ExecutorProcessor implements Runnable {
     }
   }
 
-  private void reportArbitraryQuerySuccessAndCleanUp(OrderedColumns columnDefinitions, RawUserTable userTable) throws RemoteException {
+  private void reportArbitraryQuerySuccessAndCleanUp(OrderedColumns columnDefinitions,
+      RawUserTable userTable) throws RemoteException {
     List<KeyValueStoreEntry> entries = null;
 
     // We are assuming that we always have the KVS
     // otherwise use the request.includeKeyValueStoreMap
     //if (request.includeKeyValueStoreMap) {
-    entries = dbInterface.getDBTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null);
+    entries = dbInterface
+        .getDBTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null);
     //}
-    TableDefinitionEntry tdef = dbInterface.getTableDefinitionEntry(context.getAppName(),
-        dbHandle, request.tableId);
+    TableDefinitionEntry tdef = dbInterface
+        .getTableDefinitionEntry(context.getAppName(), dbHandle, request.tableId);
 
     HashMap<String, Integer> elementKeyToIndexMap = new HashMap<String, Integer>();
 
     ArrayList<List<Object>> data = new ArrayList<List<Object>>();
 
-    if ( userTable != null ) {
-        int idx;
-        // resolve the data types of all of the columns in the result set.
-        Class<?>[] classes = new Class<?>[userTable.getWidth()];
-        for ( idx = 0 ; idx < userTable.getWidth(); ++idx ) {
-          // String is the default
-          classes[idx] = String.class;
-          // clean up the column name...
-          String colName = userTable.getElementKey(idx);
-          // set up the map -- use full column name here
-          elementKeyToIndexMap.put(colName, idx);
-          // remove any table alias qualifier from the name (assumes no quoting of column names)
-          if ( colName.lastIndexOf('.') != -1 ) {
-            colName = colName.substring(colName.lastIndexOf('.')+1);
-          }
-          // and try to deduce what type it should be...
-          if ( colName.equals(DataTableColumns.CONFLICT_TYPE) ) {
-            classes[idx] = Integer.class;
-          } else {
-            try {
-              ColumnDefinition defn = columnDefinitions.find(colName);
-              ElementDataType dataType = defn.getType().getDataType();
-              Class<?> clazz = ColumnUtil.get().getDataType(dataType);
-              classes[idx] = clazz;
-            } catch ( Exception e ) {
-              // ignore
-            }
+    if (userTable != null) {
+      int idx;
+      // resolve the data types of all of the columns in the result set.
+      Class<?>[] classes = new Class<?>[userTable.getWidth()];
+      for (idx = 0; idx < userTable.getWidth(); ++idx) {
+        // String is the default
+        classes[idx] = String.class;
+        // clean up the column name...
+        String colName = userTable.getElementKey(idx);
+        // set up the map -- use full column name here
+        elementKeyToIndexMap.put(colName, idx);
+        // remove any table alias qualifier from the name (assumes no quoting of column names)
+        if (colName.lastIndexOf('.') != -1) {
+          colName = colName.substring(colName.lastIndexOf('.') + 1);
+        }
+        // and try to deduce what type it should be...
+        if (colName.equals(DataTableColumns.CONFLICT_TYPE)) {
+          classes[idx] = Integer.class;
+        } else {
+          try {
+            ColumnDefinition defn = columnDefinitions.find(colName);
+            ElementDataType dataType = defn.getType().getDataType();
+            Class<?> clazz = ColumnUtil.get().getDataType(dataType);
+            classes[idx] = clazz;
+          } catch (Exception e) {
+            // ignore
           }
         }
+      }
 
-        // assemble the data array
-        for (int i = 0; i < userTable.getNumberOfRows(); ++i) {
-          RawRow r = userTable.getRowAtIndex(i);
-          Object[] values = new Object[userTable.getWidth()];
+      // assemble the data array
+      for (int i = 0; i < userTable.getNumberOfRows(); ++i) {
+        RawRow r = userTable.getRowAtIndex(i);
+        Object[] values = new Object[userTable.getWidth()];
 
-          for ( idx = 0 ; idx < userTable.getWidth() ; ++idx ) {
-            values[idx] = r.getRawDataType(idx, classes[idx]);
-          }
-          data.add(Arrays.asList(values));
+        for (idx = 0; idx < userTable.getWidth(); ++idx) {
+          values[idx] = r.getRawDataType(idx, classes[idx]);
         }
+        data.add(Arrays.asList(values));
+      }
     }
 
     Map<String, Object> metadata = new HashMap<String, Object>();
@@ -380,8 +386,7 @@ public abstract class ExecutorProcessor implements Runnable {
     reportSuccessAndCleanUp(data, metadata);
   }
 
-  private void reportListOfTableIdsSuccessAndCleanUp(List<String> tableIds) throws
-      RemoteException {
+  private void reportListOfTableIdsSuccessAndCleanUp(List<String> tableIds) throws RemoteException {
 
     Map<String, Object> metadata = new HashMap<String, Object>();
     metadata.put("tableIds", tableIds);
@@ -405,7 +410,7 @@ public abstract class ExecutorProcessor implements Runnable {
             request.sqlBindParams, request.groupBy, request.having, request.orderByElementKey,
             request.orderByDirection);
 
-    if ( t == null ) {
+    if (t == null) {
       reportErrorAndCleanUp("Unable to query " + request.tableId);
     } else {
       reportSuccessAndCleanUp(t);
@@ -418,10 +423,11 @@ public abstract class ExecutorProcessor implements Runnable {
     // We are assuming that we always have the KVS
     // otherwise use the request.includeKeyValueStoreMap
     //if (request.includeKeyValueStoreMap) {
-      entries = dbInterface.getDBTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null);
+    entries = dbInterface
+        .getDBTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null);
     //}
-    TableDefinitionEntry tdef = dbInterface.getTableDefinitionEntry(context.getAppName(),
-                                                                    dbHandle, request.tableId);
+    TableDefinitionEntry tdef = dbInterface
+        .getTableDefinitionEntry(context.getAppName(), dbHandle, request.tableId);
 
     // assemble the data and metadata objects
     ArrayList<List<Object>> data = new ArrayList<List<Object>>();
@@ -431,7 +437,8 @@ public abstract class ExecutorProcessor implements Runnable {
 
     for (int i = 0; i < userTable.getNumberOfRows(); ++i) {
       Row r = userTable.getRowAtIndex(i);
-      List<Object> values = Arrays.asList(new Object[ADMIN_COLUMNS.size() + elementKeyToIndexMap.size()]);
+      List<Object> values = Arrays
+          .asList(new Object[ADMIN_COLUMNS.size() + elementKeyToIndexMap.size()]);
       data.add(values);
 
       for (String name : ADMIN_COLUMNS) {
@@ -477,8 +484,8 @@ public abstract class ExecutorProcessor implements Runnable {
     reportSuccessAndCleanUp(data, metadata);
   }
 
-  protected abstract void extendQueryMetadata(OdkDbHandle dbHandle, List<KeyValueStoreEntry> entries, UserTable userTable, Map<String, Object> metadata);
-
+  protected abstract void extendQueryMetadata(OdkDbHandle dbHandle,
+      List<KeyValueStoreEntry> entries, UserTable userTable, Map<String, Object> metadata);
 
   private void getRows() throws RemoteException {
     if (request.tableId == null) {
@@ -497,9 +504,9 @@ public abstract class ExecutorProcessor implements Runnable {
     UserTable t = dbInterface
         .getRowsWithId(context.getAppName(), dbHandle, request.tableId, columns, request.rowId);
 
-    if ( t == null ) {
+    if (t == null) {
       reportErrorAndCleanUp("Unable to getRows for " +
-          request.tableId + "._id = " +  request.rowId);
+          request.tableId + "._id = " + request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
     }
@@ -520,11 +527,12 @@ public abstract class ExecutorProcessor implements Runnable {
       context.putOrderedColumns(request.tableId, columns);
     }
     UserTable t = dbInterface
-        .getMostRecentRowWithId(context.getAppName(), dbHandle, request.tableId, columns, request.rowId);
+        .getMostRecentRowWithId(context.getAppName(), dbHandle, request.tableId, columns,
+            request.rowId);
 
-    if ( t == null ) {
+    if (t == null) {
       reportErrorAndCleanUp("Unable to getMostRecentRow for " +
-          request.tableId + "._id = " +  request.rowId);
+          request.tableId + "._id = " + request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
     }
@@ -547,11 +555,12 @@ public abstract class ExecutorProcessor implements Runnable {
 
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
     UserTable t = dbInterface
-        .updateRowWithId(context.getAppName(), dbHandle, request.tableId, columns, cvValues, request.rowId);
+        .updateRowWithId(context.getAppName(), dbHandle, request.tableId, columns, cvValues,
+            request.rowId);
 
-    if ( t == null ) {
+    if (t == null) {
       reportErrorAndCleanUp("Unable to updateRow for " +
-          request.tableId + "._id = " +  request.rowId);
+          request.tableId + "._id = " + request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
     }
@@ -576,9 +585,9 @@ public abstract class ExecutorProcessor implements Runnable {
     UserTable t = dbInterface
         .deleteRowWithId(context.getAppName(), dbHandle, request.tableId, columns, request.rowId);
 
-    if ( t == null ) {
+    if (t == null) {
       reportErrorAndCleanUp("Unable to deleteRow for " +
-          request.tableId + "._id = " +  request.rowId);
+          request.tableId + "._id = " + request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
     }
@@ -601,38 +610,40 @@ public abstract class ExecutorProcessor implements Runnable {
 
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
     UserTable t = dbInterface
-        .insertRowWithId(context.getAppName(), dbHandle, request.tableId, columns, cvValues, request.rowId);
+        .insertRowWithId(context.getAppName(), dbHandle, request.tableId, columns, cvValues,
+            request.rowId);
 
-    if ( t == null ) {
+    if (t == null) {
       reportErrorAndCleanUp("Unable to addRow for " +
-          request.tableId + "._id = " +  request.rowId);
+          request.tableId + "._id = " + request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
     }
   }
 
   private void addCheckpoint() throws RemoteException {
-    if ( request.tableId == null ) {
+    if (request.tableId == null) {
       reportErrorAndCleanUp("tableId cannot be null");
       return;
     }
-    if ( request.rowId == null ) {
+    if (request.rowId == null) {
       reportErrorAndCleanUp("rowId cannot be null");
       return;
     }
     OrderedColumns columns = context.getOrderedColumns(request.tableId);
-    if ( columns == null ) {
+    if (columns == null) {
       columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
       context.putOrderedColumns(request.tableId, columns);
     }
 
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
     UserTable t = dbInterface
-        .insertCheckpointRowWithId(context.getAppName(), dbHandle, request.tableId, columns, cvValues, request.rowId);
+        .insertCheckpointRowWithId(context.getAppName(), dbHandle, request.tableId, columns,
+            cvValues, request.rowId);
 
-    if ( t == null ) {
+    if (t == null) {
       reportErrorAndCleanUp("Unable to addCheckpoint for " +
-          request.tableId + "._id = " +  request.rowId);
+          request.tableId + "._id = " + request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
     }
@@ -654,12 +665,13 @@ public abstract class ExecutorProcessor implements Runnable {
     }
 
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
-    UserTable t = dbInterface.saveAsIncompleteMostRecentCheckpointRowWithId(context.getAppName(),
-        dbHandle, request.tableId, columns, cvValues, request.rowId);
+    UserTable t = dbInterface
+        .saveAsIncompleteMostRecentCheckpointRowWithId(context.getAppName(), dbHandle,
+            request.tableId, columns, cvValues, request.rowId);
 
-    if ( t == null ) {
+    if (t == null) {
       reportErrorAndCleanUp("Unable to saveCheckpointAsIncomplete for " +
-          request.tableId + "._id = " +  request.rowId);
+          request.tableId + "._id = " + request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
     }
@@ -681,23 +693,24 @@ public abstract class ExecutorProcessor implements Runnable {
     }
 
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
-    UserTable t = dbInterface.saveAsCompleteMostRecentCheckpointRowWithId(context.getAppName(),
-        dbHandle, request.tableId, columns, cvValues, request.rowId);
+    UserTable t = dbInterface
+        .saveAsCompleteMostRecentCheckpointRowWithId(context.getAppName(), dbHandle,
+            request.tableId, columns, cvValues, request.rowId);
 
-    if ( t == null ) {
+    if (t == null) {
       reportErrorAndCleanUp("Unable to saveCheckpointAsComplete for " +
-          request.tableId + "._id = " +  request.rowId);
+          request.tableId + "._id = " + request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
     }
   }
 
   private void deleteLastCheckpoint() throws RemoteException {
-    if ( request.tableId == null ) {
+    if (request.tableId == null) {
       reportErrorAndCleanUp("tableId cannot be null");
       return;
     }
-    if ( request.rowId == null ) {
+    if (request.rowId == null) {
       reportErrorAndCleanUp("rowId cannot be null");
       return;
     }
@@ -708,23 +721,24 @@ public abstract class ExecutorProcessor implements Runnable {
       context.putOrderedColumns(request.tableId, columns);
     }
 
-    UserTable t = dbInterface.deleteLastCheckpointRowWithId(context.getAppName(), dbHandle,
-        request.tableId, columns, request.rowId);
+    UserTable t = dbInterface
+        .deleteLastCheckpointRowWithId(context.getAppName(), dbHandle, request.tableId, columns,
+            request.rowId);
 
-    if ( t == null ) {
+    if (t == null) {
       reportErrorAndCleanUp("Unable to deleteLastCheckpoint for " +
-          request.tableId + "._id = " +  request.rowId);
+          request.tableId + "._id = " + request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
     }
   }
 
   private void deleteAllCheckpoints() throws RemoteException {
-    if ( request.tableId == null ) {
+    if (request.tableId == null) {
       reportErrorAndCleanUp("tableId cannot be null");
       return;
     }
-    if ( request.rowId == null ) {
+    if (request.rowId == null) {
       reportErrorAndCleanUp("rowId cannot be null");
       return;
     }
@@ -736,12 +750,13 @@ public abstract class ExecutorProcessor implements Runnable {
     }
 
     //ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
-    UserTable t = dbInterface.deleteAllCheckpointRowsWithId(context.getAppName(), dbHandle,
-        request.tableId, columns, request.rowId);
+    UserTable t = dbInterface
+        .deleteAllCheckpointRowsWithId(context.getAppName(), dbHandle, request.tableId, columns,
+            request.rowId);
 
-    if ( t == null ) {
+    if (t == null) {
       reportErrorAndCleanUp("Unable to deleteAllCheckpoints for " +
-          request.tableId + "._id = " +  request.rowId);
+          request.tableId + "._id = " + request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
     }

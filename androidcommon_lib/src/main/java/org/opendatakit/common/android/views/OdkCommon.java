@@ -62,11 +62,16 @@ public class OdkCommon {
     return (mWebView.get() == null || mWebView.get().isInactive());
   }
 
+  private void logDebug(String loggingString) {
+    WebLogger.getLogger(this.mActivity.getAppName()).d("odkCommon", loggingString);
+  }
+
   /**
    * @return
    * @see {@link OdkCommonIf#getPlatformInfo()}
    */
   public String getPlatformInfo() {
+    logDebug("getPlatformInfo()");
     String appName = mActivity.getAppName();
     Map<String, String> platformInfo = new HashMap<String, String>();
     platformInfo.put(PlatformInfoKeys.VERSION, Build.VERSION.RELEASE);
@@ -87,6 +92,7 @@ public class OdkCommon {
    * @see {@link OdkCommonIf#getFileAsUrl(String)}
    */
   public String getFileAsUrl(String relativePath) {
+    logDebug("getFileAsUrl("+relativePath+")");
     String baseUri = getBaseContentUri();
     String result = baseUri + relativePath;
     return result;
@@ -100,6 +106,7 @@ public class OdkCommon {
    * @see {@link OdkCommonIf#getRowFileAsUrl(String, String, String)}
    */
   public String getRowFileAsUrl(String tableId, String rowId, String rowPathUri) {
+    logDebug("getRowFileAsUrl("+tableId+", "+rowId+", "+rowPathUri+")");
     String appName = mActivity.getAppName();
     String baseUri = getBaseContentUri();
     File rowpathFile = ODKFileUtils.getRowpathFile(appName, tableId, rowId, rowPathUri);
@@ -146,7 +153,7 @@ public class OdkCommon {
    * @see {@link OdkCommonIf#getActiveUser()}
    */
   public String getActiveUser() {
-    log("I", "getActiveUser()");
+    logDebug("getActiveUser()");
     String activeUser = mActivity.getActiveUser();
     if (activeUser == null) {
       activeUser = DataTableColumns.DEFAULT_SAVEPOINT_CREATOR;
@@ -160,7 +167,7 @@ public class OdkCommon {
    * @see {@link OdkCommonIf#getProperty(String)}
    */
   public String getProperty(String propertyId) {
-    log("I", "getProperty(" + propertyId + ")");
+    logDebug("getProperty(" + propertyId + ")");
 
     return mActivity.getProperty(propertyId);
   }
@@ -170,6 +177,7 @@ public class OdkCommon {
    * @see {@link OdkCommonIf#getBaseUrl()}
    */
   public String getBaseUrl() {
+    logDebug("getBaseUrl()");
     return ODKFileUtils.getRelativeSystemPath();
   }
 
@@ -179,6 +187,7 @@ public class OdkCommon {
    * @return
    */
   private String getBaseContentUri() {
+    logDebug("getBaseContentUri()");
     Uri contentUri = Uri.parse(mActivity.getWebViewContentUri());
     String appName = mActivity.getAppName();
     contentUri = Uri.withAppendedPath(contentUri, Uri.encode(appName));
@@ -193,6 +202,7 @@ public class OdkCommon {
    * @param jsonValue
    */
   public void setSessionVariable(String elementPath, String jsonValue) {
+    logDebug("setSessionVariable("+elementPath+", ...)");
     mActivity.setSessionVariable(elementPath, jsonValue);
   }
 
@@ -203,6 +213,7 @@ public class OdkCommon {
    * @param elementPath
    */
   public String getSessionVariable(String elementPath) {
+    logDebug("getSessionVariable("+elementPath+")");
     return mActivity.getSessionVariable(elementPath);
   }
 
@@ -213,8 +224,8 @@ public class OdkCommon {
    * @return
    * @see {@link OdkCommonIf#doAction(String, String, String)}
    */
-  @android.webkit.JavascriptInterface public String doAction(String dispatchString, String action,
-      String jsonMap) {
+  public String doAction(String dispatchString, String action, String jsonMap) {
+    logDebug("doAction("+dispatchString+", "+action+", ...)");
 
     JSONObject valueMap = null;
     try {
@@ -234,6 +245,7 @@ public class OdkCommon {
    * or Url change. Return null if there are none.
    */
   public String viewFirstQueuedAction() {
+    logDebug("viewFirstQueuedAction()");
     return mActivity.viewFirstQueuedAction();
   }
 
@@ -241,6 +253,7 @@ public class OdkCommon {
    * Remove the first queued action, if any.
    */
   public void removeFirstQueuedAction() {
+    logDebug("removeFirstQueuedAction()");
     mActivity.removeFirstQueuedAction();
   }
 
