@@ -259,7 +259,7 @@ public abstract class ExecutorProcessor implements Runnable {
           ElementDataType type = ElementDataType.valueOf(entry.type);
           if (entry.value != null) {
             if (type == ElementDataType.integer) {
-              value = Integer.parseInt(entry.value);
+              value = Long.parseLong(entry.value);
             } else if (type == ElementDataType.bool) {
               // This is broken - a value
               // of "TRUE" is returned some times
@@ -342,13 +342,15 @@ public abstract class ExecutorProcessor implements Runnable {
           colName = colName.substring(colName.lastIndexOf('.') + 1);
         }
         // and try to deduce what type it should be...
+        // we keep object and array as String
+        // integer
         if (colName.equals(DataTableColumns.CONFLICT_TYPE)) {
           classes[idx] = Integer.class;
         } else {
           try {
             ColumnDefinition defn = columnDefinitions.find(colName);
             ElementDataType dataType = defn.getType().getDataType();
-            Class<?> clazz = ColumnUtil.get().getDataType(dataType);
+            Class<?> clazz = ColumnUtil.get().getOdkDataIfType(dataType);
             classes[idx] = clazz;
           } catch (Exception e) {
             // ignore
@@ -376,9 +378,9 @@ public abstract class ExecutorProcessor implements Runnable {
 
     // elementKey -> index in row within row list
     metadata.put("elementKeyMap", elementKeyToIndexMap);
-    // orderedColumns -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
-    TreeMap<String, Object> orderedColumns = columnDefinitions.getExtendedDataModel();
-    metadata.put("orderedColumns", orderedColumns);
+    // dataTableModel -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
+    TreeMap<String, Object> dataTableModel = columnDefinitions.getExtendedDataModel();
+    metadata.put("dataTableModel", dataTableModel);
     // keyValueStoreList
     populateKeyValueStoreList(metadata, entries);
 
@@ -458,7 +460,7 @@ public abstract class ExecutorProcessor implements Runnable {
         int idx = elementKeyToIndexMap.get(name);
         ColumnDefinition defn = columnDefinitions.find(name);
         ElementDataType dataType = defn.getType().getDataType();
-        Class<?> clazz = ColumnUtil.get().getDataType(dataType);
+        Class<?> clazz = ColumnUtil.get().getOdkDataIfType(dataType);
         Object value = r.getRawDataType(name, clazz);
         values.set(idx, value);
       }
@@ -472,9 +474,9 @@ public abstract class ExecutorProcessor implements Runnable {
 
     // elementKey -> index in row within row list
     metadata.put("elementKeyMap", elementKeyToIndexMap);
-    // orderedColumns -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
-    TreeMap<String, Object> orderedColumns = columnDefinitions.getExtendedDataModel();
-    metadata.put("orderedColumns", orderedColumns);
+    // dataTableModel -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
+    TreeMap<String, Object> dataTableModel = columnDefinitions.getExtendedDataModel();
+    metadata.put("dataTableModel", dataTableModel);
     // keyValueStoreList
     populateKeyValueStoreList(metadata, entries);
 

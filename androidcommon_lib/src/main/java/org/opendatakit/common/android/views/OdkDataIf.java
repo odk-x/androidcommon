@@ -20,49 +20,122 @@ import java.lang.ref.WeakReference;
 
 /**
  * @author mitchellsundt@gmail.com
- *         <p/>
+ *         <p>
  *         Database interface from JS to Java.
- *         <p/>
+ *         </p><p>
  *         General notes on APIs:
- *         <p/>
+ *         </p><p>
  *         callbackJSON - this is a JSON serialization of a description that the caller can use to recreate
  *         or retrieve the callback that will handle the response.
- *         <p/>
+ *         </p><p>
  *         COMMON RETURN VALUE:
- *         <p/>
+ *         </p><p>
  *         All of these functions asynchronously return a stringifiedJSON object.
- *         <p/>
- *         <pre>
+ *         </p><pre>
  *             {
  *                 callbackJSON: callbackJSON-that-was-passed-in,
  *                 errorMsg: "message if there was an error",
- *                 data: [ [ row1elementKey1, row1elementKey2, ... ], [row2elementKey1, row2elementKey1, ...], ...]
+ *                 data: [ [ row1elementValue1, row1elementValue2, ... ],
+ *                         [row2elementValue1,  row2elementValue2, ...], ...]
  *                 metadata: {
- *                     rowIdMap: { 'rowId' : outerIdx, ...},
+ *                     tableId: tableId,
+ *                     schemaETag: schemaETag for this table,
+ *                     lastDataETag: the server's dataETag for the last successful
+ *                                   row sync of the table,
+ *                     lastSyncTime: the timestamp of the last successful row sync,
  *                     elementKeyMap: { 'elementKey': innerIdx, ... },
+ *                     dataTableModel: dataTableModel of table -- identical to that in a formDef
+ *                                    specification except there are no session variables since
+ *                                    this is a reconstruction from the database content.
+ *                     keyValueStoreList: [ { partition: pv,
+ *                                            aspect: av,
+ *                                            key: kv,
+ *                                            type: tv,
+ *                                            value: vv }, ... ]
  *                     ...
+ *                     // other tool-specific fields. E.g., for ODK Tables, the custom
+ *                     // color values for the rows and columns.
  *                 }
  *             }
- *         </pre>
- *         <p/>
- *         If there was an error, the errorMsg field will be present.
- *         <p/>
- *         If the request was a deleteRow or deleteLastCheckpoint, then the data and metadata
- *         objects will be omitted. Otherwise, the data and metadta objects will be present.
- *         <p/>
- *         The data object is an array of data rows, which are themselves hetrogeneous row field arrays.
- *         <p/>
- *         The metadata object contains:
- *         <ul><li>rowIdMap -- mapping rowId to an index in the data array</li>
- *         <li>elementKeyMap -- mapping elementKey to an index in the row field array</li>
- *         <li>orderedColumns -- if not rawQuery; the ordered column defns for this tableId,
- *         This is a map of elementName to the extended JS schema struct for that element.</li>
- *         <li>keyValueStoreList -- if not rawQuery; optional KeyValueStore content for this tableId.
- *         This is a list of objects [ { dimension: , aspect: , key:, type:, value:}, ...] with integer, boolean and
- *         number types converted to JS representation. Arrays and objects are left as strings for JS decoding.</li>
- *         <li>other tool-specific optional fields such as computed row and column colors or extended content</li></ul>
- *         <p/>
- *         The rawQuery result just has the rowIdMap and elementKeyMap.
+ *         </pre><p>
+ *         If there was an error, the errorMsg field will be present. If an error occured,
+ *         the data and metadata will generally not be present.
+ *         </p><p>
+ *         The data object is an array of data rows, which are themselves hetrogeneous
+ *         field-value arrays containing the values for all the fields (data and metadata) in a row.
+ *         </p><p>
+ *         The order of the fields in the field-value arrays is specified in the
+ *         </p><pre>
+ *                    metadata.elementKeyMap
+ *         </pre><p>
+ *         If the request was a deleteRow or deleteAllCheckpoints, the data array can either
+ *         be empty or can contain a row with sync_state = 'deleted' to indicate that the deletion
+ *         needs to be sync'd with the server.
+ *         </p><p>
+ *         For all other row modification requests, the returned data array will contain the
+ *         most recent data field-values for that row.  I.e., the database entry where
+ *         </p><pre>
+ *                     _savepoint_timestamp = max(_savepoint_timestamp)
+ *         </pre><p>
+ *         The metadata object fields are populated if the odkDataIf action specified a tableId.
+ *         </p><p>
+ *           stringifiedJSON arguments to the odkDataIf APIs
+ *         </p><p>
+ *         The stringifiedJSON argument is a JSON serialization of an elementKey-to-value map.
+ *         As such, all keys in these maps are required to be the elementKeys (database column
+ *         names) of the underlying table.  The dataTableModel can be used to resolve arbitrary
+ *         portions of a complex Javascript object into their underlying elementKey units. I.e.,
+ *         if you update a geopoint, it is expected that you would specify an stringifiedJSON
+ *         input string that was a JSON serialization of an update map with the 4 entries
+ *         for the latitude, longitude, altitude and accuracy of the geopoint you are updating
+ *         since those will be mapped to separate columns in the database table. It would be
+ *         incorrect to pass an update map with a single entry corresponding to the composite
+ *         value for the complex 'geopoint' object.</p><p>
+ *         Similarly, the data rows returned by the odkDataIf API will return the values for the
+ *         individual elementKeys (database column names). You can use the dataTableModel to
+ *         reconstruct the complex Javascript object from those values.
+ *         </p><p>
+ *           DATA ROW AND KEY-VALUE-STORE VALUE REPRESENTATION
+ *         </p><p>
+ *         All rowNelementValueM and vv key-value-store field values are transmitted across the
+ *         interfaces in a "marshalled string representation" as follows: boolean, integer,
+ *         number, rowpath, configpath and string values are transmitted as their native values
+ *         (i.e., booleans are true/false, integers are 1, 2,..., numbers are decimal numbers).
+ *         All other values (arrays and objects) are marshalled.</p><p>
+ *         The "marshalled string representation" for an array is the JSON serialization of the
+ *         array after traversing all elements of the array and generating their "marshalled
+ *         string representation"s.</p><p>
+ *         The "marshalled string representation" for an object depends upon the
+ *         "elementType" string and the list of children of the object. If the object does
+ *         not have any children, the elementType string is examined to determine the primitive
+ *         type of the object. This defaults to a string. But users may specify a different type
+ *         by following the user-named object type with a colon and a primitive data type
+ *         (integer, number, string). e.g.,<pre>
+ *                       elementType = "feet:number"
+ *         </pre><p>
+ *         Would define a 'feet' object type that is stored as a number, rather than a string.
+ *         If there are children, the object type is assumed to be 'object' but if there is only
+ *         one child, it can be specified as 'array' (e.g., "workItems:array"), and the child
+ *         element then defines the data type stored in that array.
+ *         </p><p>
+ *         User code (either in an ODK Survey prompt or in and ODK
+ *         Tables webpage) is expected to parse the content and act accordingly.  If it
+ *         does have children, it is a JSON serialization of the object after traversing
+ *         all of its children and generating their "marshalled string representation"s.</p><p>
+ *         The primary example of childless object types are date, time, dateTime and
+ *         timeInterval types. If these are manipulated using Date() objects in Javascript,
+ *         the values within those Date() objects need to be converted into a string formatted
+ *         as defined by opendatakit before being stored into the database layer. Conversion
+ *         routines are provided for this by the odkCommon object.</p><p>
+ *         The upshot of all of this is that the Javascript layer needs to make sure that any
+ *         user-defined object types or any of the predefined date, time, dateTime and timeInterval
+ *         types are appropriately marshalled into their string representations if they occur within
+ *         an array or object type that is persisted into the database via the odkDataIf interfaces.
+ *         For simple arrays of integers, numbers or string, an ordinary JSON stringify is
+ *         sufficient prior to inserting the field value into the elementKey-value map passed
+ *         into these routines (and JSON parse is required to restore these arrays upon obtaining
+ *         the value from the data row in the odkDataIf response).
+ *         </p>
  */
 public class OdkDataIf {
 
