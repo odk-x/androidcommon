@@ -185,19 +185,27 @@ public abstract class ExecutorProcessor implements Runnable {
       // populate cvValues from the map...
       for (Object okey : map.keySet()) {
         String key = (String) okey;
+        ColumnDefinition cd = columns.find(key);
+        if ( !cd.isUnitOfRetention() ) {
+          throw new IllegalStateException("key is not a database column name: " + key);
+        }
+        // the only types are integer/long, float/double, string, boolean
+        // complex types (array, object) should come across the interface as strings
         Object value = map.get(key);
         if (value == null) {
           cvValues.putNull(key);
+        } else if (value instanceof Long) {
+          cvValues.put(key, (Long) value);
         } else if (value instanceof Integer) {
           cvValues.put(key, (Integer) value);
+        } else if (value instanceof Float) {
+          cvValues.put(key, (Float) value);
         } else if (value instanceof Double) {
           cvValues.put(key, (Double) value);
         } else if (value instanceof String) {
           cvValues.put(key, (String) value);
         } else if (value instanceof Boolean) {
           cvValues.put(key, (Boolean) value);
-        } else if (value instanceof ArrayList) {
-          cvValues.put(key, ODKFileUtils.mapper.writeValueAsString(value));
         } else {
           throw new IllegalStateException("unimplemented case");
         }
@@ -281,10 +289,10 @@ public abstract class ExecutorProcessor implements Runnable {
               }
             } else if (type == ElementDataType.number) {
               value = Double.parseDouble(entry.value);
-            } else if (type == ElementDataType.string) {
-              value = entry.value;
             } else {
-              // array, object, rowpath, configpath
+              // string, array, object, rowpath, configpath and
+              // anything else -- do not attempt to convert.
+              // Leave as string.
               value = entry.value;
             }
           }

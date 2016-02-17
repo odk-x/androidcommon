@@ -27,9 +27,9 @@ import java.lang.ref.WeakReference;
  *         </p><p>
  *         callbackJSON - this is a JSON serialization of a description that the caller can use to recreate
  *         or retrieve the callback that will handle the response.
- *         </p><p>
+ *         </p><h2>
  *         COMMON RETURN VALUE:
- *         </p><p>
+ *         </h2><p>
  *         All of these functions asynchronously return a stringifiedJSON object.
  *         </p><pre>
  *             {
@@ -62,7 +62,8 @@ import java.lang.ref.WeakReference;
  *         the data and metadata will generally not be present.
  *         </p><p>
  *         The data object is an array of data rows, which are themselves hetrogeneous
- *         field-value arrays containing the values for all the fields (data and metadata) in a row.
+ *         field-value arrays containing the values for all the fields (data and instance metadata)
+ *         in a row.
  *         </p><p>
  *         The order of the fields in the field-value arrays is specified in the
  *         </p><pre>
@@ -78,64 +79,83 @@ import java.lang.ref.WeakReference;
  *                     _savepoint_timestamp = max(_savepoint_timestamp)
  *         </pre><p>
  *         The metadata object fields are populated if the odkDataIf action specified a tableId.
- *         </p><p>
- *           stringifiedJSON arguments to the odkDataIf APIs
- *         </p><p>
+ *         </p><h3>
+ *         INTERPRETATION of stringifiedJSON arguments to the odkDataIf APIs
+ *         </h3><p>
  *         The stringifiedJSON argument is a JSON serialization of an elementKey-to-value map.
  *         As such, all keys in these maps are required to be the elementKeys (database column
- *         names) of the underlying table.  The dataTableModel can be used to resolve arbitrary
- *         portions of a complex Javascript object into their underlying elementKey units. I.e.,
+ *         names) of the underlying table; any complex object must be resolved to the separate
+ *         values that are stored into individual columns in the database table before invoking
+ *         these APIs.  The values are "marshalled representations" of the content of the
+ *         fields, as described in the following section.</p><p>
+ *         The dataTableModel can be used to resolve arbitrary portions of a complex Javascript
+ *         object into their underlying elementKey units. I.e.,
  *         if you update a geopoint, it is expected that you would specify an stringifiedJSON
  *         input string that was a JSON serialization of an update map with the 4 entries
  *         for the latitude, longitude, altitude and accuracy of the geopoint you are updating
- *         since those will be mapped to separate columns in the database table. It would be
+ *         since those will be mapped to separate columns in the database table. It is
  *         incorrect to pass an update map with a single entry corresponding to the composite
  *         value for the complex 'geopoint' object.</p><p>
  *         Similarly, the data rows returned by the odkDataIf API will return the values for the
  *         individual elementKeys (database column names). You can use the dataTableModel to
  *         reconstruct the complex Javascript object from those values.
- *         </p><p>
+ *         </p><h3>
  *           DATA ROW AND KEY-VALUE-STORE VALUE REPRESENTATION
- *         </p><p>
- *         All rowNelementValueM and vv key-value-store field values are transmitted across the
- *         interfaces in a "marshalled string representation" as follows: boolean, integer,
+ *         </h3><p>
+ *         All vv key-value-store field values are transmitted across the interfaces in a
+ *         "marshalled representation" as follows: boolean, integer, number, rowpath, configpath
+ *         and string values are transmitted as their native values (i.e., booleans are
+ *         true/false, integers are 1, 2, ..., numbers are decimal numbers). Arrays and objects
+ *         (the only other allowed value types) are transmitted as the JSON stringify of
+ *         their "marshalled representation" described below.</p><p>
+ *         All rowNelementValueM field values are transmitted across the
+ *         interfaces in a "marshalled representation" as follows: boolean, integer,
  *         number, rowpath, configpath and string values are transmitted as their native values
  *         (i.e., booleans are true/false, integers are 1, 2,..., numbers are decimal numbers).
- *         All other values (arrays and objects) are marshalled.</p><p>
- *         The "marshalled string representation" for an array is the JSON serialization of the
- *         array after traversing all elements of the array and generating their "marshalled
- *         string representation"s.</p><p>
- *         The "marshalled string representation" for an object depends upon the
- *         "elementType" string and the list of children of the object. If the object does
- *         not have any children, the elementType string is examined to determine the primitive
- *         type of the object. This defaults to a string. But users may specify a different type
+ *         All other values (arrays, user defined types and objects) are marshalled. Arrays and
+ *         objects are then JSON stringify'd before transitting the interface.</p><p>
+ *         The "marshalled representation" for an array is the array after traversing all
+ *         elements of the array and generating their "marshalled representation"s.</p><p>
+ *         User-defined types are either user-defined object types or primitive types. If the
+ *         list of children is empty, a user-defined type is assumed to be a string unless there
+ *         is an explicit data type. rowpath, configpath, date, dateTime and time could be viewed
+ *         as predefined user-defined string types; these are all named types with no explicit data
+ *         type and no children, so they default to be string data.</p><p>
+ *         To explicitly declare a data type for an element type, users may specify a different type
  *         by following the user-named object type with a colon and a primitive data type
  *         (integer, number, string). e.g.,<pre>
  *                       elementType = "feet:number"
  *         </pre><p>
  *         Would define a 'feet' object type that is stored as a number, rather than a string.
- *         If there are children, the object type is assumed to be 'object' but if there is only
- *         one child, it can be specified as 'array' (e.g., "workItems:array"), and the child
- *         element then defines the data type stored in that array.
+ *         Additionally, there are optional data type attributes that can be specified within
+ *         parentheses at the end of the element type. This would be how you would specify a
+ *         string field storing 1024 characters (storage length specifications are only relevant
+ *         on the server):<pre>
+ *                       elementType = "myfieldtype:string(1024)"
+ *         <em>or, because string is implied:</em>
+ *                       elementType = "myfieldType(1024)"
+ *         </pre><p>
+ *         It is an error to attempt to declare a native data type when the field also has children.
+ *         If there are children, the object type is expected to be 'object' but if there is only
+ *         one child, it can alternatively be specified as 'array' (e.g., "workItems:array"), and
+ *         the child element then defines the data type stored in that array. You can define
+ *         fields that store arrays of integers or booleans through this mechanism.
+ *         </p>
+ *         When needed, the "marshalled representation" of an object is as a Javascript
+ *         object, with key-value pairs, with the keys being the element names within the object
+ *         definition and the values being the "marshalled representation" of the data
+ *         values that those fields contain contain.
  *         </p><p>
- *         User code (either in an ODK Survey prompt or in and ODK
- *         Tables webpage) is expected to parse the content and act accordingly.  If it
- *         does have children, it is a JSON serialization of the object after traversing
- *         all of its children and generating their "marshalled string representation"s.</p><p>
- *         The primary example of childless object types are date, time, dateTime and
- *         timeInterval types. If these are manipulated using Date() objects in Javascript,
+ *         User code (either in an ODK Survey prompt or in and ODK Tables webpage) is expected to
+ *         parse the content and act accordingly.</p><p>
+ *         The supplied date, dateTime, time and timeInterval data types are represented as
+ *         string values in the data table. If these are manipulated using Date() objects,
  *         the values within those Date() objects need to be converted into a string formatted
- *         as defined by opendatakit before being stored into the database layer. Conversion
+ *         as defined by opendatakit before being passed through this interface. Conversion
  *         routines are provided for this by the odkCommon object.</p><p>
  *         The upshot of all of this is that the Javascript layer needs to make sure that any
- *         user-defined object types or any of the predefined date, time, dateTime and timeInterval
- *         types are appropriately marshalled into their string representations if they occur within
- *         an array or object type that is persisted into the database via the odkDataIf interfaces.
- *         For simple arrays of integers, numbers or string, an ordinary JSON stringify is
- *         sufficient prior to inserting the field value into the elementKey-value map passed
- *         into these routines (and JSON parse is required to restore these arrays upon obtaining
- *         the value from the data row in the odkDataIf response).
- *         </p>
+ *         types are appropriately converted into their "marshalled representations" as described
+ *         above.</p>
  */
 public class OdkDataIf {
 

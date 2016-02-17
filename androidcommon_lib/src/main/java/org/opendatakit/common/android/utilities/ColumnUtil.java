@@ -16,10 +16,7 @@
 package org.opendatakit.common.android.utilities;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import com.fasterxml.jackson.databind.type.CollectionType;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
@@ -303,13 +300,6 @@ public class ColumnUtil {
    * @return
    */
   public Class<?> getOdkDataIfType(ElementDataType dataType) {
-    
-    if ( dataType == ElementDataType.array ) {
-      return String.class;
-    }
-    if (dataType == ElementDataType.object) {
-      return String.class;
-    }
     
     if ( dataType == ElementDataType.integer ) {
       return Long.class;
