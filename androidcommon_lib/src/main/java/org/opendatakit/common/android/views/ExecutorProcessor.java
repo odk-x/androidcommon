@@ -185,9 +185,14 @@ public abstract class ExecutorProcessor implements Runnable {
       // populate cvValues from the map...
       for (Object okey : map.keySet()) {
         String key = (String) okey;
-        ColumnDefinition cd = columns.find(key);
-        if ( !cd.isUnitOfRetention() ) {
-          throw new IllegalStateException("key is not a database column name: " + key);
+        // the only 3 metadata fields that the user should update are formId, locale, and creator
+        if ( !key.equals(DataTableColumns.FORM_ID) &&
+             !key.equals(DataTableColumns.LOCALE) &&
+             !key.equals(DataTableColumns.SAVEPOINT_CREATOR) ) {
+          ColumnDefinition cd = columns.find(key);
+          if (!cd.isUnitOfRetention()) {
+            throw new IllegalStateException("key is not a database column name: " + key);
+          }
         }
         // the only types are integer/long, float/double, string, boolean
         // complex types (array, object) should come across the interface as strings
