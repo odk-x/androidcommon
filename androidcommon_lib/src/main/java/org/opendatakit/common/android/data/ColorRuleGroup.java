@@ -24,6 +24,7 @@ import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.ElementType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.common.android.application.CommonApplication;
+import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.utilities.*;
 import org.opendatakit.database.service.KeyValueStoreEntry;
 import org.opendatakit.database.service.OdkDbHandle;
@@ -347,7 +348,12 @@ public class ColorRuleGroup {
               + "ColorRule#checkMatch didn't have a mapping and was "
               + "not a metadata elementKey: " + elementKey);
         }
-        type = ElementDataType.string;
+        // if conflict_type then integer
+        if ( elementKey.equals(DataTableColumns.CONFLICT_TYPE) ) {
+          type = ElementDataType.integer;
+        } else {
+          type = ElementDataType.string;
+        }
       } else {
         ElementType elementType = cd.getType();
         type = elementType.getDataType();
