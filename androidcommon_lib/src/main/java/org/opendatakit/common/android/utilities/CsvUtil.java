@@ -231,7 +231,9 @@ public class CsvUtil {
       return false;
     } finally {
       try {
-        output.close();
+        if (output != null) {
+          output.close();
+        }
       } catch (IOException e) {
       }
     }
