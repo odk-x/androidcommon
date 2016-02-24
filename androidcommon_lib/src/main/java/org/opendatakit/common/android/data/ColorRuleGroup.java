@@ -18,6 +18,7 @@ package org.opendatakit.common.android.data;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
@@ -128,7 +129,8 @@ public class ColorRuleGroup {
     mDefault = false;
     if ( entries.size() != 1 ) {
       if (mType == Type.STATUS_COLUMN) {
-        this.ruleList = ColorRuleUtil.getDefaultSyncStateColorRules();
+        this.ruleList = new ArrayList<ColorRule>();
+        this.ruleList.addAll(ColorRuleUtil.getDefaultSyncStateColorRules());
         mDefault = true;
       } else {
         this.ruleList = new ArrayList<ColorRule>();
