@@ -131,7 +131,6 @@ public class ColorRuleGroup {
       if (mType == Type.STATUS_COLUMN) {
         this.ruleList = new ArrayList<ColorRule>();
         this.ruleList.addAll(ColorRuleUtil.getDefaultSyncStateColorRules());
-        mDefault = true;
       } else {
         this.ruleList = new ArrayList<ColorRule>();
       }
