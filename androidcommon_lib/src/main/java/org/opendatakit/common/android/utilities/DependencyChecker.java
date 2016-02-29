@@ -16,6 +16,9 @@ import org.opendatakit.common.android.application.CommonApplication;
  */
 public class DependencyChecker {
 
+    public static final String surveyAppPkgName = "org.opendatakit.survey.android";
+    public static final String collectAppPkgName = "org.odk.collect.android";
+
     private static final String oiFileMgr = "org.openintents.filemanager";
     private static final String coreServices = "org.opendatakit.core";
     private static final String tables = "tables";
@@ -37,12 +40,12 @@ public class DependencyChecker {
         if (tables.equals(((CommonApplication)context).getToolName()) ||
             scan.equals(((CommonApplication)context).getToolName())) { // need to check
         // for OI and Core
-            oiInstalled = isPackageInstalled(oiFileMgr);
+            oiInstalled = isPackageInstalled(context, oiFileMgr);
         } else { // only need to check for Core
             oiInstalled = true;
         }
 
-        coreInstalled = isPackageInstalled(coreServices);
+        coreInstalled = isPackageInstalled(context, coreServices);
 
         if (oiInstalled && coreInstalled) { // correct dependencies installed
             return true;
@@ -87,7 +90,7 @@ public class DependencyChecker {
         return builder.create();
     }
 
-    private boolean isPackageInstalled(String packageName) {
+    public static boolean isPackageInstalled(Context context, String packageName) {
         PackageManager pm = context.getPackageManager();
         try {
             pm.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES);
