@@ -20,7 +20,7 @@ public class DependencyChecker {
     public static final String collectAppPkgName = "org.odk.collect.android";
 
     private static final String oiFileMgr = "org.openintents.filemanager";
-    private static final String coreServices = "org.opendatakit.core";
+    private static final String coreServices = "org.opendatakit.services";
     private static final String tables = "tables";
     private static final String scan = "scan";
 
