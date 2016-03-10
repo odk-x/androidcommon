@@ -43,7 +43,8 @@
 <string name="dependency_missing">Dependency Missing:</string>
 <string name="dependencies_missing">Dependencies Missing:</string>
 <string name="oi_missing">Please install OI File Manager before continuing.</string>
-<string name="core_missing">Please install ODK Core Services before continuing.</string>
-<string name="oi_and_core_missing">Please install both OI File Manager and ODK Core Services before continuing.</string>
+<string name="services_missing">Please install ODK Services before continuing.</string>
+<string name="oi_and_services_missing">Please install both OI File Manager and ODK Services
+    before continuing.</string>
 
 </resources>

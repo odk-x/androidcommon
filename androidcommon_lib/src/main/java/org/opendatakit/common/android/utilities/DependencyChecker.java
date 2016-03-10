@@ -20,7 +20,7 @@ public class DependencyChecker {
     public static final String collectAppPkgName = "org.odk.collect.android";
 
     private static final String oiFileMgr = "org.openintents.filemanager";
-    private static final String coreServices = "org.opendatakit.services";
+    private static final String services = "org.opendatakit.services";
     private static final String tables = "tables";
     private static final String scan = "scan";
 
@@ -35,7 +35,7 @@ public class DependencyChecker {
     public boolean checkDependencies() {
 
         boolean oiInstalled;
-        boolean coreInstalled;
+        boolean servicesInstalled;
 
         if (tables.equals(((CommonApplication)context).getToolName()) ||
             scan.equals(((CommonApplication)context).getToolName())) { // need to check
@@ -45,27 +45,27 @@ public class DependencyChecker {
             oiInstalled = true;
         }
 
-        coreInstalled = isPackageInstalled(context, coreServices);
+        servicesInstalled = isPackageInstalled(context, services);
 
-        if (oiInstalled && coreInstalled) { // correct dependencies installed
+        if (oiInstalled && servicesInstalled) { // correct dependencies installed
             return true;
         } else {
-            alertMissing(oiInstalled, coreInstalled); // missing dependencies, warn user
+            alertMissing(oiInstalled, servicesInstalled); // missing dependencies, warn user
             return false;
         }
     }
 
-    private void alertMissing(boolean oiInstalled, boolean coreInstalled) {
+    private void alertMissing(boolean oiInstalled, boolean servicesInstalled) {
 
         String message;
         String title = context.getString(R.string.dependency_missing);
 
-        if (oiInstalled && !coreInstalled) {
-            message = context.getString(R.string.core_missing);
-        } else if (!oiInstalled && coreInstalled) {
+        if (oiInstalled && !servicesInstalled) {
+            message = context.getString(R.string.services_missing);
+        } else if (!oiInstalled && servicesInstalled) {
             message = context.getString(R.string.oi_missing);
         } else {
-            message = context.getString(R.string.oi_and_core_missing);
+            message = context.getString(R.string.oi_and_services_missing);
             title = context.getString(R.string.dependencies_missing);
         }
 
