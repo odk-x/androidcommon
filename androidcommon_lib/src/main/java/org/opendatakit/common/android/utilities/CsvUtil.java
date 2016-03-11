@@ -60,6 +60,7 @@ import org.opendatakit.database.service.OdkDbHandle;
 import android.content.ContentValues;
 import android.os.RemoteException;
 import org.opendatakit.database.service.OdkDbInterface;
+import org.apache.commons.io.FileUtils;
 
 /**
  * Various utilities for importing/exporting tables from/to CSV.
@@ -166,16 +167,17 @@ public class CsvUtil {
     }
 
     OutputStreamWriter output = null;
+    File outputCsv = null;
     try {
       // both files go under the output/csv directory...
-      File outputCsv = new File(ODKFileUtils.getOutputTableCsvFile(appName, tableId, fileQualifier));
+      outputCsv = new File(ODKFileUtils.getOutputTableCsvFile(appName, tableId, fileQualifier));
       outputCsv.mkdirs();
 
       // emit properties files
       File definitionCsv = new File(ODKFileUtils.getOutputTableDefinitionCsvFile(appName, tableId,
           fileQualifier));
       File propertiesCsv = new File(ODKFileUtils.getOutputTablePropertiesCsvFile(appName, tableId,
-          fileQualifier));
+              fileQualifier));
 
       if (!writePropertiesCsv(db, tableId, orderedDefns, definitionCsv, propertiesCsv)) {
         return false;
@@ -228,6 +230,18 @@ public class CsvUtil {
 
       return true;
     } catch (IOException e) {
+      if (outputCsv != null) {
+        try {
+          File outputCsvFolder = new File(ODKFileUtils.getOutputCsvFolder(appName));
+          while (FileUtils.directoryContains(outputCsvFolder, outputCsv)) {
+            FileUtils.deleteDirectory(outputCsv);
+            outputCsv = outputCsv.getParentFile();
+          }
+        } catch (IOException e1) {
+          e1.printStackTrace();
+          return false;
+        }
+      }
       return false;
     } finally {
       try {
