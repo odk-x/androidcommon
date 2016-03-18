@@ -37,8 +37,3 @@ if (libraryProjectPath.exists() && gradle.ext.useLocal) { // check if local libr
     include libraryProjectName
     project(libraryProjectName).setProjectDir(libraryProjectPath) // set local location
 }
-
-if (playServicesPath.exists() && gradle.ext.useLocal) { // check if local play services project is present
-    include playServicesName
-    project(playServicesName).setProjectDir(playServicesPath) // set local location
-}
