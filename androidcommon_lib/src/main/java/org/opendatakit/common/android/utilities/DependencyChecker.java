@@ -39,9 +39,9 @@ public class DependencyChecker {
 
         if (tables.equals(((CommonApplication)context).getToolName()) ||
             scan.equals(((CommonApplication)context).getToolName())) { // need to check
-        // for OI and Core
+        // for OI and Services
             oiInstalled = isPackageInstalled(context, oiFileMgr);
-        } else { // only need to check for Core
+        } else { // only need to check for Services
             oiInstalled = true;
         }
 
