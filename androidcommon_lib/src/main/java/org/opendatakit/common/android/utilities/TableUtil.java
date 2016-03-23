@@ -533,11 +533,9 @@ public class TableUtil {
         colorColumnElementKey = KeyValueStoreUtils.getString(appName, entry);
       }
     }
-    if (colorType == null ||
-        !(colorType.equals(LocalKeyValueStoreConstants.Map.COLOR_TYPE_NONE) ||
-          colorType.equals(LocalKeyValueStoreConstants.Map.COLOR_TYPE_TABLE) ||
-          colorType.equals(LocalKeyValueStoreConstants.Map.COLOR_TYPE_STATUS) ||
-          colorType.equals(LocalKeyValueStoreConstants.Map.COLOR_TYPE_COLUMN))) {
+
+    if (colorType != null && !colorType.equals(LocalKeyValueStoreConstants.Map.COLOR_TYPE_TABLE) &&
+            !colorType.equals(LocalKeyValueStoreConstants.Map.COLOR_TYPE_STATUS)) {
       colorType = LocalKeyValueStoreConstants.Map.COLOR_TYPE_NONE;
     }
 
@@ -553,20 +551,15 @@ public class TableUtil {
             KeyValueStoreConstants.ASPECT_DEFAULT,
             LocalKeyValueStoreConstants.Map.KEY_COLOR_RULE_COLUMN,
             ElementDataType.string,
-            (info == null || !info.colorType.equals(LocalKeyValueStoreConstants.Map.COLOR_TYPE_COLUMN)) ? null : info.colorElementKey);
+            null);
     KeyValueStoreEntry entryColorRuleType = KeyValueStoreUtils.buildEntry(tableId,
             LocalKeyValueStoreConstants.Map.PARTITION,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             LocalKeyValueStoreConstants.Map.KEY_COLOR_RULE_TYPE,
             ElementDataType.string, (info == null) ? null : info.colorType);
 
-    if ( info == null || !info.colorType.equals(LocalKeyValueStoreConstants.Map.COLOR_TYPE_COLUMN) ) {
-      ctxt.getDatabase().replaceDBTableMetadata(appName, db, entryColorRuleType);
-      ctxt.getDatabase().replaceDBTableMetadata(appName, db, entryColorElementKey);
-    } else {
       ctxt.getDatabase().replaceDBTableMetadata(appName, db, entryColorElementKey);
       ctxt.getDatabase().replaceDBTableMetadata(appName, db, entryColorRuleType);
-    }
   }
 
   public String getMapListViewLatitudeElementKey( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, OrderedColumns orderedDefns) throws RemoteException {
