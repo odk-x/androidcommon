@@ -43,7 +43,7 @@ android {
         snapshot {
         }
 
-        uitests {
+        uitest {
         }
     }
 
@@ -96,11 +96,11 @@ dependencies {
     } else {
         demoCompile(group: groupId, name: libraryDemoArtifactName, classifier: demoRelease,
                     version: latestVersion, ext: 'aar')
-        masterCompile(group: groupId, name: libraryDemoArtifactName, classifier: masterRelease,
+        masterCompile(group: groupId, name: libraryMasterArtifactName, classifier: masterRelease,
                       version: latestVersion, ext: 'aar')
-        snapshotCompile(group: groupId, name: libraryDemoArtifactName, classifier: snapshotRelease,
-                        version: latestVersion, ext: 'aar')
-        uitestCompile(group: groupId, name: libraryDemoArtifactName, classifier: uitestRelease,
+        snapshotCompile(group: groupId, name: librarySnapshotArtifactName,
+                classifier: snapshotRelease, version: latestVersion, ext: 'aar')
+        uitestCompile(group: groupId, name: librarySnapshotArtifactName, classifier: uitestRelease,
                       version: latestVersion, ext: 'aar')
     }
 
