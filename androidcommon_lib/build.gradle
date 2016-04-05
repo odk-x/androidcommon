@@ -19,9 +19,12 @@ group = groupId
 com.android.ddmlib.DdmPreferences.setTimeOut(60000)
 
 android {
+    publishNonDefault(true)
+
     // The following are set in the common.gradle file
     compileSdkVersion(compileVersion)
     buildToolsVersion(buildTools)
+    defaultPublishConfig(gradle.ext.odkDefaultPublishConfig)
 
     defaultConfig {
         minSdkVersion(minVersion)
@@ -30,12 +33,27 @@ android {
         versionName(versionCodeName)
     }
 
+    productFlavors {
+        demo {
+        }
+
+        master {
+        }
+
+        snapshot {
+        }
+
+        uitests {
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled(minify)
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
         debug {
+            debuggable(true)
             testCoverageEnabled(testCoverage) // Allows AndroidTest JaCoCo reports to be generated
         }
     }
@@ -50,12 +68,23 @@ android {
         sourceCompatibility javaVersion
         targetCompatibility javaVersion
     }
+
+    variantFilter { variant ->
+        def names = variant.flavors*.name
+        if (gradle.ext.odkPublishConfig) {
+            if (names.contains(gradle.ext.odkPublishConfigName)) {
+                variant.setIgnore(false)
+            } else {
+                variant.setIgnore(true)
+            }
+        }
+    }
 }
 
 configurations.all {
   resolutionStrategy {
-    cacheDynamicVersionsFor(0, 'seconds')
-    cacheChangingModulesFor(0, 'seconds')
+      cacheDynamicVersionsFor(0, 'seconds')
+      cacheChangingModulesFor(0, 'seconds')
   }
 }
 
@@ -65,8 +94,14 @@ dependencies {
     if (libraryProjectPath.exists() && gradle.useLocal) { // Local project is favoured
         compile project(libraryProjectName)
     } else {
-        compile(group: groupId, name: libraryArtifactName,
-                version: (useLatestLibrary ? latestVersion : librarySnapshot), ext: 'aar')
+        demoCompile(group: groupId, name: libraryDemoArtifactName, classifier: demoRelease,
+                    version: latestVersion, ext: 'aar')
+        masterCompile(group: groupId, name: libraryDemoArtifactName, classifier: masterRelease,
+                      version: latestVersion, ext: 'aar')
+        snapshotCompile(group: groupId, name: libraryDemoArtifactName, classifier: snapshotRelease,
+                        version: latestVersion, ext: 'aar')
+        uitestCompile(group: groupId, name: libraryDemoArtifactName, classifier: uitestRelease,
+                      version: latestVersion, ext: 'aar')
     }
 
     compile 'com.google.android.gms:play-services:' + gpsVersion
