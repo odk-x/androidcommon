@@ -22,6 +22,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Looper;
 import android.os.Parcelable;
 import android.util.AttributeSet;
 import android.view.View;
@@ -244,11 +245,22 @@ public abstract class ODKWebView extends WebView {
   }
 
   // called to invoke a javascript method inside the webView
-  private synchronized void loadJavascriptUrl(String javascriptUrl) {
+  private synchronized void loadJavascriptUrl(final String javascriptUrl) {
     if ( isInactive() ) return; // no-op
     if (isLoadPageFinished || isJavascriptFlushActive) {
       log.i(t, "loadJavascriptUrl: IMMEDIATE: " + javascriptUrl);
-      loadUrl(javascriptUrl);
+
+      // Ensure that this is run on the UI thread
+      if (Thread.currentThread() != Looper.getMainLooper().getThread()) {
+        post(new Runnable() {
+          public void run() {
+            loadUrl(javascriptUrl);
+          }
+        });
+      } else {
+        loadUrl(javascriptUrl);
+      }
+
     } else {
       log.i(t, "loadJavascriptUrl: QUEUING: " + javascriptUrl);
       javascriptRequestsWaitingForPageLoad.add(javascriptUrl);
