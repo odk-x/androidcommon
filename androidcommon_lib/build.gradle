@@ -107,6 +107,7 @@ dependencies {
     }
 
     compile 'com.google.android.gms:play-services:' + gpsVersion
+    compile 'com.android.support:support-annotations:23.1.0'
 
     // Testing dependencies
     testCompile 'junit:junit:4.12'
