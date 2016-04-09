@@ -19,12 +19,10 @@ group = groupId
 com.android.ddmlib.DdmPreferences.setTimeOut(60000)
 
 android {
-    publishNonDefault(true)
-
+  
     // The following are set in the common.gradle file
     compileSdkVersion(compileVersion)
     buildToolsVersion(buildTools)
-    defaultPublishConfig(gradle.ext.odkDefaultPublishConfig)
 
     defaultConfig {
         minSdkVersion(minVersion)
@@ -33,6 +31,10 @@ android {
         versionName(versionCodeName)
     }
 
+	    // set by command line arguments
+    publishNonDefault(gradle.ext.odkPublishConfig.toBoolean())
+    defaultPublishConfig(gradle.ext.odkDefaultPublishConfig)
+	
     productFlavors {
         demo {
         }
@@ -105,6 +107,7 @@ dependencies {
     }
 
     compile 'com.google.android.gms:play-services:' + gpsVersion
+    compile 'com.android.support:support-annotations:23.1.0'
 
     // Testing dependencies
     testCompile 'junit:junit:4.12'
