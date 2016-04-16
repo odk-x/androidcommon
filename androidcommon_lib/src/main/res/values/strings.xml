@@ -1,0 +1,50 @@
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+
+    <string name="app_name">ODK Common</string>
+    <string name="app_userLabel">OpenDataKit</string>
+    
+    <string name="enter_new_password">Enter new password</string>
+    <string name="verify_new_password">Re-enter new password</string>
+    <string name="password">Password</string>
+    <string name="username">Username</string>
+
+<string name="expansion_unzipping_begins">Unzipping resources. Scanning zip directory.</string>
+<string name="searching_for_form_defs">Searching for new form definitions &#8230;</string>
+<string name="expansion_unzipping_without_detail">Unzipping resources. Extracting %1$s (%2$d of %3$d)</string>
+<string name="expansion_create_dir_detail">Creating directory</string>
+<string name="expansion_unzipping_detail">at byte %1$d, file %2$d</string>
+<string name="expansion_unzipping_complete">Unzipping completed. %1$d resources unzipped.</string>
+<string name="searching_for_deleted_forms">Searching for deleted forms &#8230;</string>
+<string name="examining_form">Verifying form %2$s for table %1$s exists &#8230;</string>    
+<string name="updating_form_information">Updating form information for form %1$s (%2$d of %3$d)</string>
+
+<string name="processing_file">processing file&#8230;</string>
+<string name="scanning_for_table_definitions">Scanning for table definitions. Creating %1$s (%2$d of %3$d).</string>
+<string name="defining_tableid_error">Error processing table definition for tableId %1$s</string>
+<string name="importing_file_without_detail">Importing file (%1$d of %2$d): %3$s</string>
+<string name="importing_file">Importing file (%1$d of %2$d): %3$s\n(%4$s)</string>
+<string name="bad_config_properties_file">bad config.properties file</string>
+<string name="import_success">CSV File import was successful.</string>
+<string name="csv_file_not_found">Warning: CSV File not found: %1$s - skipped</string>
+<string name="import_csv_success">Success: CSV intialization for tableId %1$s</string>
+<string name="import_csv_failure">Failure: CSV intialization for tableId %1$s</string>
+<string name="defining_tableid_success">Success: Defined tableId %1$s</string>
+<string name="defining_tableid_failure">Failure: During definition of tableId %1$s</string>
+<string name="form_register_success">Success: Defining formId %2$s for tableId %1$s</string>
+<string name="form_register_failure">Failure: Defining formId %2$s for tableId %1$s</string>
+
+<string name="abort_error_accessing_database">Aborted: Error accessing database</string>
+<string name="poorly_formatted_init_file">Invalid tables.init file</string>
+
+<string name="no_items_display">Nothing available to display.</string>
+
+<string name="activity_not_found">No activity found to handle: %s</string>
+
+<string name="dependency_missing">Dependency Missing:</string>
+<string name="dependencies_missing">Dependencies Missing:</string>
+<string name="oi_missing">Please install OI File Manager before continuing.</string>
+<string name="services_missing">Please install ODK Services before continuing.</string>
+<string name="oi_and_services_missing">Please install both OI File Manager and ODK Services
+    before continuing.</string>
+
+</resources>
