@@ -26,6 +26,7 @@ import org.opendatakit.common.android.utilities.ColumnUtil;
 import org.opendatakit.common.android.utilities.DataHelper;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
+import org.opendatakit.database.OdkDbSerializedInterface;
 import org.opendatakit.database.service.KeyValueStoreEntry;
 import org.opendatakit.database.service.OdkDbHandle;
 import org.opendatakit.database.service.OdkDbInterface;
@@ -66,7 +67,7 @@ public abstract class ExecutorProcessor implements Runnable {
   private ExecutorContext context;
 
   private ExecutorRequest request;
-  private OdkDbInterface dbInterface;
+  private OdkDbSerializedInterface dbInterface;
   private String transId;
   private OdkDbHandle dbHandle;
 

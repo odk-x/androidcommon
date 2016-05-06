@@ -15,6 +15,7 @@
 package org.opendatakit.common.android.views;
 
 import org.opendatakit.common.android.listener.DatabaseConnectionListener;
+import org.opendatakit.database.OdkDbSerializedInterface;
 import org.opendatakit.database.service.OdkDbInterface;
 
 /**
@@ -61,7 +62,7 @@ public interface ICallbackFragment {
      *
      * @return null if not available.
      */
-    public OdkDbInterface getDatabase();
+    public OdkDbSerializedInterface getDatabase();
 
     /**
      * Get our application name

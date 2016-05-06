@@ -54,12 +54,14 @@ import org.opendatakit.common.android.data.Row;
 import org.opendatakit.common.android.provider.ColumnDefinitionsColumns;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.KeyValueStoreColumns;
+import org.opendatakit.database.OdkDbSerializedInterface;
 import org.opendatakit.database.service.KeyValueStoreEntry;
 import org.opendatakit.database.service.OdkDbHandle;
 
 import android.content.ContentValues;
 import android.os.RemoteException;
 import org.opendatakit.database.service.OdkDbInterface;
+import org.apache.commons.io.FileUtils;
 
 /**
  * Various utilities for importing/exporting tables from/to CSV.
@@ -166,16 +168,17 @@ public class CsvUtil {
     }
 
     OutputStreamWriter output = null;
+    File outputCsv = null;
     try {
       // both files go under the output/csv directory...
-      File outputCsv = new File(ODKFileUtils.getOutputTableCsvFile(appName, tableId, fileQualifier));
+      outputCsv = new File(ODKFileUtils.getOutputTableCsvFile(appName, tableId, fileQualifier));
       outputCsv.mkdirs();
 
       // emit properties files
       File definitionCsv = new File(ODKFileUtils.getOutputTableDefinitionCsvFile(appName, tableId,
           fileQualifier));
       File propertiesCsv = new File(ODKFileUtils.getOutputTablePropertiesCsvFile(appName, tableId,
-          fileQualifier));
+              fileQualifier));
 
       if (!writePropertiesCsv(db, tableId, orderedDefns, definitionCsv, propertiesCsv)) {
         return false;
@@ -187,8 +190,10 @@ public class CsvUtil {
           + " = " + Integer.toString(ConflictType.LOCAL_UPDATED_UPDATED_VALUES) + ")";
 
       String[] emptyArray = {};
-      UserTable table = context.getDatabase().rawSqlQuery(appName, db, tableId, orderedDefns,
-          whereString, emptyArray, emptyArray, null, null, null);
+
+      UserTable table = context.getDatabase()
+          .rawSqlQuery(appName, db, tableId, orderedDefns, whereString, emptyArray, emptyArray,
+              null, null, null);
 
       // emit data table...
       File file = new File(outputCsv, tableId
@@ -228,10 +233,24 @@ public class CsvUtil {
 
       return true;
     } catch (IOException e) {
+      if (outputCsv != null) {
+        try {
+          File outputCsvFolder = new File(ODKFileUtils.getOutputCsvFolder(appName));
+          while (FileUtils.directoryContains(outputCsvFolder, outputCsv)) {
+            FileUtils.deleteDirectory(outputCsv);
+            outputCsv = outputCsv.getParentFile();
+          }
+        } catch (IOException e1) {
+          e1.printStackTrace();
+          return false;
+        }
+      }
       return false;
     } finally {
       try {
-        output.close();
+        if (output != null) {
+          output.close();
+        }
       } catch (IOException e) {
       }
     }
