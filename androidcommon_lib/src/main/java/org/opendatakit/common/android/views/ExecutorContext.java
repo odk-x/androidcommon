@@ -20,6 +20,7 @@ import org.opendatakit.common.android.data.OrderedColumns;
 import org.opendatakit.common.android.listener.DatabaseConnectionListener;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
+import org.opendatakit.database.OdkDbSerializedInterface;
 import org.opendatakit.database.service.OdkDbHandle;
 import org.opendatakit.database.service.OdkDbInterface;
 
@@ -244,7 +245,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
   /**
    * @return
    */
-    public OdkDbInterface getDatabase() {
+    public OdkDbSerializedInterface getDatabase() {
         return activity.getDatabase();
     }
 
@@ -285,7 +286,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
         if ( dbh == null ) {
           WebLogger.getLogger(getAppName()).w(TAG, "Unexpected failure to retrieve dbHandle for " + transId);
         }
-        OdkDbInterface dbInterface = currentContext.getDatabase();
+        OdkDbSerializedInterface dbInterface = currentContext.getDatabase();
         if ( dbInterface != null ) {
           try {
             dbInterface.closeDatabase(currentContext.getAppName(), dbh);

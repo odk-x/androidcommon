@@ -54,12 +54,12 @@ import org.opendatakit.common.android.data.Row;
 import org.opendatakit.common.android.provider.ColumnDefinitionsColumns;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.KeyValueStoreColumns;
+import org.opendatakit.database.OdkDbSerializedInterface;
 import org.opendatakit.database.service.KeyValueStoreEntry;
 import org.opendatakit.database.service.OdkDbHandle;
 
 import android.content.ContentValues;
 import android.os.RemoteException;
-import org.opendatakit.database.service.OdkDbInterface;
 import org.apache.commons.io.FileUtils;
 
 /**
@@ -189,8 +189,10 @@ public class CsvUtil {
           + " = " + Integer.toString(ConflictType.LOCAL_UPDATED_UPDATED_VALUES) + ")";
 
       String[] emptyArray = {};
-      UserTable table = context.getDatabase().rawSqlQuery(appName, db, tableId, orderedDefns,
-          whereString, emptyArray, emptyArray, null, null, null);
+
+      UserTable table = context.getDatabase()
+          .rawSqlQuery(appName, db, tableId, orderedDefns, whereString, emptyArray, emptyArray,
+              null, null, null);
 
       // emit data table...
       File file = new File(outputCsv, tableId

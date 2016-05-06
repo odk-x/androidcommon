@@ -37,6 +37,7 @@ import org.opendatakit.common.android.task.InitializationTask;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.views.ODKWebView;
 import org.opendatakit.database.DatabaseConsts;
+import org.opendatakit.database.OdkDbSerializedInterface;
 import org.opendatakit.database.service.OdkDbInterface;
 import org.opendatakit.webkitserver.WebkitServerConsts;
 import org.opendatakit.webkitserver.service.OdkWebkitServerInterface;
@@ -59,7 +60,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
   private static boolean disableInitializeCascade = true;
   
   // Hack for handling mock interfaces...
-  private static OdkDbInterface mockDatabaseService = null;
+  private static OdkDbSerializedInterface mockDatabaseService = null;
   private static OdkWebkitServerInterface mockWebkitServerService = null;
   
   public static void setMocked() {
@@ -82,7 +83,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
     disableInitializeCascade = true;
   }
   
-  public static void setMockDatabase(OdkDbInterface mock) {
+  public static void setMockDatabase(OdkDbSerializedInterface mock) {
     CommonApplication.mockDatabaseService = mock;
   }
 
@@ -171,7 +172,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
     private ServiceConnectionWrapper webkitfilesServiceConnection = null;
     private OdkWebkitServerInterface webkitfilesService = null;
     private ServiceConnectionWrapper databaseServiceConnection = null;
-    private OdkDbInterface databaseService = null;
+    private OdkDbSerializedInterface databaseService = null;
     private boolean isDestroying = false;
 
     BackgroundServices() {
@@ -433,7 +434,15 @@ public abstract class CommonApplication extends AppAwareApplication implements
 
     if (className.getClassName().equals(DatabaseConsts.DATABASE_SERVICE_CLASS)) {
       Log.i(t, "Bound to Database service");
-      mBackgroundServices.databaseService = (service == null) ? null : OdkDbInterface.Stub.asInterface(service);
+
+      try {
+        mBackgroundServices.databaseService = (service == null) ?
+            null :
+            new OdkDbSerializedInterface(OdkDbInterface.Stub.asInterface(service));
+      } catch (Exception e) {
+        mBackgroundServices.databaseService = null;
+      }
+
       
       triggerDatabaseEvent(false);
     }
@@ -441,7 +450,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
     configureView();
   }
   
-  public OdkDbInterface getDatabase() {
+  public OdkDbSerializedInterface getDatabase() {
     if ( isMocked ) {
       return mockDatabaseService;
     } else {
@@ -468,7 +477,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
             wv.serviceChange(false);
           } else {
             OdkWebkitServerInterface webkitServerIf = getWebkitServer();
-            OdkDbInterface dbIf = getDatabase();
+            OdkDbSerializedInterface dbIf = getDatabase();
             wv.serviceChange(webkitServerIf != null && dbIf != null);
           }
         }
