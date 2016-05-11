@@ -257,19 +257,6 @@ public abstract class CommonApplication extends AppAwareApplication implements
     props.setRunInitializationTask(this.getToolName());
   }
 
-  private <T> void executeTask(AsyncTask<T, ?, ?> task, T... args) {
-
-    int androidVersion = android.os.Build.VERSION.SDK_INT;
-    if (androidVersion < 11) {
-      task.execute(args);
-    } else {
-      // TODO: execute on serial executor in version 11 onward...
-      task.execute(args);
-      // task.executeOnExecutor(AsyncTask.SERIAL_EXECUTOR, (Void[]) null);
-    }
-
-  }
-
   private Activity activeActivity = null;
   private Activity databaseListenerActivity = null;
   
@@ -583,7 +570,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
       cf.setAppName(appName);
       cf.setInitializationListener(this);
       mBackgroundTasks.mInitializationTask = cf;
-      executeTask(mBackgroundTasks.mInitializationTask, (Void) null);
+      mBackgroundTasks.mInitializationTask.execute((Void) null);
       return true;
     } else {
       return false;

@@ -71,6 +71,7 @@ public class ODKWebViewClient extends WebViewClient {
     super.onTooManyRedirects(view, cancelMsg, continueMsg);
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public void onUnhandledKeyEvent(WebView view, KeyEvent event) {
     wrappedView.getLogger().i(t, "onUnhandledKeyEvent: " + event.toString());
