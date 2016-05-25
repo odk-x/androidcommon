@@ -360,6 +360,8 @@ public abstract class CommonApplication extends AppAwareApplication implements
         databaseService = null;
         tmpWeb = webkitfilesServiceConnection;
         tmpDb = databaseServiceConnection;
+        webkitfilesServiceConnection = null;
+        databaseServiceConnection = null;
       }
       try {
         if (tmpWeb != null) {
