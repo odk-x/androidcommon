@@ -42,7 +42,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.UUID;
 
 /**
  * @author mitchellsundt@gmail.com
@@ -78,7 +77,6 @@ public abstract class ExecutorProcessor implements Runnable {
 
   private ExecutorRequest request;
   private OdkDbSerializedInterface dbInterface;
-  private String transId;
   private OdkDbHandle dbHandle;
 
   protected ExecutorProcessor(ExecutorContext context) {
@@ -106,9 +104,6 @@ public abstract class ExecutorProcessor implements Runnable {
         context.popRequest(true);
         return;
       }
-
-      transId = UUID.randomUUID().toString();
-      context.registerActiveConnection(transId, dbHandle);
 
       switch (request.executorRequestType) {
         case UPDATE_EXECUTOR_CONTEXT:
@@ -171,9 +166,8 @@ public abstract class ExecutorProcessor implements Runnable {
       dbInterface.closeDatabase(context.getAppName(), dbHandle);
     } catch (RemoteException e) {
       WebLogger.getLogger(context.getAppName()).printStackTrace(e);
-      WebLogger.getLogger(context.getAppName()).w(TAG, "error while releasing database conneciton");
+      WebLogger.getLogger(context.getAppName()).w(TAG, "error while releasing database connection");
     } finally {
-      context.removeActiveConnection(transId);
       context.reportError(request.callbackJSON, null, errorMessage);
       context.popRequest(true);
     }
@@ -194,7 +188,6 @@ public abstract class ExecutorProcessor implements Runnable {
       WebLogger.getLogger(context.getAppName()).printStackTrace(e);
       WebLogger.getLogger(context.getAppName()).w(TAG, "error while releasing database connection");
     } finally {
-      context.removeActiveConnection(transId);
       if (successful) {
         context.reportSuccess(request.callbackJSON, null, data, metadata);
       } else {
