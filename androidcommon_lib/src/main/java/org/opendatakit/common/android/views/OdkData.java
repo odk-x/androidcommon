@@ -14,8 +14,8 @@
 
 package org.opendatakit.common.android.views;
 
-import android.app.Activity;
 import android.os.Bundle;
+
 import org.opendatakit.IntentConsts;
 import org.opendatakit.common.android.activities.IOdkDataActivity;
 import org.opendatakit.common.android.provider.DataTableColumns;
@@ -117,7 +117,7 @@ public class OdkData {
   }
 
   public synchronized void shutdownContext() {
-    context.releaseResources("Shutting down context");
+    context.shutdownWorker();
   }
 
   private void logDebug(String loggingString) {

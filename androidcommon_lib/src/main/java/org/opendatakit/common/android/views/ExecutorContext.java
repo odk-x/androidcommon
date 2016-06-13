@@ -22,9 +22,13 @@ import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
 import org.opendatakit.database.OdkDbSerializedInterface;
 import org.opendatakit.database.service.OdkDbHandle;
-import org.opendatakit.database.service.OdkDbInterface;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -157,11 +161,11 @@ public class ExecutorContext implements DatabaseConnectionListener {
     }
   }
 
-  /**
-   * shutdown the worker. This is done within the mutex to ensure that the above methods
-   * never throw an unexpected state exception.
-   */
-    private void shutdownWorker() {
+    /**
+     * shutdown the worker. This is done within the mutex to ensure that the above methods
+     * never throw an unexpected state exception.
+     */
+    void shutdownWorker() {
       WebLogger.getLogger(currentContext.getAppName()).i(TAG, "shutdownWorker - shutting down dataif Executor");
       Throwable t = null;
       synchronized (mutex) {
@@ -254,8 +258,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
     }
 
     public void releaseResources(String reason) {
-        // TODO: rollback any transactions and close connections
-      shutdownWorker();
+      // TODO: rollback any transactions and close connections
 
 	  String errorMessage = "releaseResources - shutting down worker (" + reason +
                    ") -- rolling back all transactions and releasing all connections";

@@ -15,9 +15,6 @@
  */
 package org.opendatakit.common.android.views;
 
-import org.opendatakit.common.android.activities.IAppAwareActivity;
-import org.opendatakit.common.android.activities.IOdkCommonActivity;
-import org.opendatakit.common.android.activities.IOdkDataActivity;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Build;
@@ -28,6 +25,10 @@ import android.util.AttributeSet;
 import android.view.View;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+
+import org.opendatakit.common.android.activities.IAppAwareActivity;
+import org.opendatakit.common.android.activities.IOdkCommonActivity;
+import org.opendatakit.common.android.activities.IOdkDataActivity;
 import org.opendatakit.common.android.application.CommonApplication;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
@@ -110,7 +111,7 @@ public abstract class ODKWebView extends WebView {
 
   @Override
   protected Parcelable onSaveInstanceState () {
-    log.i(t, "onSaveInstanceState()");
+    log.i(t, "[" + this.hashCode() + "] onSaveInstanceState()");
     Parcelable baseState = super.onSaveInstanceState();
     Bundle savedState = new Bundle();
     if ( baseState != null ) {
@@ -130,7 +131,7 @@ public abstract class ODKWebView extends WebView {
 
   @Override
   protected void onRestoreInstanceState (Parcelable state) {
-    log.i(t, "onRestoreInstanceState()");
+    log.i(t, "[" + this.hashCode() + "] onRestoreInstanceState()");
     Bundle savedState = (Bundle) state;
     if ( savedState.containsKey(JAVASCRIPT_REQUESTS_WAITING_FOR_PAGE_LOAD)) {
       String[] waitQueue = savedState.getStringArray(JAVASCRIPT_REQUESTS_WAITING_FOR_PAGE_LOAD);
@@ -170,7 +171,7 @@ public abstract class ODKWebView extends WebView {
 
     String appName = ((IAppAwareActivity) context).getAppName();
     log = WebLogger.getLogger(appName);
-    log.i(t, "ODKWebView()");
+    log.i(t, "[" + this.hashCode() + "] ODKWebView()");
 
     perhapsEnableDebugging();
 
@@ -216,6 +217,10 @@ public abstract class ODKWebView extends WebView {
   @Override public void destroy() {
     // bare minimum time to mark this as inactive.
     setInactive();
+    if (odkData != null) {
+      odkData.shutdownContext();
+    }
+
     super.destroy();
   }
 
@@ -234,13 +239,13 @@ public abstract class ODKWebView extends WebView {
    */
   public void signalQueuedActionAvailable() {
     // NOTE: this is asynchronous
-    log.i(t, "signalQueuedActionAvailable()");
+    log.i(t, "[" + this.hashCode() + "] signalQueuedActionAvailable()");
     loadJavascriptUrl("javascript:window.odkCommon.signalQueuedActionAvailable()");
   }
 
   public void signalResponseAvailable() {
     // NOTE: this is asynchronous
-    log.i(t, "signalResponseAvailable()");
+    log.i(t, "[" + this.hashCode() + "] signalResponseAvailable()");
     loadJavascriptUrl("javascript:odkData.responseAvailable();");
   }
 
@@ -248,7 +253,7 @@ public abstract class ODKWebView extends WebView {
   private synchronized void loadJavascriptUrl(final String javascriptUrl) {
     if ( isInactive() ) return; // no-op
     if (isLoadPageFinished || isJavascriptFlushActive) {
-      log.i(t, "loadJavascriptUrl: IMMEDIATE: " + javascriptUrl);
+      log.i(t, "[" + this.hashCode() + "] loadJavascriptUrl: IMMEDIATE: " + javascriptUrl);
 
       // Ensure that this is run on the UI thread
       if (Thread.currentThread() != Looper.getMainLooper().getThread()) {
@@ -262,13 +267,13 @@ public abstract class ODKWebView extends WebView {
       }
 
     } else {
-      log.i(t, "loadJavascriptUrl: QUEUING: " + javascriptUrl);
+      log.i(t, "[" + this.hashCode() + "] loadJavascriptUrl: QUEUING: " + javascriptUrl);
       javascriptRequestsWaitingForPageLoad.add(javascriptUrl);
     }
   }
 
   public void gotoUrlHash(String hash) {
-    log.i(t, "gotoUrlHash: " + hash);
+    log.i(t, "[" + this.hashCode() + "] gotoUrlHash: " + hash);
     ((IOdkCommonActivity) getContext()).queueUrlChange(hash);
     signalQueuedActionAvailable();
   }
@@ -323,18 +328,18 @@ public abstract class ODKWebView extends WebView {
   public synchronized void frameworkHasLoaded() {
     isLoadPageFrameworkFinished = true;
     if (!isLoadPageFinished && !isJavascriptFlushActive) {
-      log.i(t, "loadPageFinished: BEGINNING FLUSH");
+      log.i(t, "[" + this.hashCode() + "] loadPageFinished: BEGINNING FLUSH");
       isJavascriptFlushActive = true;
       while (isJavascriptFlushActive && !javascriptRequestsWaitingForPageLoad.isEmpty()) {
         String s = javascriptRequestsWaitingForPageLoad.removeFirst();
-        log.i(t, "loadPageFinished: DISPATCHING javascriptUrl: " + s);
+        log.i(t, "[" + this.hashCode() + "] loadPageFinished: DISPATCHING javascriptUrl: " + s);
         loadJavascriptUrl(s);
       }
       isLoadPageFinished = true;
       isJavascriptFlushActive = false;
       isFirstPageLoad = false;
     } else {
-      log.i(t, "loadPageFinished: IGNORING completion event");
+      log.i(t, "[" + this.hashCode() + "] loadPageFinished: IGNORING completion event");
     }
   }
 
