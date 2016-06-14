@@ -182,8 +182,10 @@ public abstract class ODKWebView extends WebView {
     ws.setAppCachePath(ODKFileUtils.getAppCacheFolder(appName));
     ws.setCacheMode(WebSettings.LOAD_DEFAULT);
     ws.setDatabaseEnabled(false);
-    ws.setDefaultFixedFontSize(((CommonApplication) context.getApplicationContext()).getQuestionFontsize(appName));
-    ws.setDefaultFontSize(((CommonApplication) context.getApplicationContext()).getQuestionFontsize(appName));
+    ws.setDefaultFixedFontSize(
+        ((CommonApplication) context.getApplicationContext()).getQuestionFontsize(appName));
+    ws.setDefaultFontSize(
+        ((CommonApplication) context.getApplicationContext()).getQuestionFontsize(appName));
     ws.setDomStorageEnabled(true);
     ws.setGeolocationDatabasePath(ODKFileUtils.getGeoCacheFolder(appName));
     ws.setGeolocationEnabled(true);
@@ -193,10 +195,10 @@ public abstract class ODKWebView extends WebView {
     // disable to try to solve touch/mouse/swipe issues
     ws.setBuiltInZoomControls(true);
     ws.setSupportZoom(true);
+    ws.setUseWideViewPort(false);
 
     setFocusable(true);
     setFocusableInTouchMode(true);
-    setInitialScale(100);
 
     // questionable value...
     setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
