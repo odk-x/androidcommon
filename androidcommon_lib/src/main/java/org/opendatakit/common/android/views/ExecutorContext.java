@@ -21,12 +21,14 @@ import org.opendatakit.common.android.listener.DatabaseConnectionListener;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
 import org.opendatakit.database.OdkDbSerializedInterface;
+import org.opendatakit.database.service.OdkDbHandle;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -81,6 +83,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
      */
     private final LinkedList<ExecutorRequest> workQueue = new LinkedList<ExecutorRequest>();
 
+    private Map<String, OdkDbHandle> activeConnections = new HashMap<String, OdkDbHandle>();
     private Map<String, OrderedColumns> mCachedOrderedDefns = new HashMap<String, OrderedColumns>();
 
     private ExecutorContext(IOdkDataActivity fragment) {
@@ -184,6 +187,50 @@ public class ExecutorContext implements DatabaseConnectionListener {
       WebLogger.getLogger(currentContext.getAppName()).i(TAG, "shutdownWorker - dataif Executor has been shut down.");
     }
 
+  /**
+   * Get the connection on which this transaction is active.
+   *
+   * @param transId
+   * @return OdkDbHandle
+   */
+  public OdkDbHandle getActiveConnection(String transId) {
+    synchronized (mutex) {
+      return activeConnections.get(transId);
+    }
+  }
+
+  public void registerActiveConnection(String transId, OdkDbHandle dbHandle) {
+    boolean alreadyExists = false;
+    synchronized (mutex) {
+      if ( activeConnections.containsKey(transId) ) {
+        alreadyExists = true;
+      } else {
+        activeConnections.put(transId, dbHandle);
+      }
+    }
+    if ( alreadyExists ) {
+      WebLogger.getLogger(currentContext.getAppName()).e(TAG,"transaction id " + transId + " already registered!");
+      throw new IllegalArgumentException("transaction id already registered!");
+    }
+  }
+
+  private String getFirstActiveTransactionId() {
+    synchronized (mutex) {
+      Set<String> transIds = activeConnections.keySet();
+      if ( transIds.isEmpty() ) {
+        return null;
+      } else {
+        return transIds.iterator().next();
+      }
+    }
+  }
+
+  public void removeActiveConnection(String transId) {
+    synchronized (mutex) {
+      activeConnections.remove(transId);
+    }
+  }
+
   public OrderedColumns getOrderedColumns(String tableId) {
     synchronized (mutex) {
       return mCachedOrderedDefns.get(tableId);
@@ -231,6 +278,34 @@ public class ExecutorContext implements DatabaseConnectionListener {
       }
 
       WebLogger.getLogger(currentContext.getAppName()).i(TAG, "releaseResources - workQueue has been purged.");
+
+      int activeConns = 0;
+      for (;;) {
+        String transId = getFirstActiveTransactionId();
+        if ( transId == null ) {
+          break;
+        }
+        OdkDbHandle dbh = getActiveConnection(transId);
+        removeActiveConnection(transId);
+        if ( dbh == null ) {
+          WebLogger.getLogger(getAppName()).w(TAG, "Unexpected failure to retrieve dbHandle for " + transId);
+        }
+        OdkDbSerializedInterface dbInterface = currentContext.getDatabase();
+        if ( dbInterface != null ) {
+          try {
+            WebLogger.getLogger(currentContext.getAppName()).i(TAG, "releaseResources - closing dbHandle " + dbh.toString());
+            dbInterface.closeDatabase(currentContext.getAppName(), dbh);
+            activeConns++;
+          } catch (Throwable t) {
+            WebLogger.getLogger(currentContext.getAppName()).w(TAG,
+                    "releaseResources - Exception thrown while trying to close dbHandle");
+            WebLogger.getLogger(currentContext.getAppName()).printStackTrace(t);
+          }
+        }
+      }
+
+      WebLogger.getLogger(currentContext.getAppName()).w(TAG,
+              "releaseResources - closed " + activeConns + " associated dbHandles");
     }
 
     public void reportError(String callbackJSON, String transId, String errorMessage) {
