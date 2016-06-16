@@ -91,7 +91,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
     CommonApplication.mockWebkitServerService = mock;
   }
 
-  public static void mockServiceConnected(CommonApplication app, String name) {
+  public static void mockServiceConnected(CommonApplication app, String name, IBinder service) {
     ComponentName className = null;
     if (name.equals(WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS)) {
       className = new ComponentName(WebkitServerConsts.WEBKITSERVER_SERVICE_PACKAGE,
@@ -106,8 +106,8 @@ public abstract class CommonApplication extends AppAwareApplication implements
     if ( className == null ) {
       throw new IllegalStateException("unrecognized mockService");
     }
-    
-    app.doServiceConnected(className, null);
+
+    app.mBackgroundServices.doServiceConnected(app, className, service);
   }
 
   public static void mockServiceDisconnected(CommonApplication app, String name) {
@@ -125,27 +125,8 @@ public abstract class CommonApplication extends AppAwareApplication implements
     if ( className == null ) {
       throw new IllegalStateException("unrecognized mockService");
     }
-    
-    app.doServiceDisconnected(className);
-  }
-  
-  /**
-   * Wrapper class for service activation management.
-   * 
-   * @author mitchellsundt@gmail.com
-   *
-   */
-  private final class ServiceConnectionWrapper implements ServiceConnection {
 
-    @Override
-    public void onServiceConnected(ComponentName name, IBinder service) {
-      CommonApplication.this.doServiceConnected(name, service);
-    }
-
-    @Override
-    public void onServiceDisconnected(ComponentName name) {
-      CommonApplication.this.doServiceDisconnected(name);
-    }
+    app.mBackgroundServices.doServiceDisconnected(app, className);
   }
 
   /**
@@ -169,14 +150,240 @@ public abstract class CommonApplication extends AppAwareApplication implements
    */
   private static final class BackgroundServices {
 
-    private ServiceConnectionWrapper webkitfilesServiceConnection = null;
+    private ServiceConnection webkitfilesServiceConnection = null;
     private OdkWebkitServerInterface webkitfilesService = null;
-    private ServiceConnectionWrapper databaseServiceConnection = null;
+    private ServiceConnection databaseServiceConnection = null;
     private OdkDbSerializedInterface databaseService = null;
     private boolean isDestroying = false;
 
     BackgroundServices() {
     };
+
+    synchronized void clearDestroyingFlag() {
+      Log.i(t, "isDestroying reset to false");
+      isDestroying = false;
+    }
+
+    synchronized boolean isDestroyingFlag() {
+      return isDestroying;
+    }
+    public synchronized OdkDbSerializedInterface getDatabase() {
+      return databaseService;
+    }
+
+    private synchronized OdkWebkitServerInterface getWebkitServer() {
+      return webkitfilesService;
+    }
+    private void bindToService(final CommonApplication application,
+        boolean useWebServer, boolean useDatabase ) {
+      ServiceConnection webkitServerBinder = null;
+      ServiceConnection databaseBinder = null;
+
+      synchronized (this) {
+        if ( !isDestroying ) {
+          Log.i(t, "bindToService -- processing...");
+          if ( useWebServer && webkitfilesService == null && webkitfilesServiceConnection == null ) {
+            webkitfilesServiceConnection = webkitServerBinder = new ServiceConnection() {
+
+              @Override public void onServiceConnected(ComponentName name, IBinder service) {
+                doServiceConnected(application, name, service);
+              }
+
+              @Override public void onServiceDisconnected(ComponentName name) {
+                doServiceDisconnected(application, name);
+              }
+            };
+          }
+          if ( useDatabase && databaseService == null && databaseServiceConnection == null ) {
+            databaseServiceConnection = databaseBinder = new ServiceConnection() {
+              @Override public void onServiceConnected(ComponentName name, IBinder service) {
+                doServiceConnected(application, name, service);
+              }
+
+              @Override public void onServiceDisconnected(ComponentName name) {
+                doServiceDisconnected(application, name);
+              }
+            };
+          }
+        } else {
+          Log.i(t, "bindToService -- ignored -- isDestroying is true!");
+        }
+      }
+
+      if ( webkitServerBinder != null ) {
+        Log.i(t, "Attempting bind to WebkitServer service");
+        Intent bind_intent = new Intent();
+        bind_intent.setClassName(WebkitServerConsts.WEBKITSERVER_SERVICE_PACKAGE,
+            WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS);
+        application.bindService(
+            bind_intent,
+            webkitServerBinder,
+            Context.BIND_AUTO_CREATE
+                | ((Build.VERSION.SDK_INT >= 14) ? Context.BIND_ADJUST_WITH_ACTIVITY : 0));
+      }
+
+      if ( databaseBinder != null ) {
+        Log.i(t, "Attempting bind to Database service");
+        Intent bind_intent = new Intent();
+        bind_intent.setClassName(DatabaseConsts.DATABASE_SERVICE_PACKAGE,
+            DatabaseConsts.DATABASE_SERVICE_CLASS);
+        application.bindService(
+            bind_intent,
+            databaseBinder,
+            Context.BIND_AUTO_CREATE
+                | ((Build.VERSION.SDK_INT >= 14) ? Context.BIND_ADJUST_WITH_ACTIVITY : 0));
+      }
+    }
+
+    private void doServiceConnected(CommonApplication application, ComponentName className,
+        IBinder service) {
+      if (className.getClassName().equals(WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS)) {
+        Log.i(t, "Bound to WebServer service");
+        synchronized (this) {
+          try {
+            webkitfilesService = (service == null) ? null : OdkWebkitServerInterface.Stub.asInterface(service);
+          } catch (Exception e) {
+            webkitfilesService = null;
+          }
+        }
+      }
+
+      if (className.getClassName().equals(DatabaseConsts.DATABASE_SERVICE_CLASS)) {
+        Log.i(t, "Bound to Database service");
+        synchronized (this) {
+          try {
+            databaseService = (service == null) ? null : new OdkDbSerializedInterface(OdkDbInterface.Stub.asInterface(service));
+          } catch (Exception e) {
+            databaseService = null;
+          }
+        }
+        application.triggerDatabaseEvent(false);
+      }
+
+      application.configureView();
+    }
+
+    private void doServiceDisconnected(CommonApplication application, ComponentName className) {
+      if (className.getClassName().equals(WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS)) {
+        ServiceConnection tmpWeb = null;
+        synchronized (this) {
+          if (isDestroying) {
+            Log.i(t, "Unbound from WebServer service (intentionally)");
+          } else {
+            Log.w(t, "Unbound from WebServer service (unexpected)");
+          }
+          webkitfilesService = null;
+          tmpWeb = webkitfilesServiceConnection;
+          webkitfilesServiceConnection = null;
+        }
+        try {
+          if ( tmpWeb != null ) {
+            // expect to fail (because we are disconnected)
+            application.unbindService(tmpWeb);
+          }
+        } catch ( Exception e ) {
+          // ignore
+          e.printStackTrace();
+        }
+      }
+
+      if (className.getClassName().equals(DatabaseConsts.DATABASE_SERVICE_CLASS)) {
+        ServiceConnection tmpDb = null;
+        synchronized (this) {
+          if (isDestroying) {
+            Log.i(t, "Unbound from Database service (intentionally)");
+          } else {
+            Log.w(t, "Unbound from Database service (unexpected)");
+          }
+          databaseService = null;
+          tmpDb = databaseServiceConnection;
+          databaseServiceConnection = null;
+        }
+        try {
+          if ( tmpDb != null ) {
+            // expect to fail (because we are disconnected)
+            application.unbindService(tmpDb);
+          }
+        } catch ( Exception e ) {
+          // ignore
+          e.printStackTrace();
+        }
+        application.triggerDatabaseEvent(false);
+      }
+
+      application.configureView();
+
+      // the bindToService() method decides whether to connect or not...
+      application.bindToService();
+    }
+
+    private void unbindWebkitServerWrapper(CommonApplication application) {
+      ServiceConnection tmpWeb = null;
+      synchronized(this) {
+        tmpWeb = webkitfilesServiceConnection;
+        webkitfilesServiceConnection = null;
+      }
+      try {
+        if ( tmpWeb != null ) {
+          application.unbindService(tmpWeb);
+        }
+      } catch ( Exception e ) {
+        // ignore
+        e.printStackTrace();
+      }
+    }
+
+    private void unbindDatabaseWrapper(CommonApplication application) {
+      ServiceConnection tmpDb = null;
+      synchronized (this) {
+        tmpDb = databaseServiceConnection;
+        databaseServiceConnection = null;
+      }
+      try {
+        if ( tmpDb != null ) {
+          application.unbindService(tmpDb);
+          application.triggerDatabaseEvent(false);
+        }
+      } catch ( Exception e ) {
+        // ignore
+        e.printStackTrace();
+      }
+    }
+
+    private void shutdownServices(CommonApplication application) {
+      Log.i(t, "shutdownServices - Releasing WebServer and database service");
+      ServiceConnection tmpWeb = null;
+      ServiceConnection tmpDb = null;
+      synchronized (this) {
+        isDestroying = true;
+        webkitfilesService = null;
+        databaseService = null;
+        tmpWeb = webkitfilesServiceConnection;
+        tmpDb = databaseServiceConnection;
+        webkitfilesServiceConnection = null;
+        databaseServiceConnection = null;
+      }
+      try {
+        if (tmpWeb != null) {
+          application.unbindService(tmpWeb);
+        }
+      } catch (Exception e) {
+        // ignore
+        e.printStackTrace();
+      }
+
+      try {
+        if (tmpDb != null) {
+          application.unbindService(tmpDb);
+        }
+      } catch (Exception e) {
+        // ignore
+        e.printStackTrace();
+      }
+      // release interfaces held by the view
+      application.configureView();
+      application.triggerDatabaseEvent(false);
+    }
   }
 
   /**
@@ -294,10 +501,11 @@ public abstract class CommonApplication extends AppAwareApplication implements
   private void cleanShutdown() {
     try {
       shuttingDown = true;
-      
+      Log.i(t, "cleanShutdown (initiating)");
       shutdownServices();
     } finally {
       shuttingDown = false;
+      Log.i(t, "cleanShutdown (resetting shuttingDown to false)");
     }
   }
   
@@ -317,7 +525,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
     }
     
     // be sure the services are connected...
-    mBackgroundServices.isDestroying = false;
+    mBackgroundServices.clearDestroyingFlag();
 
     configureView();
 
@@ -327,43 +535,9 @@ public abstract class CommonApplication extends AppAwareApplication implements
 
   // /////////////////////////////////////////////////////////////////////////
   // service interactions
-  private void unbindWebkitfilesServiceWrapper() {
-    try {
-      ServiceConnectionWrapper tmp = mBackgroundServices.webkitfilesServiceConnection;
-      mBackgroundServices.webkitfilesServiceConnection = null;
-      if ( tmp != null ) {
-        unbindService(tmp);
-      }
-    } catch ( Exception e ) {
-      // ignore
-      e.printStackTrace();
-    }
-  }
-  
-  private void unbindDatabaseBinderWrapper() {
-    try {
-      ServiceConnectionWrapper tmp = mBackgroundServices.databaseServiceConnection;
-      mBackgroundServices.databaseServiceConnection = null;
-      if ( tmp != null ) {
-        unbindService(tmp);
-        triggerDatabaseEvent(false);
-      }
-    } catch ( Exception e ) {
-      // ignore
-      e.printStackTrace();
-    }
-  }
 
   private void shutdownServices() {
-    Log.i(t, "shutdownServices - Releasing WebServer and database service");
-    mBackgroundServices.isDestroying = true;
-    mBackgroundServices.webkitfilesService = null;
-    mBackgroundServices.databaseService = null;
-    // release interfaces held by the view
-    configureView();
-    // release the webkitfilesService
-    unbindWebkitfilesServiceWrapper();
-    unbindDatabaseBinderWrapper();
+    mBackgroundServices.shutdownServices(this);
   }
   
   private void bindToService() {
@@ -371,77 +545,22 @@ public abstract class CommonApplication extends AppAwareApplication implements
       // we directly control all the service binding interactions if we are mocked
       return;
     }
-    if (!shuttingDown && !mBackgroundServices.isDestroying) {
+    if (!shuttingDown) {
       PackageManager pm = getPackageManager();
       boolean useWebServer = (pm.checkPermission(PERMISSION_WEBSERVER, getPackageName()) == PackageManager.PERMISSION_GRANTED);
       boolean useDatabase = (pm.checkPermission(PERMISSION_DATABASE, getPackageName()) == PackageManager.PERMISSION_GRANTED);
 
-          // do something
-      
-      if (useWebServer && mBackgroundServices.webkitfilesService == null && 
-          mBackgroundServices.webkitfilesServiceConnection == null) {
-        Log.i(t, "Attempting bind to WebServer service");
-        mBackgroundServices.webkitfilesServiceConnection = new ServiceConnectionWrapper();
-        Intent bind_intent = new Intent();
-        bind_intent.setClassName(WebkitServerConsts.WEBKITSERVER_SERVICE_PACKAGE,
-            WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS);
-        bindService(
-            bind_intent,
-            mBackgroundServices.webkitfilesServiceConnection,
-            Context.BIND_AUTO_CREATE
-                | ((Build.VERSION.SDK_INT >= 14) ? Context.BIND_ADJUST_WITH_ACTIVITY : 0));
-      }
-
-      if (useDatabase && mBackgroundServices.databaseService == null &&
-          mBackgroundServices.databaseServiceConnection == null) {
-        Log.i(t, "Attempting bind to Database service");
-        mBackgroundServices.databaseServiceConnection = new ServiceConnectionWrapper();
-        Intent bind_intent = new Intent();
-        bind_intent.setClassName(DatabaseConsts.DATABASE_SERVICE_PACKAGE,
-            DatabaseConsts.DATABASE_SERVICE_CLASS);
-        bindService(
-            bind_intent,
-            mBackgroundServices.databaseServiceConnection,
-            Context.BIND_AUTO_CREATE
-                | ((Build.VERSION.SDK_INT >= 14) ? Context.BIND_ADJUST_WITH_ACTIVITY : 0));
-      }
+      Log.i(t, "bindToService -- useWebServer " + Boolean.toString(useWebServer)
+          + " useDatabase " + Boolean.toString(useDatabase) );
+      mBackgroundServices.bindToService(this, useWebServer, useDatabase);
     }
   }
 
-  /**
-   * 
-   * @param className
-   * @param service can be null if we are mocked
-   */
-  private void doServiceConnected(ComponentName className, IBinder service) {
-    if (className.getClassName().equals(WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS)) {
-      Log.i(t, "Bound to WebServer service");
-      mBackgroundServices.webkitfilesService = (service == null) ? null : OdkWebkitServerInterface.Stub.asInterface(service);
-    }
-
-    if (className.getClassName().equals(DatabaseConsts.DATABASE_SERVICE_CLASS)) {
-      Log.i(t, "Bound to Database service");
-
-      try {
-        mBackgroundServices.databaseService = (service == null) ?
-            null :
-            new OdkDbSerializedInterface(OdkDbInterface.Stub.asInterface(service));
-      } catch (Exception e) {
-        mBackgroundServices.databaseService = null;
-      }
-
-      
-      triggerDatabaseEvent(false);
-    }
-
-    configureView();
-  }
-  
   public OdkDbSerializedInterface getDatabase() {
     if ( isMocked ) {
       return mockDatabaseService;
     } else {
-      return mBackgroundServices.databaseService;
+      return mBackgroundServices.getDatabase();
     }
   }
   
@@ -449,7 +568,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
     if ( isMocked ) {
       return mockWebkitServerService;
     } else {
-      return mBackgroundServices.webkitfilesService;
+      return mBackgroundServices.getWebkitServer();
     }
   }
   
@@ -460,7 +579,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
         View v = activeActivity.findViewById(getWebKitResourceId());
         if (v != null && v instanceof ODKWebView) {
           ODKWebView wv = (ODKWebView) v;
-          if (mBackgroundServices.isDestroying) {
+          if (mBackgroundServices.isDestroyingFlag()) {
             wv.serviceChange(false);
           } else {
             OdkWebkitServerInterface webkitServerIf = getWebkitServer();
@@ -470,33 +589,6 @@ public abstract class CommonApplication extends AppAwareApplication implements
         }
       }
     }
-  }
-
-  private void doServiceDisconnected(ComponentName className) {
-    if (className.getClassName().equals(WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS)) {
-      if (mBackgroundServices.isDestroying) {
-        Log.i(t, "Unbound from WebServer service (intentionally)");
-      } else {
-        Log.w(t, "Unbound from WebServer service (unexpected)");
-      }
-      mBackgroundServices.webkitfilesService = null;
-      unbindWebkitfilesServiceWrapper();
-    }
-
-    if (className.getClassName().equals(DatabaseConsts.DATABASE_SERVICE_CLASS)) {
-      if (mBackgroundServices.isDestroying) {
-        Log.i(t, "Unbound from Database service (intentionally)");
-      } else {
-        Log.w(t, "Unbound from Database service (unexpected)");
-      }
-      mBackgroundServices.databaseService = null;
-      unbindDatabaseBinderWrapper();
-    }
-
-    configureView();
-
-    // the bindToService() method decides whether to connect or not...
-    bindToService();
   }
 
   // /////////////////////////////////////////////////////////////////////////
@@ -544,8 +636,10 @@ public abstract class CommonApplication extends AppAwareApplication implements
     if ( activeActivity != null &&
         activeActivity == databaseListenerActivity &&
         activeActivity instanceof DatabaseConnectionListener ) {
-      if ( !availableOnly && this.getDatabase() == null ) {
-        ((DatabaseConnectionListener) activeActivity).databaseUnavailable();
+      if ( this.getDatabase() == null ) {
+        if ( !availableOnly ) {
+          ((DatabaseConnectionListener) activeActivity).databaseUnavailable();
+        }
       } else {
         ((DatabaseConnectionListener) activeActivity).databaseAvailable();
       }

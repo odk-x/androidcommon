@@ -16,10 +16,16 @@ package org.opendatakit.common.android.views;
 
 import android.content.ContentValues;
 import android.os.RemoteException;
+
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
-import org.opendatakit.common.android.data.*;
+import org.opendatakit.common.android.data.ColumnDefinition;
+import org.opendatakit.common.android.data.OrderedColumns;
+import org.opendatakit.common.android.data.RawRow;
+import org.opendatakit.common.android.data.RawUserTable;
+import org.opendatakit.common.android.data.Row;
+import org.opendatakit.common.android.data.TableDefinitionEntry;
+import org.opendatakit.common.android.data.UserTable;
 import org.opendatakit.common.android.provider.DataTableColumns;
-import org.opendatakit.common.android.provider.TableDefinitionsColumns;
 import org.opendatakit.common.android.utilities.ColumnUtil;
 import org.opendatakit.common.android.utilities.DataHelper;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
@@ -27,10 +33,16 @@ import org.opendatakit.common.android.utilities.WebLogger;
 import org.opendatakit.database.OdkDbSerializedInterface;
 import org.opendatakit.database.service.KeyValueStoreEntry;
 import org.opendatakit.database.service.OdkDbHandle;
-import org.opendatakit.database.service.OdkDbInterface;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.UUID;
 
 /**
  * @author mitchellsundt@gmail.com
