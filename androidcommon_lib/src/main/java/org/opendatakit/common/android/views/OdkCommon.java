@@ -154,12 +154,7 @@ public class OdkCommon {
    */
   public String getActiveUser() {
     logDebug("getActiveUser()");
-    String activeUser = mActivity.getActiveUser();
-    if (activeUser == null) {
-      activeUser = DataTableColumns.DEFAULT_SAVEPOINT_CREATOR;
-    }
-
-    return activeUser;
+    return mActivity.getActiveUser();
   }
 
   /**

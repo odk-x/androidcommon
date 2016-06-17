@@ -22,9 +22,13 @@ import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
 import org.opendatakit.database.OdkDbSerializedInterface;
 import org.opendatakit.database.service.OdkDbHandle;
-import org.opendatakit.database.service.OdkDbInterface;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -157,11 +161,11 @@ public class ExecutorContext implements DatabaseConnectionListener {
     }
   }
 
-  /**
-   * shutdown the worker. This is done within the mutex to ensure that the above methods
-   * never throw an unexpected state exception.
-   */
-    private void shutdownWorker() {
+    /**
+     * shutdown the worker. This is done within the mutex to ensure that the above methods
+     * never throw an unexpected state exception.
+     */
+    void shutdownWorker() {
       WebLogger.getLogger(currentContext.getAppName()).i(TAG, "shutdownWorker - shutting down dataif Executor");
       Throwable t = null;
       synchronized (mutex) {
@@ -254,8 +258,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
     }
 
     public void releaseResources(String reason) {
-        // TODO: rollback any transactions and close connections
-      shutdownWorker();
+      // TODO: rollback any transactions and close connections
 
 	  String errorMessage = "releaseResources - shutting down worker (" + reason +
                    ") -- rolling back all transactions and releasing all connections";
@@ -276,6 +279,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
 
       WebLogger.getLogger(currentContext.getAppName()).i(TAG, "releaseResources - workQueue has been purged.");
 
+      int activeConns = 0;
       for (;;) {
         String transId = getFirstActiveTransactionId();
         if ( transId == null ) {
@@ -289,7 +293,9 @@ public class ExecutorContext implements DatabaseConnectionListener {
         OdkDbSerializedInterface dbInterface = currentContext.getDatabase();
         if ( dbInterface != null ) {
           try {
+            WebLogger.getLogger(currentContext.getAppName()).i(TAG, "releaseResources - closing dbHandle " + dbh.toString());
             dbInterface.closeDatabase(currentContext.getAppName(), dbh);
+            activeConns++;
           } catch (Throwable t) {
             WebLogger.getLogger(currentContext.getAppName()).w(TAG,
                     "releaseResources - Exception thrown while trying to close dbHandle");
@@ -299,7 +305,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
       }
 
       WebLogger.getLogger(currentContext.getAppName()).w(TAG,
-              "releaseResources - closed all associated dbHandles");
+              "releaseResources - closed " + activeConns + " associated dbHandles");
     }
 
     public void reportError(String callbackJSON, String transId, String errorMessage) {
