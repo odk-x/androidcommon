@@ -634,7 +634,6 @@ public abstract class ExecutorProcessor implements Runnable {
       context.putOrderedColumns(request.tableId, columns);
     }
 
-    ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
     UserTable t = dbInterface
         .deleteRowWithId(context.getAppName(), dbHandle, request.tableId, columns, request.rowId);
 
