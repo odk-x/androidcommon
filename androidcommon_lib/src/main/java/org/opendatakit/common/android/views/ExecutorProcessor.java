@@ -20,8 +20,6 @@ import android.os.RemoteException;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.common.android.data.ColumnDefinition;
 import org.opendatakit.common.android.data.OrderedColumns;
-import org.opendatakit.common.android.data.RawRow;
-import org.opendatakit.common.android.data.RawUserTable;
 import org.opendatakit.common.android.data.Row;
 import org.opendatakit.common.android.data.TableDefinitionEntry;
 import org.opendatakit.common.android.data.UserTable;
@@ -33,6 +31,8 @@ import org.opendatakit.common.android.utilities.WebLogger;
 import org.opendatakit.database.OdkDbSerializedInterface;
 import org.opendatakit.database.service.KeyValueStoreEntry;
 import org.opendatakit.database.service.OdkDbHandle;
+import org.opendatakit.database.service.OdkDbRow;
+import org.opendatakit.database.service.OdkDbTable;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -284,7 +284,7 @@ public abstract class ExecutorProcessor implements Runnable {
       columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
       context.putOrderedColumns(request.tableId, columns);
     }
-    RawUserTable rawUserTable = dbInterface
+    OdkDbTable rawUserTable = dbInterface
         .arbitraryQuery(context.getAppName(), dbHandle, request.sqlCommand, request.sqlBindParams);
 
     if ( rawUserTable == null ) {
@@ -361,7 +361,7 @@ public abstract class ExecutorProcessor implements Runnable {
   }
 
   private void reportArbitraryQuerySuccessAndCleanUp(OrderedColumns columnDefinitions,
-      RawUserTable userTable) throws RemoteException {
+      OdkDbTable userTable) throws RemoteException {
     List<KeyValueStoreEntry> entries = null;
 
     // We are assuming that we always have the KVS
@@ -411,11 +411,11 @@ public abstract class ExecutorProcessor implements Runnable {
 
         // assemble the data array
         for (int i = 0; i < userTable.getNumberOfRows(); ++i) {
-          RawRow r = userTable.getRowAtIndex(i);
+          OdkDbRow r = userTable.getRowAtIndex(i);
           Object[] values = new Object[userTable.getWidth()];
 
           for ( idx = 0 ; idx < userTable.getWidth() ; ++idx ) {
-            values[idx] = r.getRawDataType(idx, classes[idx]);
+            values[idx] = r.getDataType(idx, classes[idx]);
           }
           data.add(Arrays.asList(values));
         }
