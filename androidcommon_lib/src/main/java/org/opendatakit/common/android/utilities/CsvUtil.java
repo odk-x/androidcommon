@@ -495,8 +495,9 @@ public class CsvUtil {
           v_savepoint_creator = ODKCursorUtils.DEFAULT_CREATOR;
           v_savepoint_timestamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
           v_row_etag = null;
-          v_filter_type = null;
-          v_filter_value = null;
+          v_filter_type = DataTableColumns.DEFAULT_FILTER_TYPE;
+          v_filter_value = DataTableColumns.DEFAULT_FILTER_VALUE;
+
           // clear value map
           valueMap.clear();
 
@@ -605,9 +606,6 @@ public class CsvUtil {
           if (syncState != null) {
 
             ContentValues cv = new ContentValues();
-            if (v_id != null) {
-              cv.put(DataTableColumns.ID, v_id);
-            }
             for (String column : valueMap.keySet()) {
               if (column != null) {
                 cv.put(column, valueMap.get(column));
@@ -625,24 +623,28 @@ public class CsvUtil {
             cv.put(DataTableColumns.FILTER_VALUE, v_filter_value);
 
             cv.put(DataTableColumns.SYNC_STATE, SyncState.new_row.name());
+            cv.putNull(DataTableColumns.CONFLICT_TYPE);
+
+            if (v_id != null) {
+              cv.put(DataTableColumns.ID, v_id);
+            }
 
             if (syncState == SyncState.new_row) {
               // we do the actual update here
-              context.getDatabase().updateRowWithId(appName, db, tableId, orderedDefns,
+              context.getDatabase().privilegedUpdateRowWithId(appName, db, tableId, orderedDefns,
                   cv, v_id);
             }
             // otherwise, do NOT update the row.
+            // i.e., if the row has been sync'd with
+            // the server, then we don't revise it.
 
           } else {
+
             ContentValues cv = new ContentValues();
             for (String column : valueMap.keySet()) {
               if (column != null) {
                 cv.put(column, valueMap.get(column));
               }
-            }
-
-            if (v_id == null) {
-              v_id = ODKDataUtils.genUUID();
             }
 
             // The admin columns get added here
@@ -655,9 +657,18 @@ public class CsvUtil {
             cv.put(DataTableColumns.FILTER_TYPE, v_filter_type);
             cv.put(DataTableColumns.FILTER_VALUE, v_filter_value);
 
+            cv.put(DataTableColumns.SYNC_STATE, SyncState.new_row.name());
+            cv.putNull(DataTableColumns.CONFLICT_TYPE);
+
+            if (v_id == null) {
+              v_id = ODKDataUtils.genUUID();
+            }
+
             cv.put(DataTableColumns.ID, v_id);
 
-            context.getDatabase().insertRowWithId(appName, db, tableId, orderedDefns,
+            // imports assume super-user level powers. Treat these as if they were
+            // directed by the server during a sync.
+            context.getDatabase().privilegedInsertRowWithId(appName, db, tableId, orderedDefns,
                 cv, v_id);
           }
           
