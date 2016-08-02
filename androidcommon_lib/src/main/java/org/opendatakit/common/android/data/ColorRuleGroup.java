@@ -38,6 +38,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import org.opendatakit.database.service.OdkDbRow;
 
 /**
  * A ColorRuleGroup aggregates a collection of {@link ColorRule} objects and is
@@ -325,7 +326,7 @@ public class ColorRuleGroup {
    * @param row the data from the row
    * @return null or the matching rule in the group, {@link ColorGuide}.
    */
-  public ColorGuide getColorGuide(OrderedColumns orderedDefns, Row row) {
+  public ColorGuide getColorGuide(OrderedColumns orderedDefns, OdkDbRow row) {
     for (int i = 0; i < ruleList.size(); i++) {
       ColorRule cr = ruleList.get(i);
       // First get the data about the column. It is possible that we are trying

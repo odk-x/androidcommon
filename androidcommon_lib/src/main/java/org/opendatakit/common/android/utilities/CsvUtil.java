@@ -50,7 +50,6 @@ import org.opendatakit.common.android.data.ColumnDefinition;
 import org.opendatakit.common.android.data.ColumnList;
 import org.opendatakit.common.android.data.OrderedColumns;
 import org.opendatakit.common.android.data.UserTable;
-import org.opendatakit.common.android.data.Row;
 import org.opendatakit.common.android.provider.ColumnDefinitionsColumns;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.KeyValueStoreColumns;
@@ -205,9 +204,8 @@ public class CsvUtil {
       cw.writeNext(columns.toArray(new String[columns.size()]));
       String[] row = new String[columns.size()];
       for (int i = 0; i < table.getNumberOfRows(); i++) {
-        Row dataRow = table.getRowAtIndex(i);
         for (int j = 0; j < columns.size(); ++j) {
-          row[j] = dataRow.getRawDataOrMetadataByElementKey(columns.get(j));
+          row[j] = table.getRawDataOrMetadataByElementKey(i, columns.get(j));
           ;
         }
         cw.writeNext(row);
@@ -217,7 +215,7 @@ public class CsvUtil {
          * row. This is a simplification (and biases toward preserving 
          * data).
          */
-        String instanceId = dataRow.getRowId();
+        String instanceId = table.getRowId(i);
         File tableInstanceFolder = new File(ODKFileUtils.getInstanceFolder(appName, tableId, instanceId));
         if ( instancesWithData.contains(tableInstanceFolder) ) {
           File outputInstanceFolder = new File(ODKFileUtils.getOutputCsvInstanceFolder(appName, tableId, instanceId));
@@ -584,7 +582,7 @@ public class CsvUtil {
 
           SyncState syncState = null;
           if (foundId && table.getNumberOfRows() == 1) {
-            String syncStateStr = table.getRowAtIndex(0).getRawDataOrMetadataByElementKey(
+            String syncStateStr = table.getRawDataOrMetadataByElementKey(0,
                 DataTableColumns.SYNC_STATE);
             if (syncStateStr == null) {
               throw new IllegalStateException("Unexpected null syncState value");

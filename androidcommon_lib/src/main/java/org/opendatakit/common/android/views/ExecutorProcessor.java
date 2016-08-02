@@ -20,7 +20,6 @@ import android.os.RemoteException;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.common.android.data.ColumnDefinition;
 import org.opendatakit.common.android.data.OrderedColumns;
-import org.opendatakit.common.android.data.Row;
 import org.opendatakit.common.android.data.TableDefinitionEntry;
 import org.opendatakit.common.android.data.UserTable;
 import org.opendatakit.common.android.provider.DataTableColumns;
@@ -285,7 +284,7 @@ public abstract class ExecutorProcessor implements Runnable {
       context.putOrderedColumns(request.tableId, columns);
     }
     OdkDbTable rawUserTable = dbInterface
-        .arbitraryQuery(context.getAppName(), dbHandle, request.sqlCommand, request.sqlBindParams);
+        .rawSqlQuery(context.getAppName(), dbHandle, request.sqlCommand, request.sqlBindParams);
 
     if ( rawUserTable == null ) {
       reportErrorAndCleanUp("Unable to rawQuery against: " + request.tableId +
@@ -460,8 +459,8 @@ public abstract class ExecutorProcessor implements Runnable {
     }
     UserTable t = dbInterface
         .rawSqlQuery(context.getAppName(), dbHandle, request.tableId, columns, request.whereClause,
-            request.sqlBindParams, request.groupBy, request.having, request.orderByElementKey,
-            request.orderByDirection);
+            request.sqlBindParams, request.groupBy, request.having,
+            new String[] { request.orderByElementKey }, new String[] { request.orderByDirection });
 
     if ( t == null ) {
       reportErrorAndCleanUp("Unable to query " + request.tableId);
@@ -489,7 +488,7 @@ public abstract class ExecutorProcessor implements Runnable {
     OrderedColumns columnDefinitions = userTable.getColumnDefinitions();
 
     for (int i = 0; i < userTable.getNumberOfRows(); ++i) {
-      Row r = userTable.getRowAtIndex(i);
+      OdkDbRow r = userTable.getRowAtIndex(i);
       List<Object> values = Arrays
           .asList(new Object[ADMIN_COLUMNS.size() + elementKeyToIndexMap.size()]);
       data.add(values);
@@ -497,10 +496,10 @@ public abstract class ExecutorProcessor implements Runnable {
       for (String name : ADMIN_COLUMNS) {
         int idx = elementKeyToIndexMap.get(name);
         if (name.equals(DataTableColumns.CONFLICT_TYPE)) {
-          Integer value = r.getRawDataType(name, Integer.class);
+          Integer value = r.getDataType(userTable.getColumnIndexOfElementKey(name), Integer.class);
           values.set(idx, value);
         } else {
-          String value = r.getRawDataType(name, String.class);
+          String value = r.getDataType(userTable.getColumnIndexOfElementKey(name), String.class);
           values.set(idx, value);
         }
       }
@@ -512,7 +511,7 @@ public abstract class ExecutorProcessor implements Runnable {
         ColumnDefinition defn = columnDefinitions.find(name);
         ElementDataType dataType = defn.getType().getDataType();
         Class<?> clazz = ColumnUtil.get().getOdkDataIfType(dataType);
-        Object value = r.getRawDataType(name, clazz);
+        Object value = r.getDataType(userTable.getColumnIndexOfElementKey(name), clazz);
         values.set(idx, value);
       }
     }
@@ -719,7 +718,7 @@ public abstract class ExecutorProcessor implements Runnable {
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
     UserTable t = dbInterface
         .saveAsIncompleteMostRecentCheckpointRowWithId(context.getAppName(), dbHandle,
-            request.tableId, columns, cvValues, request.rowId);
+            request.tableId, columns, request.rowId);
 
     if ( t == null ) {
       reportErrorAndCleanUp("Unable to saveCheckpointAsIncomplete for " +
@@ -747,7 +746,7 @@ public abstract class ExecutorProcessor implements Runnable {
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
     UserTable t = dbInterface
         .saveAsCompleteMostRecentCheckpointRowWithId(context.getAppName(), dbHandle,
-            request.tableId, columns, cvValues, request.rowId);
+            request.tableId, columns, request.rowId);
 
     if ( t == null ) {
       reportErrorAndCleanUp("Unable to saveCheckpointAsComplete for " +
