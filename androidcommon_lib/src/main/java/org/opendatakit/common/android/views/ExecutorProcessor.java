@@ -448,6 +448,7 @@ public abstract class ExecutorProcessor implements Runnable {
   }
 
   private void userTableQuery() throws RemoteException {
+    String[] emptyArray = {};
     if (request.tableId == null) {
       reportErrorAndCleanUp("tableId cannot be null");
       return;
@@ -460,7 +461,8 @@ public abstract class ExecutorProcessor implements Runnable {
     UserTable t = dbInterface
         .rawSqlQuery(context.getAppName(), dbHandle, request.tableId, columns, request.whereClause,
             request.sqlBindParams, request.groupBy, request.having,
-            new String[] { request.orderByElementKey }, new String[] { request.orderByDirection });
+            (request.orderByElementKey == null) ? emptyArray : new String[] { request.orderByElementKey },
+            (request.orderByDirection == null) ? emptyArray : new String[] { request.orderByDirection });
 
     if ( t == null ) {
       reportErrorAndCleanUp("Unable to query " + request.tableId);
