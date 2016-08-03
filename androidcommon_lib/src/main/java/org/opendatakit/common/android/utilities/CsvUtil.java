@@ -15,6 +15,27 @@
  */
 package org.opendatakit.common.android.utilities;
 
+import android.content.ContentValues;
+import android.os.RemoteException;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.CharEncoding;
+import org.opendatakit.aggregate.odktables.rest.ConflictType;
+import org.opendatakit.aggregate.odktables.rest.ElementDataType;
+import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
+import org.opendatakit.aggregate.odktables.rest.RFC4180CsvReader;
+import org.opendatakit.aggregate.odktables.rest.RFC4180CsvWriter;
+import org.opendatakit.aggregate.odktables.rest.SavepointTypeManipulator;
+import org.opendatakit.aggregate.odktables.rest.SyncState;
+import org.opendatakit.aggregate.odktables.rest.TableConstants;
+import org.opendatakit.common.android.application.CommonApplication;
+import org.opendatakit.common.android.data.ColumnDefinition;
+import org.opendatakit.common.android.data.OrderedColumns;
+import org.opendatakit.common.android.data.UserTable;
+import org.opendatakit.common.android.provider.DataTableColumns;
+import org.opendatakit.database.service.KeyValueStoreEntry;
+import org.opendatakit.database.service.OdkDbHandle;
+
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
@@ -24,42 +45,11 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.UUID;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.CharEncoding;
-import org.opendatakit.aggregate.odktables.rest.ConflictType;
-import org.opendatakit.aggregate.odktables.rest.ElementDataType;
-import org.opendatakit.aggregate.odktables.rest.ElementType;
-import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
-import org.opendatakit.aggregate.odktables.rest.RFC4180CsvReader;
-import org.opendatakit.aggregate.odktables.rest.RFC4180CsvWriter;
-import org.opendatakit.aggregate.odktables.rest.SavepointTypeManipulator;
-import org.opendatakit.aggregate.odktables.rest.SyncState;
-import org.opendatakit.aggregate.odktables.rest.TableConstants;
-import org.opendatakit.aggregate.odktables.rest.entity.Column;
-import org.opendatakit.common.android.application.CommonApplication;
-import org.opendatakit.common.android.data.ColumnDefinition;
-import org.opendatakit.common.android.data.ColumnList;
-import org.opendatakit.common.android.data.OrderedColumns;
-import org.opendatakit.common.android.data.UserTable;
-import org.opendatakit.common.android.provider.ColumnDefinitionsColumns;
-import org.opendatakit.common.android.provider.DataTableColumns;
-import org.opendatakit.common.android.provider.KeyValueStoreColumns;
-import org.opendatakit.database.OdkDbSerializedInterface;
-import org.opendatakit.database.service.KeyValueStoreEntry;
-import org.opendatakit.database.service.OdkDbHandle;
-
-import android.content.ContentValues;
-import android.os.RemoteException;
-import org.apache.commons.io.FileUtils;
 
 /**
  * Various utilities for importing/exporting tables from/to CSV.
@@ -630,7 +620,7 @@ public class CsvUtil {
             if (syncState == SyncState.new_row) {
               // we do the actual update here
               context.getDatabase().privilegedUpdateRowWithId(appName, db, tableId, orderedDefns,
-                  cv, v_id);
+                  cv, v_id, true);
             }
             // otherwise, do NOT update the row.
             // i.e., if the row has been sync'd with
@@ -667,7 +657,7 @@ public class CsvUtil {
             // imports assume super-user level powers. Treat these as if they were
             // directed by the server during a sync.
             context.getDatabase().privilegedInsertRowWithId(appName, db, tableId, orderedDefns,
-                cv, v_id);
+                cv, v_id, true);
           }
           
           /**
