@@ -44,7 +44,7 @@ import org.opendatakit.database.service.OdkDbRow;
  * A ColorRuleGroup aggregates a collection of {@link ColorRule} objects and is
  * responsible for looking through the list of rules to determine the color
  * dictated by the collection.
- * 
+ *
  * @author sudar.sam@gmail.com
  *
  */
@@ -108,21 +108,21 @@ public class ColorRuleGroup {
     switch (mType) {
     case COLUMN:
       entries = ctxt.getDatabase().getDBTableMetadata(appName, db, mTableId,
-              LocalKeyValueStoreConstants.ColumnColorRules.PARTITION,
-              elementKey,
-              LocalKeyValueStoreConstants.ColumnColorRules.KEY_COLOR_RULES_COLUMN);
+          LocalKeyValueStoreConstants.ColumnColorRules.PARTITION,
+          elementKey,
+          LocalKeyValueStoreConstants.ColumnColorRules.KEY_COLOR_RULES_COLUMN);
       break;
     case TABLE:
       entries = ctxt.getDatabase().getDBTableMetadata(appName, db, mTableId,
-              LocalKeyValueStoreConstants.TableColorRules.PARTITION,
-              KeyValueStoreConstants.ASPECT_DEFAULT,
-              LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_ROW);
+          LocalKeyValueStoreConstants.TableColorRules.PARTITION,
+          KeyValueStoreConstants.ASPECT_DEFAULT,
+          LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_ROW);
       break;
     case STATUS_COLUMN:
       entries = ctxt.getDatabase().getDBTableMetadata(appName, db, mTableId,
-              LocalKeyValueStoreConstants.TableColorRules.PARTITION,
-              KeyValueStoreConstants.ASPECT_DEFAULT,
-              LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_STATUS_COLUMN);
+          LocalKeyValueStoreConstants.TableColorRules.PARTITION,
+          KeyValueStoreConstants.ASPECT_DEFAULT,
+          LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_STATUS_COLUMN);
       break;
     default:
       WebLogger.getLogger(mAppName).e(TAG, "unrecognized ColorRuleGroup type: " + mType);
@@ -145,12 +145,12 @@ public class ColorRuleGroup {
     return this.mAdminColumns;
   }
 
-  public static ColorRuleGroup getColumnColorRuleGroup(CommonApplication ctxt, String appName, OdkDbHandle db, 
+  public static ColorRuleGroup getColumnColorRuleGroup(CommonApplication ctxt, String appName, OdkDbHandle db,
       String tableId, String elementKey, String[] adminColumns) throws RemoteException {
     return new ColorRuleGroup(ctxt, appName, db, tableId, elementKey, Type.COLUMN, adminColumns);
   }
 
-  public static ColorRuleGroup getTableColorRuleGroup(CommonApplication ctxt, String appName, OdkDbHandle db, 
+  public static ColorRuleGroup getTableColorRuleGroup(CommonApplication ctxt, String appName, OdkDbHandle db,
       String tableId, String[] adminColumns) throws RemoteException {
     return new ColorRuleGroup(ctxt, appName, db, tableId, null, Type.TABLE, adminColumns);
   }
@@ -191,7 +191,7 @@ public class ColorRuleGroup {
    * Return the list of rules that makes up this column. This should only be
    * used for displaying the rules. Any changes to the list should be made via
    * the add, delete, and update methods in ColumnColorRuler.
-   * 
+   *
    * @return
    */
   public List<ColorRule> getColorRules() {
@@ -201,7 +201,7 @@ public class ColorRuleGroup {
   /**
    * Replace the list of rules that define this ColumnColorRuler. Does so while
    * retaining the same reference as was originally held.
-   * 
+   *
    * @param newRules
    */
   public void replaceColorRuleList(List<ColorRule> newRules) {
@@ -212,7 +212,7 @@ public class ColorRuleGroup {
 
   /**
    * Get the type of the rule group.
-   * 
+   *
    * @return
    */
   public Type getType() {
@@ -223,7 +223,7 @@ public class ColorRuleGroup {
    * Persist the rule list into the key value store. Does nothing if there are
    * no rules, so will not pollute the key value store unless something has been
    * added.
-   * 
+   *
    * @throws RemoteException
    */
   public void saveRuleList(CommonApplication ctxt) throws RemoteException {
@@ -247,21 +247,21 @@ public class ColorRuleGroup {
         switch (mType) {
         case COLUMN:
           entry = KeyValueStoreUtils.buildEntry(mTableId, LocalKeyValueStoreConstants.ColumnColorRules.PARTITION,
-                  mElementKey,
-                  LocalKeyValueStoreConstants.ColumnColorRules.KEY_COLOR_RULES_COLUMN,
-                  ElementDataType.array, ruleListJson);
+              mElementKey,
+              LocalKeyValueStoreConstants.ColumnColorRules.KEY_COLOR_RULES_COLUMN,
+              ElementDataType.array, ruleListJson);
           break;
         case TABLE:
           entry = KeyValueStoreUtils.buildEntry(mTableId, LocalKeyValueStoreConstants.TableColorRules.PARTITION,
-                  KeyValueStoreConstants.ASPECT_DEFAULT,
-                  LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_ROW,
-                  ElementDataType.array, ruleListJson);
+              KeyValueStoreConstants.ASPECT_DEFAULT,
+              LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_ROW,
+              ElementDataType.array, ruleListJson);
           break;
         case STATUS_COLUMN:
           entry = KeyValueStoreUtils.buildEntry(mTableId, LocalKeyValueStoreConstants.TableColorRules.PARTITION,
-                  KeyValueStoreConstants.ASPECT_DEFAULT,
-                  LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_STATUS_COLUMN,
-                  ElementDataType.array, ruleListJson);
+              KeyValueStoreConstants.ASPECT_DEFAULT,
+              LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_STATUS_COLUMN,
+              ElementDataType.array, ruleListJson);
           break;
         }
         ctxt.getDatabase().replaceDBTableMetadata(mAppName, db, entry);
@@ -284,7 +284,7 @@ public class ColorRuleGroup {
 
   /**
    * Replace the rule matching updatedRule's id with updatedRule.
-   * 
+   *
    * @param updatedRule
    */
   public void updateRule(ColorRule updatedRule) {
@@ -300,7 +300,7 @@ public class ColorRuleGroup {
 
   /**
    * Remove the given rule from the rule list.
-   * 
+   *
    * @param rule
    */
   public void removeRule(ColorRule rule) {

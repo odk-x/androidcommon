@@ -461,10 +461,13 @@ public abstract class ExecutorProcessor implements Runnable {
     UserTable t = dbInterface
         .rawSqlQuery(context.getAppName(), dbHandle, request.tableId, columns, request.whereClause,
             request.sqlBindParams, request.groupBy, request.having,
-            (request.orderByElementKey == null) ? emptyArray : new String[] { request.orderByElementKey },
-            (request.orderByDirection == null) ? emptyArray : new String[] { request.orderByDirection });
+            (request.orderByElementKey == null) ?
+                emptyArray :
+                new String[] { request.orderByElementKey }, (request.orderByDirection == null) ?
+                emptyArray :
+                new String[] { request.orderByDirection });
 
-    if ( t == null ) {
+    if (t == null) {
       reportErrorAndCleanUp("Unable to query " + request.tableId);
     } else {
       reportSuccessAndCleanUp(t);
@@ -485,7 +488,7 @@ public abstract class ExecutorProcessor implements Runnable {
 
     // assemble the data and metadata objects
     ArrayList<List<Object>> data = new ArrayList<List<Object>>();
-    Map<String, Integer> elementKeyToIndexMap = userTable.getElementKeyMap();
+    Map<String, Integer> elementKeyToIndexMap = userTable.getElementKeyToIndex();
 
     OrderedColumns columnDefinitions = userTable.getColumnDefinitions();
 
@@ -498,10 +501,10 @@ public abstract class ExecutorProcessor implements Runnable {
       for (String name : ADMIN_COLUMNS) {
         int idx = elementKeyToIndexMap.get(name);
         if (name.equals(DataTableColumns.CONFLICT_TYPE)) {
-          Integer value = r.getDataType(userTable.getColumnIndexOfElementKey(name), Integer.class);
+          Integer value = r.getDataType(name, Integer.class);
           values.set(idx, value);
         } else {
-          String value = r.getDataType(userTable.getColumnIndexOfElementKey(name), String.class);
+          String value = r.getDataType(name, String.class);
           values.set(idx, value);
         }
       }
@@ -513,7 +516,7 @@ public abstract class ExecutorProcessor implements Runnable {
         ColumnDefinition defn = columnDefinitions.find(name);
         ElementDataType dataType = defn.getType().getDataType();
         Class<?> clazz = ColumnUtil.get().getOdkDataIfType(dataType);
-        Object value = r.getDataType(userTable.getColumnIndexOfElementKey(name), clazz);
+        Object value = r.getDataType(name, clazz);
         values.set(idx, value);
       }
     }
@@ -717,7 +720,6 @@ public abstract class ExecutorProcessor implements Runnable {
       context.putOrderedColumns(request.tableId, columns);
     }
 
-    ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
     UserTable t = dbInterface
         .saveAsIncompleteMostRecentCheckpointRowWithId(context.getAppName(), dbHandle,
             request.tableId, columns, request.rowId);
@@ -745,7 +747,6 @@ public abstract class ExecutorProcessor implements Runnable {
       context.putOrderedColumns(request.tableId, columns);
     }
 
-    ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
     UserTable t = dbInterface
         .saveAsCompleteMostRecentCheckpointRowWithId(context.getAppName(), dbHandle,
             request.tableId, columns, request.rowId);

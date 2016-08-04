@@ -35,6 +35,7 @@ import org.opendatakit.common.android.data.UserTable;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.database.service.KeyValueStoreEntry;
 import org.opendatakit.database.service.OdkDbHandle;
+import org.opendatakit.database.service.OdkDbRow;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -99,15 +100,15 @@ public class CsvUtil {
    * <li>tableid.definition.csv - data table column definition</li>
    * <li>tableid.properties.csv - key-value store of this table</li>
    * </ul>
-    *
-    * @param exportListener
-    * @param db
-    * @param tableId
-    * @param orderedDefns
-    * @param fileQualifier
-    * @return
-    * @throws RemoteException
-    */
+   *
+   * @param exportListener
+   * @param db
+   * @param tableId
+   * @param orderedDefns
+   * @param fileQualifier
+   * @return
+   * @throws RemoteException
+   */
   public boolean exportSeparable(ExportListener exportListener, OdkDbHandle db, String tableId,
       OrderedColumns orderedDefns, String fileQualifier) throws RemoteException {
     // building array of columns to select and header row for output file
@@ -142,7 +143,7 @@ public class CsvUtil {
       }
       columns.add(colName);
     }
-    
+
     File tableInstancesFolder = new File(ODKFileUtils.getInstancesFolder(appName, tableId));
     HashSet<File> instancesWithData = new HashSet<File>();
     if ( tableInstancesFolder.exists() && tableInstancesFolder.isDirectory() ) {
@@ -166,7 +167,7 @@ public class CsvUtil {
       File definitionCsv = new File(ODKFileUtils.getOutputTableDefinitionCsvFile(appName, tableId,
           fileQualifier));
       File propertiesCsv = new File(ODKFileUtils.getOutputTablePropertiesCsvFile(appName, tableId,
-              fileQualifier));
+          fileQualifier));
 
       if (!writePropertiesCsv(db, tableId, orderedDefns, definitionCsv, propertiesCsv)) {
         return false;
@@ -194,15 +195,16 @@ public class CsvUtil {
       cw.writeNext(columns.toArray(new String[columns.size()]));
       String[] row = new String[columns.size()];
       for (int i = 0; i < table.getNumberOfRows(); i++) {
+        OdkDbRow dataRow = table.getRowAtIndex(i);
         for (int j = 0; j < columns.size(); ++j) {
-          row[j] = table.getRawDataOrMetadataByElementKey(i, columns.get(j));
+          row[j] = dataRow.getDataByKey(columns.get(j));
           ;
         }
         cw.writeNext(row);
         /**
          * Copy all attachment files into the output directory tree.
          * Don't worry about whether they are referenced in the current
-         * row. This is a simplification (and biases toward preserving 
+         * row. This is a simplification (and biases toward preserving
          * data).
          */
         String instanceId = table.getRowId(i);
@@ -257,13 +259,13 @@ public class CsvUtil {
    * store). The md5hash of it corresponds to the propertiesETag.
    *
    * For use by the sync mechanism.
-    *
-    * @param db
-    * @param tableId
-    * @param orderedDefns
-    * @return
-    * @throws RemoteException
-    */
+   *
+   * @param db
+   * @param tableId
+   * @param orderedDefns
+   * @return
+   * @throws RemoteException
+   */
   public boolean writePropertiesCsv(OdkDbHandle db, String tableId,
       OrderedColumns orderedDefns) throws RemoteException {
     File definitionCsv = new File(ODKFileUtils.getTableDefinitionCsvFile(appName, tableId));
@@ -274,15 +276,15 @@ public class CsvUtil {
 
   /**
    * Common routine to write the definition and properties files.
-    *
-    * @param db
-    * @param tableId
-    * @param orderedDefns
-    * @param definitionCsv
-    * @param propertiesCsv
-    * @return
-    * @throws RemoteException
-    */
+   *
+   * @param db
+   * @param tableId
+   * @param orderedDefns
+   * @param definitionCsv
+   * @param propertiesCsv
+   * @return
+   * @throws RemoteException
+   */
   private boolean writePropertiesCsv(OdkDbHandle db, String tableId,
       OrderedColumns orderedDefns, File definitionCsv, File propertiesCsv) throws RemoteException {
     WebLogger.getLogger(appName).i(TAG, "writePropertiesCsv: tableId: " + tableId);
@@ -337,7 +339,7 @@ public class CsvUtil {
    *
    * @param tableId
    * @throws IOException
-   * @throws RemoteException 
+   * @throws RemoteException
    */
   public synchronized void updateTablePropertiesFromCsv(String tableId)
       throws IOException, RemoteException {
@@ -394,7 +396,7 @@ public class CsvUtil {
    * @param createIfNotPresent
    *          -- true if we should try to create the table.
    * @return
-   * @throws RemoteException 
+   * @throws RemoteException
    */
   public boolean importSeparable(ImportListener importListener, String tableId,
       String fileQualifier, boolean createIfNotPresent) throws RemoteException {
@@ -423,7 +425,7 @@ public class CsvUtil {
       // reading data
       InputStreamReader input = null;
       try {
-        
+
         File assetsCsvInstances = new File(ODKFileUtils.getAssetsCsvInstancesFolder(appName, tableId));
         HashSet<File> instancesHavingData = new HashSet<File>();
         if ( assetsCsvInstances.exists() && assetsCsvInstances.isDirectory() ) {
@@ -435,7 +437,7 @@ public class CsvUtil {
             }});
           instancesHavingData.addAll(Arrays.asList(subDirectories));
         }
-        
+
         // both files are read from config/assets/csv directory...
         File assetsCsv = new File(ODKFileUtils.getAssetsCsvFolder(appName));
 
@@ -572,8 +574,7 @@ public class CsvUtil {
 
           SyncState syncState = null;
           if (foundId && table.getNumberOfRows() == 1) {
-            String syncStateStr = table.getRawDataOrMetadataByElementKey(0,
-                DataTableColumns.SYNC_STATE);
+            String syncStateStr = table.getRowAtIndex(0).getDataByKey(DataTableColumns.SYNC_STATE);
             if (syncStateStr == null) {
               throw new IllegalStateException("Unexpected null syncState value");
             }
@@ -659,7 +660,7 @@ public class CsvUtil {
             context.getDatabase().privilegedInsertRowWithId(appName, db, tableId, orderedDefns,
                 cv, v_id, true);
           }
-          
+
           /**
            * Copy all attachment files into the destination row.
            * Don't worry about whether they are present in the current
