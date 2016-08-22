@@ -284,7 +284,8 @@ public abstract class ExecutorProcessor implements Runnable {
       context.putOrderedColumns(request.tableId, columns);
     }
     OdkDbTable rawUserTable = dbInterface
-        .rawSqlQuery(context.getAppName(), dbHandle, request.sqlCommand, request.sqlBindParams);
+        .arbitrarySqlQuery(context.getAppName(), dbHandle, request.tableId, request.sqlCommand,
+            request.sqlBindParams, null, null, null, null);
 
     if ( rawUserTable == null ) {
       reportErrorAndCleanUp("Unable to rawQuery against: " + request.tableId +
@@ -465,7 +466,7 @@ public abstract class ExecutorProcessor implements Runnable {
                 emptyArray :
                 new String[] { request.orderByElementKey }, (request.orderByDirection == null) ?
                 emptyArray :
-                new String[] { request.orderByDirection });
+                new String[] { request.orderByDirection }, null, null);
 
     if (t == null) {
       reportErrorAndCleanUp("Unable to query " + request.tableId);

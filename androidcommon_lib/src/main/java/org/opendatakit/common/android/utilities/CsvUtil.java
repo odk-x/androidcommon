@@ -182,7 +182,7 @@ public class CsvUtil {
 
       UserTable table = context.getDatabase()
           .rawSqlQuery(appName, db, tableId, orderedDefns, whereString, emptyArray, emptyArray,
-              null, null, null);
+              null, null, null, null, null);
 
       // emit data table...
       File file = new File(outputCsv, tableId
