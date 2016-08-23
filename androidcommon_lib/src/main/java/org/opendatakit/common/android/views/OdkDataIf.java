@@ -14,8 +14,6 @@
 
 package org.opendatakit.common.android.views;
 
-import android.os.RemoteException;
-
 import java.lang.ref.WeakReference;
 
 /**
