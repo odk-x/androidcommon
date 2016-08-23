@@ -25,11 +25,10 @@ import org.opendatakit.common.android.application.CommonApplication;
 import org.opendatakit.common.android.data.ColumnDefinition;
 import org.opendatakit.common.android.data.JoinColumn;
 import org.opendatakit.common.android.data.OrderedColumns;
+import org.opendatakit.common.android.exception.ServicesAvailabilityException;
 import org.opendatakit.common.android.utilities.StaticStateManipulator.IStaticFieldManipulator;
 import org.opendatakit.database.service.KeyValueStoreEntry;
 import org.opendatakit.database.service.OdkDbHandle;
-
-import android.os.RemoteException;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -80,14 +79,15 @@ public class ColumnUtil {
     return hackPath;
   }
 
-  public String getLocalizedDisplayName(CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey) throws RemoteException {
+  public String getLocalizedDisplayName(CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey) throws
+      ServicesAvailabilityException {
 
     String jsonDisplayName = getRawDisplayName(ctxt, appName, db, tableId, elementKey);
     String displayName = ODKDataUtils.getLocalizedDisplayName(jsonDisplayName);
     return displayName;
   }
 
-  public String getRawDisplayName(CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey) throws RemoteException {
+  public String getRawDisplayName(CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
 
     List<KeyValueStoreEntry> displayNameList =
             ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
@@ -103,7 +103,7 @@ public class ColumnUtil {
     return jsonDisplayName;
   }
 
-  public ArrayList<Map<String,Object>> getDisplayChoicesList(CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey) throws RemoteException {
+  public ArrayList<Map<String,Object>> getDisplayChoicesList(CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
 
     List<KeyValueStoreEntry> choicesListList =
             ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
@@ -159,7 +159,7 @@ public class ColumnUtil {
     return jsonDisplayChoices;
   }
 
-  public void setDisplayChoicesList( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, ColumnDefinition cd, ArrayList<Map<String,Object>> choices) throws RemoteException {
+  public void setDisplayChoicesList( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, ColumnDefinition cd, ArrayList<Map<String,Object>> choices) throws ServicesAvailabilityException {
     String choiceListJSON = null;
     try {
       choiceListJSON = ODKFileUtils.mapper.writeValueAsString(choices);
@@ -174,7 +174,7 @@ public class ColumnUtil {
     ctxt.getDatabase().replaceDBTableMetadata(appName, db, e);
   }
   
-  public ArrayList<JoinColumn> getJoins(CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey) throws RemoteException {
+  public ArrayList<JoinColumn> getJoins(CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
 
     List<KeyValueStoreEntry> joinsList =
             ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
@@ -197,7 +197,7 @@ public class ColumnUtil {
     return (joins == null) ? new ArrayList<JoinColumn>() : joins;
   }
 
-  public int getColumnWidth( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey) throws RemoteException {
+  public int getColumnWidth( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> kvsList =
             ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
                     LocalKeyValueStoreConstants.Spreadsheet.PARTITION,
@@ -225,9 +225,9 @@ public class ColumnUtil {
    * @param tableId
    * @param elementKey
    * @param width
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public void setColumnWidth( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey, Integer width) throws RemoteException {
+  public void setColumnWidth( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey, Integer width) throws ServicesAvailabilityException {
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId,
             LocalKeyValueStoreConstants.Spreadsheet.PARTITION,
             elementKey,
@@ -243,22 +243,22 @@ public class ColumnUtil {
    * @param appName
    * @param tableId
    * @param elementKey
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public void atomicSetColumnWidth( CommonApplication ctxt, String appName, String tableId, String elementKey, Integer width) throws RemoteException {
+  public void atomicSetColumnWidth( CommonApplication ctxt, String appName, String tableId, String elementKey, Integer width) throws ServicesAvailabilityException {
     OdkDbHandle db = null;
     try {
       db = ctxt.getDatabase().openDatabase(appName);
 
       setColumnWidth(ctxt, appName, db, tableId, elementKey, width);
-    } catch (RemoteException e) {
+    } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
           ctxt.getDatabase().closeDatabase(appName, db);
-        } catch (RemoteException e) {
+        } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
         }
@@ -266,7 +266,7 @@ public class ColumnUtil {
     }
   }
 
-  public Map<String, Integer> getColumnWidths( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, OrderedColumns columns) throws RemoteException {
+  public Map<String, Integer> getColumnWidths( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, OrderedColumns columns) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> kvsList =
             ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
                     LocalKeyValueStoreConstants.Spreadsheet.PARTITION,

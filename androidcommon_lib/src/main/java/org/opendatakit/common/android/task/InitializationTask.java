@@ -31,6 +31,7 @@ import java.util.zip.ZipInputStream;
 import org.apache.commons.io.FileUtils;
 import org.opendatakit.androidcommon.R;
 import org.opendatakit.common.android.application.CommonApplication;
+import org.opendatakit.common.android.exception.ServicesAvailabilityException;
 import org.opendatakit.common.android.listener.InitializationListener;
 import org.opendatakit.common.android.provider.FormsColumns;
 import org.opendatakit.common.android.provider.FormsProviderAPI;
@@ -46,7 +47,6 @@ import android.content.res.AssetFileDescriptor;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.RemoteException;
 
 /**
  * Background task for exploding the built-in zipfile resource into the
@@ -120,7 +120,7 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
 
     try {
       updateTableDirs();
-    } catch (RemoteException e) {
+    } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       WebLogger.getLogger(appName).e(t, "Error accesssing database during table creation sweep");
       mPendingResult.add(appContext.getString(R.string.abort_error_accessing_database));
@@ -131,7 +131,7 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
 
     try {
       mPendingSuccess = mPendingSuccess && initTables();
-    } catch (RemoteException e) {
+    } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       WebLogger.getLogger(appName).e(t, "Error accesssing database during CSV import sweep");
       mPendingResult.add(appContext.getString(R.string.abort_error_accessing_database));
@@ -419,7 +419,7 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
   private String tableIdInProgress;
   private Map<String, Boolean> importStatus = new TreeMap<String, Boolean>();
 
-  private final void updateTableDirs() throws RemoteException {
+  private final void updateTableDirs() throws ServicesAvailabilityException {
     // /////////////////////////////////////////
     // /////////////////////////////////////////
     // /////////////////////////////////////////
@@ -489,7 +489,7 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
 
   }
 
-  private final boolean initTables() throws RemoteException {
+  private final boolean initTables() throws ServicesAvailabilityException {
 
     final String EMPTY_STRING = "";
     final String SPACE = " ";

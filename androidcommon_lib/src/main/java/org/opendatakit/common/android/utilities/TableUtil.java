@@ -13,17 +13,14 @@
  */
 package org.opendatakit.common.android.utilities;
 
-import android.app.Activity;
-import android.os.RemoteException;
-import android.widget.Toast;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.android.gms.maps.MapView;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.common.android.application.CommonApplication;
 import org.opendatakit.common.android.data.ColumnDefinition;
 import org.opendatakit.common.android.data.OrderedColumns;
 import org.opendatakit.common.android.data.TableViewType;
+import org.opendatakit.common.android.exception.ServicesAvailabilityException;
 import org.opendatakit.common.android.logic.CommonToolProperties;
 import org.opendatakit.common.android.logic.PropertiesSingleton;
 import org.opendatakit.common.android.utilities.StaticStateManipulator.IStaticFieldManipulator;
@@ -118,9 +115,10 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @return
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public String getLocalizedDisplayName(CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws RemoteException {
+  public String getLocalizedDisplayName(CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws
+      ServicesAvailabilityException {
 
     String rawDisplayName = getRawDisplayName(ctxt, appName, db, tableId);
     String displayName = null;
@@ -142,9 +140,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @return
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public String getRawDisplayName(CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws RemoteException {
+  public String getRawDisplayName(CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws ServicesAvailabilityException {
 
     List<KeyValueStoreEntry> displayNameList =
             ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
@@ -169,9 +167,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @param rawDisplayName
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public void setRawDisplayName( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String rawDisplayName) throws RemoteException {
+  public void setRawDisplayName( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String rawDisplayName) throws ServicesAvailabilityException {
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             KeyValueStoreConstants.TABLE_DISPLAY_NAME,
@@ -187,9 +185,9 @@ public class TableUtil {
    * @param tableId
    * @param rawDisplayName
    * @return
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public String atomicSetRawDisplayName( CommonApplication ctxt, String appName, String tableId, String rawDisplayName) throws RemoteException {
+  public String atomicSetRawDisplayName( CommonApplication ctxt, String appName, String tableId, String rawDisplayName) throws ServicesAvailabilityException {
     OdkDbHandle db = null;
     try {
       db = ctxt.getDatabase().openDatabase(appName);
@@ -199,14 +197,14 @@ public class TableUtil {
         rawDisplayName = NameUtil.normalizeDisplayName(NameUtil.constructSimpleDisplayName(tableId));
       }
       return rawDisplayName;
-    } catch (RemoteException e) {
+    } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
           ctxt.getDatabase().closeDatabase(appName, db);
-        } catch (RemoteException e) {
+        } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
         }
@@ -222,9 +220,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @return the specified default view type or SPREADSHEET_VIEW if none defined.
-   * @throws RemoteException 
+   * @throws ServicesAvailabilityException 
    */
-  public TableViewType getDefaultViewType( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws RemoteException {
+  public TableViewType getDefaultViewType( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws ServicesAvailabilityException {
 
     List<KeyValueStoreEntry> kvsList =
             ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
@@ -254,9 +252,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @param viewType
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public void setDefaultViewType( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, TableViewType viewType) throws RemoteException {
+  public void setDefaultViewType( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, TableViewType viewType) throws ServicesAvailabilityException {
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             LocalKeyValueStoreConstants.Tables.TABLE_DEFAULT_VIEW_TYPE,
@@ -271,22 +269,22 @@ public class TableUtil {
    * @param appName
    * @param tableId
    * @param viewType
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public void atomicSetDefaultViewType( CommonApplication ctxt, String appName, String tableId, TableViewType viewType) throws RemoteException {
+  public void atomicSetDefaultViewType( CommonApplication ctxt, String appName, String tableId, TableViewType viewType) throws ServicesAvailabilityException {
     OdkDbHandle db = null;
     try {
       db = ctxt.getDatabase().openDatabase(appName);
 
       setDefaultViewType(ctxt, appName, db, tableId, viewType);
-    } catch (RemoteException e) {
+    } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
           ctxt.getDatabase().closeDatabase(appName, db);
-        } catch (RemoteException e) {
+        } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
         }
@@ -302,9 +300,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @return null if none defined.
-   * @throws RemoteException 
+   * @throws ServicesAvailabilityException 
    */
-  public String getDetailViewFilename( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws RemoteException {
+  public String getDetailViewFilename( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws ServicesAvailabilityException {
 
     // TODO: this should probably use the detailView name as the aspect
     List<KeyValueStoreEntry> kvsList =
@@ -327,9 +325,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @param detailViewRelativePath
-   * @throws RemoteException 
+   * @throws ServicesAvailabilityException 
    */
-  public void setDetailViewFilename( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String detailViewRelativePath) throws RemoteException {
+  public void setDetailViewFilename( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String detailViewRelativePath) throws ServicesAvailabilityException {
 
     // TODO: this should probably use the detailView name as the aspect
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId, KeyValueStoreConstants.PARTITION_TABLE,
@@ -346,22 +344,22 @@ public class TableUtil {
    * @param appName
    * @param tableId
    * @param detailViewRelativePath
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public void atomicSetDetailViewFilename( CommonApplication ctxt, String appName, String tableId, String detailViewRelativePath) throws RemoteException {
+  public void atomicSetDetailViewFilename( CommonApplication ctxt, String appName, String tableId, String detailViewRelativePath) throws ServicesAvailabilityException {
     OdkDbHandle db = null;
     try {
       db = ctxt.getDatabase().openDatabase(appName);
 
       setDetailViewFilename(ctxt, appName, db, tableId, detailViewRelativePath);
-    } catch (RemoteException e) {
+    } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
           ctxt.getDatabase().closeDatabase(appName, db);
-        } catch (RemoteException e) {
+        } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
         }
@@ -377,9 +375,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @return null if none defined.
-   * @throws RemoteException 
+   * @throws ServicesAvailabilityException 
    */
-  public String getListViewFilename( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws RemoteException {
+  public String getListViewFilename( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws ServicesAvailabilityException {
 
     // TODO: this should probably use the listView name as the aspect
     List<KeyValueStoreEntry> kvsList =
@@ -402,9 +400,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @param listViewRelativePath
-   * @throws RemoteException 
+   * @throws ServicesAvailabilityException 
    */
-  public void setListViewFilename( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String listViewRelativePath) throws RemoteException {
+  public void setListViewFilename( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String listViewRelativePath) throws ServicesAvailabilityException {
 
     // TODO: this should probably use the listView name as the aspect
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId, KeyValueStoreConstants.PARTITION_TABLE,
@@ -421,22 +419,22 @@ public class TableUtil {
    * @param appName
    * @param tableId
    * @param listViewRelativePath
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public void atomicSetListViewFilename( CommonApplication ctxt, String appName, String tableId, String listViewRelativePath) throws RemoteException {
+  public void atomicSetListViewFilename( CommonApplication ctxt, String appName, String tableId, String listViewRelativePath) throws ServicesAvailabilityException {
     OdkDbHandle db = null;
     try {
       db = ctxt.getDatabase().openDatabase(appName);
 
       setListViewFilename(ctxt, appName, db, tableId, listViewRelativePath);
-    } catch (RemoteException e) {
+    } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
           ctxt.getDatabase().closeDatabase(appName, db);
-        } catch (RemoteException e) {
+        } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
         }
@@ -452,9 +450,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @return null if none defined.
-   * @throws RemoteException 
+   * @throws ServicesAvailabilityException 
    */
-  public String getMapListViewFilename( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws RemoteException {
+  public String getMapListViewFilename( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws ServicesAvailabilityException {
     // TODO: this should probably use a mapView name as the aspect
     List<KeyValueStoreEntry> kvsList =
             ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
@@ -476,9 +474,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @param mapListViewRelativePath
-   * @throws RemoteException 
+   * @throws ServicesAvailabilityException 
    */
-  public void setMapListViewFilename( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String mapListViewRelativePath) throws RemoteException {
+  public void setMapListViewFilename( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String mapListViewRelativePath) throws ServicesAvailabilityException {
     // TODO: this should probably use a mapView name as the aspect
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT,
@@ -494,22 +492,22 @@ public class TableUtil {
    * @param appName
    * @param tableId
    * @param mapListViewRelativePath
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public void atomicSetMapListViewFilename( CommonApplication ctxt, String appName, String tableId, String mapListViewRelativePath) throws RemoteException {
+  public void atomicSetMapListViewFilename( CommonApplication ctxt, String appName, String tableId, String mapListViewRelativePath) throws ServicesAvailabilityException {
     OdkDbHandle db = null;
     try {
       db = ctxt.getDatabase().openDatabase(appName);
 
       setMapListViewFilename(ctxt, appName, db, tableId, mapListViewRelativePath);
-    } catch (RemoteException e) {
+    } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
           ctxt.getDatabase().closeDatabase(appName, db);
-        } catch (RemoteException e) {
+        } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
         }
@@ -517,7 +515,7 @@ public class TableUtil {
     }
   }
 
-  public MapViewColorRuleInfo getMapListViewColorRuleInfo( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws RemoteException {
+  public MapViewColorRuleInfo getMapListViewColorRuleInfo( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws ServicesAvailabilityException {
     // TODO: this should probably use the mapView name as the aspect
     List<KeyValueStoreEntry> kvsList =  ctxt.getDatabase()
             .getDBTableMetadata(appName, db, tableId,
@@ -544,7 +542,7 @@ public class TableUtil {
   }
 
 
-  public void setMapListViewColorRuleInfo( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, MapViewColorRuleInfo info) throws RemoteException {
+  public void setMapListViewColorRuleInfo( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, MapViewColorRuleInfo info) throws ServicesAvailabilityException {
     // TODO: this should probably use the mapView name as the aspect
     KeyValueStoreEntry entryColorElementKey = KeyValueStoreUtils.buildEntry(tableId,
             LocalKeyValueStoreConstants.Map.PARTITION,
@@ -562,7 +560,7 @@ public class TableUtil {
       ctxt.getDatabase().replaceDBTableMetadata(appName, db, entryColorRuleType);
   }
 
-  public String getMapListViewLatitudeElementKey( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, OrderedColumns orderedDefns) throws RemoteException {
+  public String getMapListViewLatitudeElementKey( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, OrderedColumns orderedDefns) throws ServicesAvailabilityException {
     // TODO: this should probably use a mapView name as the aspect
     List<KeyValueStoreEntry> kvsList =
             ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
@@ -588,7 +586,7 @@ public class TableUtil {
     return rawValue;
   }
 
-  public String getMapListViewLongitudeElementKey( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, OrderedColumns orderedDefns) throws RemoteException {
+  public String getMapListViewLongitudeElementKey( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, OrderedColumns orderedDefns) throws ServicesAvailabilityException {
     // TODO: this should probably use a mapView name as the aspect
     List<KeyValueStoreEntry> kvsList =
             ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
@@ -622,9 +620,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @return null if none defined.
-   * @throws RemoteException 
+   * @throws ServicesAvailabilityException 
    */
-  public String getSortColumn( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws RemoteException {
+  public String getSortColumn( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> kvsList =
             ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
                     KeyValueStoreConstants.PARTITION_TABLE,
@@ -645,9 +643,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @param elementKey
-   * @throws RemoteException 
+   * @throws ServicesAvailabilityException 
    */
-  public void setSortColumn( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey) throws RemoteException {
+  public void setSortColumn( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             KeyValueStoreConstants.TABLE_SORT_COL,
@@ -662,22 +660,22 @@ public class TableUtil {
    * @param appName
    * @param tableId
    * @param elementKey
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public void atomicSetSortColumn( CommonApplication ctxt, String appName, String tableId, String elementKey) throws RemoteException {
+  public void atomicSetSortColumn( CommonApplication ctxt, String appName, String tableId, String elementKey) throws ServicesAvailabilityException {
     OdkDbHandle db = null;
     try {
       db = ctxt.getDatabase().openDatabase(appName);
 
       setSortColumn(ctxt, appName, db, tableId, elementKey);
-    } catch (RemoteException e) {
+    } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
           ctxt.getDatabase().closeDatabase(appName, db);
-        } catch (RemoteException e) {
+        } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
         }
@@ -693,9 +691,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @return ASC if none specified.
-   * @throws RemoteException 
+   * @throws ServicesAvailabilityException 
    */
-  public String getSortOrder( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws RemoteException {
+  public String getSortOrder( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> kvsList =
             ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
                     KeyValueStoreConstants.PARTITION_TABLE,
@@ -719,9 +717,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @param sortOrder
-   * @throws RemoteException 
+   * @throws ServicesAvailabilityException 
    */
-  public void setSortOrder( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String sortOrder) throws RemoteException {
+  public void setSortOrder( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String sortOrder) throws ServicesAvailabilityException {
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             KeyValueStoreConstants.TABLE_SORT_ORDER,
@@ -736,22 +734,22 @@ public class TableUtil {
    * @param appName
    * @param tableId
    * @param sortOrder
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public void atomicSetSortOrder( CommonApplication ctxt, String appName, String tableId, String sortOrder) throws RemoteException {
+  public void atomicSetSortOrder( CommonApplication ctxt, String appName, String tableId, String sortOrder) throws ServicesAvailabilityException {
     OdkDbHandle db = null;
     try {
       db = ctxt.getDatabase().openDatabase(appName);
 
       setSortOrder(ctxt, appName, db, tableId, sortOrder);
-    } catch (RemoteException e) {
+    } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
           ctxt.getDatabase().closeDatabase(appName, db);
-        } catch (RemoteException e) {
+        } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
         }
@@ -767,9 +765,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @return null if none
-   * @throws RemoteException 
+   * @throws ServicesAvailabilityException 
    */
-  public String getIndexColumn( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws RemoteException {
+  public String getIndexColumn( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> kvsList =
             ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
                     KeyValueStoreConstants.PARTITION_TABLE,
@@ -790,9 +788,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @param elementKey
-   * @throws RemoteException 
+   * @throws ServicesAvailabilityException 
    */
-  public void setIndexColumn( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey) throws RemoteException {
+  public void setIndexColumn( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             KeyValueStoreConstants.TABLE_INDEX_COL,
@@ -807,22 +805,22 @@ public class TableUtil {
    * @param appName
    * @param tableId
    * @param elementKey
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public void atomicSetIndexColumn( CommonApplication ctxt, String appName, String tableId, String elementKey) throws RemoteException {
+  public void atomicSetIndexColumn( CommonApplication ctxt, String appName, String tableId, String elementKey) throws ServicesAvailabilityException {
     OdkDbHandle db = null;
     try {
       db = ctxt.getDatabase().openDatabase(appName);
 
       setIndexColumn(ctxt, appName, db, tableId, elementKey);
-    } catch (RemoteException e) {
+    } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
           ctxt.getDatabase().closeDatabase(appName, db);
-        } catch (RemoteException e) {
+        } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
         }
@@ -830,7 +828,7 @@ public class TableUtil {
     }
   }
 
-  public int getSpreadsheetViewFontSize( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws RemoteException {
+  public int getSpreadsheetViewFontSize( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> kvsList =
             ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
                     LocalKeyValueStoreConstants.Spreadsheet.PARTITION,
@@ -857,9 +855,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @param fontSize
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public void setSpreadsheetViewFontSize( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, Integer fontSize) throws RemoteException {
+  public void setSpreadsheetViewFontSize( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, Integer fontSize) throws ServicesAvailabilityException {
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId,
             LocalKeyValueStoreConstants.Spreadsheet.PARTITION,
             KeyValueStoreConstants.ASPECT_DEFAULT,
@@ -875,22 +873,22 @@ public class TableUtil {
    * @param appName
    * @param tableId
    * @param fontSize
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public void atomicSetSpreadsheetViewFontSize( CommonApplication ctxt, String appName, String tableId, Integer fontSize) throws RemoteException {
+  public void atomicSetSpreadsheetViewFontSize( CommonApplication ctxt, String appName, String tableId, Integer fontSize) throws ServicesAvailabilityException {
     OdkDbHandle db = null;
     try {
       db = ctxt.getDatabase().openDatabase(appName);
 
       setSpreadsheetViewFontSize(ctxt, appName, db, tableId, fontSize);
-    } catch (RemoteException e) {
+    } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
           ctxt.getDatabase().closeDatabase(appName, db);
-        } catch (RemoteException e) {
+        } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
         }
@@ -906,9 +904,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @return empty list if none
-   * @throws RemoteException 
+   * @throws ServicesAvailabilityException 
    */
-  public ArrayList<String> getGroupByColumns( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws RemoteException {
+  public ArrayList<String> getGroupByColumns( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> kvsList =
             ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
                     KeyValueStoreConstants.PARTITION_TABLE,
@@ -932,9 +930,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @param elementKeys
-   * @throws RemoteException 
+   * @throws ServicesAvailabilityException 
    */
-  public void setGroupByColumns( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, ArrayList<String> elementKeys) throws RemoteException {
+  public void setGroupByColumns( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, ArrayList<String> elementKeys) throws ServicesAvailabilityException {
     String list = null;
     try {
       list = ODKFileUtils.mapper.writeValueAsString(elementKeys);
@@ -958,9 +956,9 @@ public class TableUtil {
    * @param appName
    * @param tableId
    * @param elementKey
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public void atomicAddGroupByColumn( CommonApplication ctxt, String appName, String tableId, String elementKey) throws RemoteException {
+  public void atomicAddGroupByColumn( CommonApplication ctxt, String appName, String tableId, String elementKey) throws ServicesAvailabilityException {
     OdkDbHandle db = null;
     try {
       db = ctxt.getDatabase().openDatabase(appName);
@@ -969,14 +967,14 @@ public class TableUtil {
       elementKeys.remove(elementKey);
       elementKeys.add(elementKey);
       setGroupByColumns(ctxt, appName, db, tableId, elementKeys);
-    } catch (RemoteException e) {
+    } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
           ctxt.getDatabase().closeDatabase(appName, db);
-        } catch (RemoteException e) {
+        } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
         }
@@ -992,9 +990,9 @@ public class TableUtil {
    * @param appName
    * @param tableId
    * @param elementKey
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public void atomicRemoveGroupByColumn( CommonApplication ctxt, String appName, String tableId, String elementKey) throws RemoteException {
+  public void atomicRemoveGroupByColumn( CommonApplication ctxt, String appName, String tableId, String elementKey) throws ServicesAvailabilityException {
     OdkDbHandle db = null;
     try {
       db = ctxt.getDatabase().openDatabase(appName);
@@ -1002,14 +1000,14 @@ public class TableUtil {
       ArrayList<String> elementKeys = getGroupByColumns(ctxt, appName, db, tableId);
       elementKeys.remove(elementKey);
       setGroupByColumns(ctxt, appName, db, tableId, elementKeys);
-    } catch (RemoteException e) {
+    } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
           ctxt.getDatabase().closeDatabase(appName, db);
-        } catch (RemoteException e) {
+        } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
         }
@@ -1025,9 +1023,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @return empty list of none specified. Otherwise the elementKeys in the order of display.
-   * @throws RemoteException 
+   * @throws ServicesAvailabilityException 
    */
-  public ArrayList<String> getColumnOrder( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, OrderedColumns columns) throws RemoteException {
+  public ArrayList<String> getColumnOrder( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, OrderedColumns columns) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> kvsList =
             ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
                     KeyValueStoreConstants.PARTITION_TABLE,
@@ -1052,9 +1050,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @param elementKeys
-   * @throws RemoteException 
+   * @throws ServicesAvailabilityException 
    */
-  public void setColumnOrder( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, ArrayList<String> elementKeys) throws RemoteException {
+  public void setColumnOrder( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, ArrayList<String> elementKeys) throws ServicesAvailabilityException {
     String list = null;
     try {
       list = ODKFileUtils.mapper.writeValueAsString(elementKeys);
@@ -1069,20 +1067,20 @@ public class TableUtil {
     ctxt.getDatabase().replaceDBTableMetadata(appName, db, e);
   }
 
-  public void atomicSetColumnOrder( CommonApplication ctxt, String appName, String tableId, ArrayList<String> elementKeys) throws RemoteException {
+  public void atomicSetColumnOrder( CommonApplication ctxt, String appName, String tableId, ArrayList<String> elementKeys) throws ServicesAvailabilityException {
     OdkDbHandle db = null;
     try {
       db = ctxt.getDatabase().openDatabase(appName);
 
       setColumnOrder(ctxt, appName, db, tableId, elementKeys);
-    } catch (RemoteException e) {
+    } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
           ctxt.getDatabase().closeDatabase(appName, db);
-        } catch (RemoteException e) {
+        } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
         }
@@ -1097,9 +1095,9 @@ public class TableUtil {
    * @param db
    * @param tableId
    * @return
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public TableColumns getTableColumns( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId ) throws RemoteException {
+  public TableColumns getTableColumns( CommonApplication ctxt, String appName, OdkDbHandle db, String tableId ) throws ServicesAvailabilityException {
     String[] adminColumns = ctxt.getDatabase().getAdminColumns();
     HashMap<String,String> colDisplayNames = new HashMap<String,String>();
     OrderedColumns orderedDefns = ctxt.getDatabase()

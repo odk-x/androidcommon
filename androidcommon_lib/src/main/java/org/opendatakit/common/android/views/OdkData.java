@@ -175,6 +175,30 @@ public class OdkData {
   }
 
   /**
+   * Get all the roles granted to this user by the server.
+   *
+   * @param callbackJSON
+   */
+  public void getRoles(String callbackJSON) {
+    logDebug("getRoles");
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.GET_ROLES_LIST, callbackJSON);
+
+    queueRequest(request);
+  }
+
+  /**
+   * Get all the users on the server and their roles.
+   *
+   * @param callbackJSON
+   */
+  public void getUsers(String callbackJSON) {
+    logDebug("getUsers");
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.GET_USERS_LIST, callbackJSON);
+
+    queueRequest(request);
+  }
+
+  /**
    * Get all the tableIds in the system.
    *
    * @param callbackJSON

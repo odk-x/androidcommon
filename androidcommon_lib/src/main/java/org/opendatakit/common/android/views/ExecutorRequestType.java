@@ -21,6 +21,8 @@ package org.opendatakit.common.android.views;
  */
 public enum ExecutorRequestType {
     UPDATE_EXECUTOR_CONTEXT,
+    GET_ROLES_LIST,
+    GET_USERS_LIST,
     GET_ALL_TABLE_IDS,
     ARBITRARY_QUERY,
     USER_TABLE_QUERY,

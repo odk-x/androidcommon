@@ -25,12 +25,11 @@ import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.ElementType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.common.android.application.CommonApplication;
+import org.opendatakit.common.android.exception.ServicesAvailabilityException;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.utilities.*;
 import org.opendatakit.database.service.KeyValueStoreEntry;
 import org.opendatakit.database.service.OdkDbHandle;
-
-import android.os.RemoteException;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.core.JsonGenerationException;
@@ -94,10 +93,10 @@ public class ColorRuleGroup {
    * @param elementKey
    * @param type
    * @param adminColumns
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
   private ColorRuleGroup(CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey,
-      Type type, String[] adminColumns) throws RemoteException {
+      Type type, String[] adminColumns) throws ServicesAvailabilityException {
     this.mType = type;
     this.mAppName = appName;
     this.mTableId = tableId;
@@ -146,17 +145,17 @@ public class ColorRuleGroup {
   }
 
   public static ColorRuleGroup getColumnColorRuleGroup(CommonApplication ctxt, String appName, OdkDbHandle db,
-      String tableId, String elementKey, String[] adminColumns) throws RemoteException {
+      String tableId, String elementKey, String[] adminColumns) throws ServicesAvailabilityException {
     return new ColorRuleGroup(ctxt, appName, db, tableId, elementKey, Type.COLUMN, adminColumns);
   }
 
   public static ColorRuleGroup getTableColorRuleGroup(CommonApplication ctxt, String appName, OdkDbHandle db,
-      String tableId, String[] adminColumns) throws RemoteException {
+      String tableId, String[] adminColumns) throws ServicesAvailabilityException {
     return new ColorRuleGroup(ctxt, appName, db, tableId, null, Type.TABLE, adminColumns);
   }
 
   public static ColorRuleGroup getStatusColumnRuleGroup(CommonApplication ctxt, String appName, OdkDbHandle db,
-      String tableId, String[] adminColumns) throws RemoteException {
+      String tableId, String[] adminColumns) throws ServicesAvailabilityException {
     return new ColorRuleGroup(ctxt, appName, db, tableId, null, Type.STATUS_COLUMN, adminColumns);
   }
 
@@ -224,9 +223,9 @@ public class ColorRuleGroup {
    * no rules, so will not pollute the key value store unless something has been
    * added.
    *
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
-  public void saveRuleList(CommonApplication ctxt) throws RemoteException {
+  public void saveRuleList(CommonApplication ctxt) throws ServicesAvailabilityException {
     if ( mDefault ) {
       // nothing to save
       return;

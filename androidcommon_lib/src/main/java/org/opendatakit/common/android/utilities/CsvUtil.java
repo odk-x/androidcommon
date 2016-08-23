@@ -16,7 +16,6 @@
 package org.opendatakit.common.android.utilities;
 
 import android.content.ContentValues;
-import android.os.RemoteException;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.CharEncoding;
@@ -32,6 +31,7 @@ import org.opendatakit.common.android.application.CommonApplication;
 import org.opendatakit.common.android.data.ColumnDefinition;
 import org.opendatakit.common.android.data.OrderedColumns;
 import org.opendatakit.common.android.data.UserTable;
+import org.opendatakit.common.android.exception.ServicesAvailabilityException;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.database.service.KeyValueStoreEntry;
 import org.opendatakit.database.service.OdkDbHandle;
@@ -107,10 +107,10 @@ public class CsvUtil {
    * @param orderedDefns
    * @param fileQualifier
    * @return
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
   public boolean exportSeparable(ExportListener exportListener, OdkDbHandle db, String tableId,
-      OrderedColumns orderedDefns, String fileQualifier) throws RemoteException {
+      OrderedColumns orderedDefns, String fileQualifier) throws ServicesAvailabilityException {
     // building array of columns to select and header row for output file
     // then we are including all the metadata columns.
     ArrayList<String> columns = new ArrayList<String>();
@@ -264,10 +264,10 @@ public class CsvUtil {
    * @param tableId
    * @param orderedDefns
    * @return
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
   public boolean writePropertiesCsv(OdkDbHandle db, String tableId,
-      OrderedColumns orderedDefns) throws RemoteException {
+      OrderedColumns orderedDefns) throws ServicesAvailabilityException {
     File definitionCsv = new File(ODKFileUtils.getTableDefinitionCsvFile(appName, tableId));
     File propertiesCsv = new File(ODKFileUtils.getTablePropertiesCsvFile(appName, tableId));
 
@@ -283,10 +283,10 @@ public class CsvUtil {
    * @param definitionCsv
    * @param propertiesCsv
    * @return
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
   private boolean writePropertiesCsv(OdkDbHandle db, String tableId,
-      OrderedColumns orderedDefns, File definitionCsv, File propertiesCsv) throws RemoteException {
+      OrderedColumns orderedDefns, File definitionCsv, File propertiesCsv) throws ServicesAvailabilityException {
     WebLogger.getLogger(appName).i(TAG, "writePropertiesCsv: tableId: " + tableId);
 
     /**
@@ -339,10 +339,10 @@ public class CsvUtil {
    *
    * @param tableId
    * @throws IOException
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
   public synchronized void updateTablePropertiesFromCsv(String tableId)
-      throws IOException, RemoteException {
+      throws IOException, ServicesAvailabilityException {
 
     PropertiesFileUtils.DataTableDefinition dtd = PropertiesFileUtils.readPropertiesFromCsv(appName,
         tableId);
@@ -396,10 +396,10 @@ public class CsvUtil {
    * @param createIfNotPresent
    *          -- true if we should try to create the table.
    * @return
-   * @throws RemoteException
+   * @throws ServicesAvailabilityException
    */
   public boolean importSeparable(ImportListener importListener, String tableId,
-      String fileQualifier, boolean createIfNotPresent) throws RemoteException {
+      String fileQualifier, boolean createIfNotPresent) throws ServicesAvailabilityException {
 
     OdkDbHandle db = null;
     try {
@@ -565,7 +565,7 @@ public class CsvUtil {
           // uncommitted edits. For now, we just add our csv import to those,
           // rather
           // than resolve the problems.
-          UserTable table = context.getDatabase().getRowsWithId(appName, db,
+          UserTable table = context.getDatabase().privilegedGetRowsWithId(appName, db,
               tableId, orderedDefns, v_id);
           if (table.getNumberOfRows() > 1) {
             throw new IllegalStateException(
