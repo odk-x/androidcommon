@@ -17,6 +17,7 @@ package org.opendatakit.common.android.views;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.opendatakit.common.android.activities.IOdkDataActivity;
 import org.opendatakit.common.android.data.OrderedColumns;
+import org.opendatakit.common.android.exception.ServicesAvailabilityException;
 import org.opendatakit.common.android.listener.DatabaseConnectionListener;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
@@ -260,7 +261,11 @@ public class ExecutorContext implements DatabaseConnectionListener {
     public void releaseResources(String reason) {
       // TODO: rollback any transactions and close connections
 
-	  String errorMessage = "releaseResources - shutting down worker (" + reason +
+      // the most reasonable error is to report a service availablity error
+      // the recovery options for that (abort) are the only reasonable ones when we are
+      // releasing resources.
+   	  String errorMessage = ServicesAvailabilityException.class.getName() +
+        ": releaseResources - shutting down worker (" + reason +
                    ") -- rolling back all transactions and releasing all connections";
       for(;;) {
         ExecutorRequest req = peekRequest();
