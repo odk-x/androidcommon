@@ -224,12 +224,13 @@ public class OdkData {
    * @param callbackJSON            The JSON object used by the JS layer to recover the callback function
    *                                that can process the response
    */
-  public void query(String tableId, String whereClause, String[] sqlBindParams, String[] groupBy,
+  public void query(String tableId, String whereClause, Object[] sqlBindParams, String[] groupBy,
       String having, String orderByElementKey, String orderByDirection,
       boolean includeKeyValueStoreMap, String callbackJSON) {
     logDebug("query: " + tableId + " whereClause: " + whereClause);
     ExecutorRequest request = new ExecutorRequest(tableId, whereClause, sqlBindParams, groupBy,
-        having, orderByElementKey, orderByDirection, includeKeyValueStoreMap, callbackJSON);
+        having, orderByElementKey, orderByDirection, null, null, includeKeyValueStoreMap,
+        callbackJSON);
 
     queueRequest(request);
   }
@@ -248,10 +249,11 @@ public class OdkData {
    *                      that can process the response
    * @return see description in class header
    */
-  public void arbitraryQuery(String tableId, String sqlCommand, String[] sqlBindParams,
+  public void arbitraryQuery(String tableId, String sqlCommand, Object[] sqlBindParams,
       String callbackJSON) {
     logDebug("arbitraryQuery: " + tableId + " sqlCommand: " + sqlCommand);
-    ExecutorRequest request = new ExecutorRequest(tableId, sqlCommand, sqlBindParams, callbackJSON);
+    ExecutorRequest request = new ExecutorRequest(tableId, sqlCommand, sqlBindParams,
+        null, null, callbackJSON);
 
     queueRequest(request);
   }
