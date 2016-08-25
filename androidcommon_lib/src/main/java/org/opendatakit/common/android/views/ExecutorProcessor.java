@@ -330,7 +330,7 @@ public abstract class ExecutorProcessor implements Runnable {
     }
     OdkDbTable rawUserTable = dbInterface
         .arbitrarySqlQuery(context.getAppName(), dbHandle, request.tableId, request.sqlCommand,
-            request.sqlBindParams, null, null, request.limit, request.offset);
+            request.sqlBindParams, request.limit, request.offset);
 
     if ( rawUserTable == null ) {
       reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to rawQuery against: " + request.tableId +
@@ -608,6 +608,8 @@ public abstract class ExecutorProcessor implements Runnable {
 
     Map<String, Object> metadata = new HashMap<String, Object>();
     metadata.put("tableId", userTable.getTableId());
+    metadata.put("limit", userTable.getQuery().getSqlLimit());
+    metadata.put("offset", userTable.getQuery().getSqlOffset());
     metadata.put("schemaETag", tdef.getSchemaETag());
     metadata.put("lastDataETag", tdef.getLastDataETag());
     metadata.put("lastSyncTime", tdef.getLastSyncTime());

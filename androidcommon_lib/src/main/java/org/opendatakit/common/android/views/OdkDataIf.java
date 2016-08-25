@@ -238,18 +238,21 @@ public class OdkDataIf {
    * @param having                  The having clause
    * @param orderByElementKey       The column to order by
    * @param orderByDirection        'ASC' or 'DESC' ordering
+   * @param limit   The maximum number of rows to return (null for unlimited)
+   * @param offset  The offset into the result set for the first row to return (null ok)
    * @param includeKeyValueStoreMap true if the keyValueStoreMap should be returned
    * @param callbackJSON            The JSON object used by the JS layer to recover the callback function
    *                                that can process the response
    */
   @android.webkit.JavascriptInterface public void query(String tableId, String whereClause,
       String[] sqlBindParams, String[] groupBy, String having, String orderByElementKey,
-      String orderByDirection, boolean includeKeyValueStoreMap, String callbackJSON)
+      String orderByDirection, Integer limit, Integer offset, boolean includeKeyValueStoreMap,
+      String callbackJSON)
       {
     if (isInactive())
       return;
     weakData.get().query(tableId, whereClause, sqlBindParams, groupBy, having, orderByElementKey,
-        orderByDirection, includeKeyValueStoreMap, callbackJSON);
+        orderByDirection, limit, offset, includeKeyValueStoreMap, callbackJSON);
   }
 
   /**
@@ -261,14 +264,16 @@ public class OdkDataIf {
    *                      column (e.g., integer, number, array, object conversions).
    * @param sqlCommand    The Select statement to issue. It can reference any table in the database, including system tables.
    * @param sqlBindParams The array of bind parameter values (including any in the having clause)
+   * @param limit   The maximum number of rows to return (null for unlimited)
+   * @param offset  The offset into the result set for the first row to return (null ok)
    * @param callbackJSON  The JSON object used by the JS layer to recover the callback function
    *                      that can process the response
    */
   @android.webkit.JavascriptInterface public void arbitraryQuery(String tableId, String sqlCommand,
-      String[] sqlBindParams, String callbackJSON) {
+      String[] sqlBindParams, Integer limit, Integer offset, String callbackJSON) {
     if (isInactive())
       return;
-    weakData.get().arbitraryQuery(tableId, sqlCommand, sqlBindParams, callbackJSON);
+    weakData.get().arbitraryQuery(tableId, sqlCommand, sqlBindParams, limit, offset, callbackJSON);
   }
 
   /**
