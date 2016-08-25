@@ -35,6 +35,7 @@ import org.opendatakit.database.service.KeyValueStoreEntry;
 import org.opendatakit.database.service.OdkDbHandle;
 import org.opendatakit.database.service.OdkDbRow;
 import org.opendatakit.database.service.OdkDbTable;
+import org.opendatakit.database.service.queries.OdkDbResumableQuery;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -467,6 +468,11 @@ public abstract class ExecutorProcessor implements Runnable {
     }
 
     Map<String, Object> metadata = new HashMap<String, Object>();
+    OdkDbResumableQuery q = userTable.getQuery();
+    if ( q != null ) {
+      metadata.put("limit", q.getSqlLimit());
+      metadata.put("offset", q.getSqlOffset());
+    }
     metadata.put("tableId", columnDefinitions.getTableId());
     metadata.put("schemaETag", tdef.getSchemaETag());
     metadata.put("lastDataETag", tdef.getLastDataETag());
@@ -608,8 +614,11 @@ public abstract class ExecutorProcessor implements Runnable {
 
     Map<String, Object> metadata = new HashMap<String, Object>();
     metadata.put("tableId", userTable.getTableId());
-    metadata.put("limit", userTable.getQuery().getSqlLimit());
-    metadata.put("offset", userTable.getQuery().getSqlOffset());
+    OdkDbResumableQuery q = userTable.getQuery();
+    if ( q != null ) {
+      metadata.put("limit", q.getSqlLimit());
+      metadata.put("offset", q.getSqlOffset());
+    }
     metadata.put("schemaETag", tdef.getSchemaETag());
     metadata.put("lastDataETag", tdef.getLastDataETag());
     metadata.put("lastSyncTime", tdef.getLastSyncTime());
