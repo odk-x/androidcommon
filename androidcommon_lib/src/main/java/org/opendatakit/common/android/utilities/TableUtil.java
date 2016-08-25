@@ -14,6 +14,7 @@
 package org.opendatakit.common.android.utilities;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.opendatakit.RoleConsts;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.common.android.application.CommonApplication;
@@ -106,6 +107,79 @@ public class TableUtil {
   }
   
   protected TableUtil() {}
+
+  /**
+   * Determine whether table is locked or not
+   *
+   * @param ctxt
+   * @param appName
+   * @param db
+   * @param tableId
+   * @return true if locked. False otherwise.
+   * @throws ServicesAvailabilityException
+   */
+  public boolean isTableLocked(CommonApplication ctxt, String appName, OdkDbHandle db,
+      String tableId) throws
+      ServicesAvailabilityException {
+
+    List<KeyValueStoreEntry> lockedList =
+        ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
+            KeyValueStoreConstants.PARTITION_TABLE,
+            LocalKeyValueStoreConstants.TableSecurity.ASPECT,
+            LocalKeyValueStoreConstants.TableSecurity.KEY_LOCKED);
+    if ( lockedList.size() == 0 ) {
+      return false; // not locked
+    }
+    if ( lockedList.size() != 1 ) {
+      throw new IllegalStateException("should be impossible");
+    }
+    Boolean outcome = KeyValueStoreUtils.getBoolean(appName, lockedList.get(0));
+    return outcome;
+  }
+
+  /**
+   * Determine whether user can add a row to the table
+   *
+   * @param ctxt
+   * @param appName
+   * @param db
+   * @param tableId
+   * @return true if locked. False otherwise.
+   * @throws ServicesAvailabilityException
+   */
+  public boolean canAddRowToTable(CommonApplication ctxt, String appName, OdkDbHandle db,
+      String tableId) throws
+      ServicesAvailabilityException {
+
+    String rolesList = ctxt.getDatabase().getRolesList(appName);
+
+    if ( rolesList != null &&
+        ( rolesList.contains(RoleConsts.ROLE_ADMINISTRATOR) ||
+          rolesList.contains(RoleConsts.ROLE_SUPER_USER)) ) {
+      return true;
+    }
+
+    if ( isTableLocked(ctxt, appName, db, tableId) ) {
+      return false;
+    }
+
+    if ( rolesList != null && rolesList.contains(RoleConsts.ROLE_USER) ) {
+      return true;
+    }
+
+    List<KeyValueStoreEntry> anonAddList = ctxt.getDatabase()
+          .getDBTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
+              LocalKeyValueStoreConstants.TableSecurity.ASPECT,
+              LocalKeyValueStoreConstants.TableSecurity.KEY_UNVERIFIED_USER_CAN_CREATE);
+    if ( anonAddList.size() == 0 ) {
+      return true; // yes if unspecified
+    }
+    if ( anonAddList.size() != 1 ) {
+      throw new IllegalStateException("should be impossible");
+    }
+    Boolean outcome = KeyValueStoreUtils.getBoolean(appName, anonAddList.get(0));
+    return outcome;
+  }
 
   /**
    * Commonly useful wrapper for getRawDisplayName
