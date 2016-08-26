@@ -18,12 +18,10 @@ package org.opendatakit.common.android.views;
 
 import android.net.Uri;
 import android.os.Build;
-import android.os.RemoteException;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.opendatakit.common.android.activities.IOdkCommonActivity;
-import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.provider.FormsProviderAPI;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
@@ -51,7 +49,6 @@ public class OdkCommon {
    * their own.
    *
    * @param activity the activity that will be holding the view
-   * @throws RemoteException
    */
   public OdkCommon(IOdkCommonActivity activity, ODKWebView webView) {
     this.mActivity = activity;

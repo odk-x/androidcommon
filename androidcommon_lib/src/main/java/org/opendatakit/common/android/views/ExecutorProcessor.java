@@ -15,16 +15,16 @@
 package org.opendatakit.common.android.views;
 
 import android.content.ContentValues;
-import android.os.RemoteException;
 
+import android.database.sqlite.SQLiteException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.common.android.data.ColumnDefinition;
 import org.opendatakit.common.android.data.OrderedColumns;
-import org.opendatakit.common.android.data.RawRow;
-import org.opendatakit.common.android.data.RawUserTable;
-import org.opendatakit.common.android.data.Row;
 import org.opendatakit.common.android.data.TableDefinitionEntry;
 import org.opendatakit.common.android.data.UserTable;
+import org.opendatakit.common.android.exception.ActionNotAuthorizedException;
+import org.opendatakit.common.android.exception.ServicesAvailabilityException;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.utilities.ColumnUtil;
 import org.opendatakit.common.android.utilities.DataHelper;
@@ -33,8 +33,12 @@ import org.opendatakit.common.android.utilities.WebLogger;
 import org.opendatakit.database.OdkDbSerializedInterface;
 import org.opendatakit.database.service.KeyValueStoreEntry;
 import org.opendatakit.database.service.OdkDbHandle;
+import org.opendatakit.database.service.OdkDbRow;
+import org.opendatakit.database.service.OdkDbTable;
+import org.opendatakit.database.service.queries.OdkDbResumableQuery;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -102,7 +106,8 @@ public abstract class ExecutorProcessor implements Runnable {
       // we have a request and a viable database interface...
       dbHandle = dbInterface.openDatabase(context.getAppName());
       if (dbHandle == null) {
-        context.reportError(request.callbackJSON, null, "Unable to open database connection");
+        context.reportError(request.callbackJSON, null,
+            IllegalStateException.class.getName() + ": Unable to open database connection");
         context.popRequest(true);
         return;
       }
@@ -111,53 +116,70 @@ public abstract class ExecutorProcessor implements Runnable {
       context.registerActiveConnection(transId, dbHandle);
 
       switch (request.executorRequestType) {
-        case UPDATE_EXECUTOR_CONTEXT:
-          updateExecutorContext();
-          break;
-        case GET_ALL_TABLE_IDS:
-          getAllTableIds();
-          break;
-        case ARBITRARY_QUERY:
-          arbitraryQuery();
-          break;
-        case USER_TABLE_QUERY:
-          userTableQuery();
-          break;
+      case UPDATE_EXECUTOR_CONTEXT:
+        updateExecutorContext();
+        break;
+      case GET_ROLES_LIST:
+        getRolesList();
+        break;
+      case GET_USERS_LIST:
+        getUsersList();
+        break;
+      case GET_ALL_TABLE_IDS:
+        getAllTableIds();
+        break;
+      case ARBITRARY_QUERY:
+        arbitraryQuery();
+        break;
+      case USER_TABLE_QUERY:
+        userTableQuery();
+        break;
       case USER_TABLE_GET_ROWS:
-          getRows();
-          break;
+        getRows();
+        break;
       case USER_TABLE_GET_MOST_RECENT_ROW:
-          getMostRecentRow();
-          break;
+        getMostRecentRow();
+        break;
       case USER_TABLE_UPDATE_ROW:
-          updateRow();
-          break;
-        case USER_TABLE_DELETE_ROW:
-          deleteRow();
-          break;
-        case USER_TABLE_ADD_ROW:
-          addRow();
-          break;
-        case USER_TABLE_ADD_CHECKPOINT:
-          addCheckpoint();
-          break;
-        case USER_TABLE_SAVE_CHECKPOINT_AS_INCOMPLETE:
-          saveCheckpointAsIncomplete();
-          break;
-        case USER_TABLE_SAVE_CHECKPOINT_AS_COMPLETE:
-          saveCheckpointAsComplete();
-          break;
+        updateRow();
+        break;
+      case USER_TABLE_DELETE_ROW:
+        deleteRow();
+        break;
+      case USER_TABLE_ADD_ROW:
+        addRow();
+        break;
+      case USER_TABLE_ADD_CHECKPOINT:
+        addCheckpoint();
+        break;
+      case USER_TABLE_SAVE_CHECKPOINT_AS_INCOMPLETE:
+        saveCheckpointAsIncomplete();
+        break;
+      case USER_TABLE_SAVE_CHECKPOINT_AS_COMPLETE:
+        saveCheckpointAsComplete();
+        break;
       case USER_TABLE_DELETE_ALL_CHECKPOINTS:
         deleteAllCheckpoints();
         break;
-        case USER_TABLE_DELETE_LAST_CHECKPOINT:
-          deleteLastCheckpoint();
-          break;
+      case USER_TABLE_DELETE_LAST_CHECKPOINT:
+        deleteLastCheckpoint();
+        break;
       default:
-        reportErrorAndCleanUp("ExecutorProcessor: unimplemented request!");
+        reportErrorAndCleanUp(IllegalStateException.class.getName() +
+            ": ExecutorProcessor has not implemented this request type!");
       }
-    } catch (RemoteException e) {
-      reportErrorAndCleanUp("unexpected remote exception");
+    } catch (ActionNotAuthorizedException ex) {
+      reportErrorAndCleanUp(ActionNotAuthorizedException.class.getName() +
+          ": Not Authorized - " + ex.getMessage());
+    } catch (ServicesAvailabilityException e) {
+      reportErrorAndCleanUp(ServicesAvailabilityException.class.getName() +
+          ": " + e.getMessage());
+    } catch (SQLiteException e) {
+      reportErrorAndCleanUp(SQLiteException.class.getName() +
+          ": " + e.getMessage());
+    } catch (Throwable t) {
+      reportErrorAndCleanUp(IllegalStateException.class.getName() +
+          ": ExecutorProcessor unexpected exception " + t.toString());
     }
   }
 
@@ -169,7 +191,8 @@ public abstract class ExecutorProcessor implements Runnable {
   private void reportErrorAndCleanUp(String errorMessage) {
     try {
       dbInterface.closeDatabase(context.getAppName(), dbHandle);
-    } catch (RemoteException e) {
+    } catch (Exception e) {
+      // ignore this -- favor first reported error
       WebLogger.getLogger(context.getAppName()).printStackTrace(e);
       WebLogger.getLogger(context.getAppName()).w(TAG, "error while releasing database conneciton");
     } finally {
@@ -187,19 +210,31 @@ public abstract class ExecutorProcessor implements Runnable {
    */
   private void reportSuccessAndCleanUp(ArrayList<List<Object>> data, Map<String, Object> metadata) {
     boolean successful = false;
+    String exceptionString = null;
     try {
       dbInterface.closeDatabase(context.getAppName(), dbHandle);
       successful = true;
-    } catch (RemoteException e) {
+    } catch (ServicesAvailabilityException e) {
+      exceptionString = e.getClass().getName() +
+        ": error while closing database: " + e.toString();
       WebLogger.getLogger(context.getAppName()).printStackTrace(e);
-      WebLogger.getLogger(context.getAppName()).w(TAG, "error while releasing database connection");
+      WebLogger.getLogger(context.getAppName()).w(TAG, exceptionString);
+    } catch (Throwable e) {
+      String msg = e.getMessage();
+      if ( msg == null ) {
+        msg = e.toString();
+      }
+      exceptionString = IllegalStateException.class.getName() +
+        ": unexpected exception " + e.getClass().getName() +
+          " while closing database: " + msg;
+      WebLogger.getLogger(context.getAppName()).printStackTrace(e);
+      WebLogger.getLogger(context.getAppName()).w(TAG, exceptionString);
     } finally {
       context.removeActiveConnection(transId);
       if (successful) {
         context.reportSuccess(request.callbackJSON, null, data, metadata);
       } else {
-        context.reportError(request.callbackJSON, null,
-                "error while commiting transaction and closing database");
+        context.reportError(request.callbackJSON, null, exceptionString);
       }
       context.popRequest(true);
     }
@@ -265,18 +300,28 @@ public abstract class ExecutorProcessor implements Runnable {
     context.popRequest(false);
   }
 
-  private void getAllTableIds() throws RemoteException {
+  private void getRolesList() throws ServicesAvailabilityException {
+    String rolesList = dbInterface.getRolesList(context.getAppName());
+    reportRolesListSuccessAndCleanUp(rolesList);
+  }
+
+  private void getUsersList() throws ServicesAvailabilityException {
+    String usersList = dbInterface.getUsersList(context.getAppName());
+    reportUsersListSuccessAndCleanUp(usersList);
+  }
+
+  private void getAllTableIds() throws ServicesAvailabilityException {
     List<String> tableIds = dbInterface.getAllTableIds(context.getAppName(), dbHandle);
     if (tableIds == null) {
-      reportErrorAndCleanUp("Unable to obtain list of all tableIds");
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to obtain list of all tableIds");
     } else {
       reportListOfTableIdsSuccessAndCleanUp(tableIds);
     }
   }
 
-  private void arbitraryQuery() throws RemoteException {
+  private void arbitraryQuery() throws ServicesAvailabilityException {
     if (request.tableId == null) {
-      reportErrorAndCleanUp("tableId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
       return;
     }
     OrderedColumns columns = context.getOrderedColumns(request.tableId);
@@ -284,11 +329,12 @@ public abstract class ExecutorProcessor implements Runnable {
       columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
       context.putOrderedColumns(request.tableId, columns);
     }
-    RawUserTable rawUserTable = dbInterface
-        .arbitraryQuery(context.getAppName(), dbHandle, request.sqlCommand, request.sqlBindParams);
+    OdkDbTable rawUserTable = dbInterface
+        .arbitrarySqlQuery(context.getAppName(), dbHandle, request.tableId, request.sqlCommand,
+            request.sqlBindParams, request.limit, request.offset);
 
     if ( rawUserTable == null ) {
-      reportErrorAndCleanUp("Unable to rawQuery against: " + request.tableId +
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to rawQuery against: " + request.tableId +
           " sql: " + request.sqlCommand );
     } else {
       reportArbitraryQuerySuccessAndCleanUp(columns, rawUserTable);
@@ -361,7 +407,7 @@ public abstract class ExecutorProcessor implements Runnable {
   }
 
   private void reportArbitraryQuerySuccessAndCleanUp(OrderedColumns columnDefinitions,
-      RawUserTable userTable) throws RemoteException {
+      OdkDbTable userTable) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> entries = null;
 
     // We are assuming that we always have the KVS
@@ -411,17 +457,22 @@ public abstract class ExecutorProcessor implements Runnable {
 
         // assemble the data array
         for (int i = 0; i < userTable.getNumberOfRows(); ++i) {
-          RawRow r = userTable.getRowAtIndex(i);
+          OdkDbRow r = userTable.getRowAtIndex(i);
           Object[] values = new Object[userTable.getWidth()];
 
           for ( idx = 0 ; idx < userTable.getWidth() ; ++idx ) {
-            values[idx] = r.getRawDataType(idx, classes[idx]);
+            values[idx] = r.getDataType(idx, classes[idx]);
           }
           data.add(Arrays.asList(values));
         }
     }
 
     Map<String, Object> metadata = new HashMap<String, Object>();
+    OdkDbResumableQuery q = userTable.getQuery();
+    if ( q != null ) {
+      metadata.put("limit", q.getSqlLimit());
+      metadata.put("offset", q.getSqlOffset());
+    }
     metadata.put("tableId", columnDefinitions.getTableId());
     metadata.put("schemaETag", tdef.getSchemaETag());
     metadata.put("lastDataETag", tdef.getLastDataETag());
@@ -439,7 +490,46 @@ public abstract class ExecutorProcessor implements Runnable {
     reportSuccessAndCleanUp(data, metadata);
   }
 
-  private void reportListOfTableIdsSuccessAndCleanUp(List<String> tableIds) throws RemoteException {
+  private void reportRolesListSuccessAndCleanUp(String rolesList) throws
+      ServicesAvailabilityException {
+
+    ArrayList<String> roles = null;
+    if ( rolesList != null ) {
+      TypeReference<ArrayList<String>> type = new TypeReference<ArrayList<String>>() {};
+      try {
+        roles = ODKFileUtils.mapper.readValue(rolesList, type);
+      } catch (IOException e) {
+        WebLogger.getLogger(context.getAppName()).printStackTrace(e);
+      }
+    }
+
+    Map<String, Object> metadata = new HashMap<String, Object>();
+    metadata.put("roles", roles);
+
+    reportSuccessAndCleanUp(null, metadata);
+  }
+
+  private void reportUsersListSuccessAndCleanUp(String usersList) throws
+      ServicesAvailabilityException {
+
+    ArrayList<HashMap<String,Object>> users = null;
+    if ( usersList != null ) {
+      TypeReference<ArrayList<HashMap<String,Object>>> type = new
+          TypeReference<ArrayList<HashMap<String,Object>>>() {};
+      try {
+        users = ODKFileUtils.mapper.readValue(usersList, type);
+      } catch (IOException e) {
+        WebLogger.getLogger(context.getAppName()).printStackTrace(e);
+      }
+    }
+
+    Map<String, Object> metadata = new HashMap<String, Object>();
+    metadata.put("users", users);
+
+    reportSuccessAndCleanUp(null, metadata);
+  }
+
+  private void reportListOfTableIdsSuccessAndCleanUp(List<String> tableIds) throws ServicesAvailabilityException {
 
     Map<String, Object> metadata = new HashMap<String, Object>();
     metadata.put("tableIds", tableIds);
@@ -448,9 +538,10 @@ public abstract class ExecutorProcessor implements Runnable {
     reportSuccessAndCleanUp(null, metadata);
   }
 
-  private void userTableQuery() throws RemoteException {
+  private void userTableQuery() throws ServicesAvailabilityException {
+    String[] emptyArray = {};
     if (request.tableId == null) {
-      reportErrorAndCleanUp("tableId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
       return;
     }
     OrderedColumns columns = context.getOrderedColumns(request.tableId);
@@ -460,17 +551,21 @@ public abstract class ExecutorProcessor implements Runnable {
     }
     UserTable t = dbInterface
         .rawSqlQuery(context.getAppName(), dbHandle, request.tableId, columns, request.whereClause,
-            request.sqlBindParams, request.groupBy, request.having, request.orderByElementKey,
-            request.orderByDirection);
+            request.sqlBindParams, request.groupBy, request.having,
+            (request.orderByElementKey == null) ?
+                emptyArray :
+                new String[] { request.orderByElementKey }, (request.orderByDirection == null) ?
+                emptyArray :
+                new String[] { request.orderByDirection }, request.limit, request.offset);
 
-    if ( t == null ) {
-      reportErrorAndCleanUp("Unable to query " + request.tableId);
+    if (t == null) {
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to query " + request.tableId);
     } else {
       reportSuccessAndCleanUp(t);
     }
   }
 
-  private void reportSuccessAndCleanUp(UserTable userTable) throws RemoteException {
+  private void reportSuccessAndCleanUp(UserTable userTable) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> entries = null;
 
     // We are assuming that we always have the KVS
@@ -484,12 +579,12 @@ public abstract class ExecutorProcessor implements Runnable {
 
     // assemble the data and metadata objects
     ArrayList<List<Object>> data = new ArrayList<List<Object>>();
-    Map<String, Integer> elementKeyToIndexMap = userTable.getElementKeyMap();
+    Map<String, Integer> elementKeyToIndexMap = userTable.getElementKeyToIndex();
 
     OrderedColumns columnDefinitions = userTable.getColumnDefinitions();
 
     for (int i = 0; i < userTable.getNumberOfRows(); ++i) {
-      Row r = userTable.getRowAtIndex(i);
+      OdkDbRow r = userTable.getRowAtIndex(i);
       List<Object> values = Arrays
           .asList(new Object[ADMIN_COLUMNS.size() + elementKeyToIndexMap.size()]);
       data.add(values);
@@ -497,10 +592,10 @@ public abstract class ExecutorProcessor implements Runnable {
       for (String name : ADMIN_COLUMNS) {
         int idx = elementKeyToIndexMap.get(name);
         if (name.equals(DataTableColumns.CONFLICT_TYPE)) {
-          Integer value = r.getRawDataType(name, Integer.class);
+          Integer value = r.getDataType(name, Integer.class);
           values.set(idx, value);
         } else {
-          String value = r.getRawDataType(name, String.class);
+          String value = r.getDataType(name, String.class);
           values.set(idx, value);
         }
       }
@@ -512,13 +607,18 @@ public abstract class ExecutorProcessor implements Runnable {
         ColumnDefinition defn = columnDefinitions.find(name);
         ElementDataType dataType = defn.getType().getDataType();
         Class<?> clazz = ColumnUtil.get().getOdkDataIfType(dataType);
-        Object value = r.getRawDataType(name, clazz);
+        Object value = r.getDataType(name, clazz);
         values.set(idx, value);
       }
     }
 
     Map<String, Object> metadata = new HashMap<String, Object>();
     metadata.put("tableId", userTable.getTableId());
+    OdkDbResumableQuery q = userTable.getQuery();
+    if ( q != null ) {
+      metadata.put("limit", q.getSqlLimit());
+      metadata.put("offset", q.getSqlOffset());
+    }
     metadata.put("schemaETag", tdef.getSchemaETag());
     metadata.put("lastDataETag", tdef.getLastDataETag());
     metadata.put("lastSyncTime", tdef.getLastSyncTime());
@@ -540,13 +640,13 @@ public abstract class ExecutorProcessor implements Runnable {
   protected abstract void extendQueryMetadata(OdkDbHandle dbHandle,
       List<KeyValueStoreEntry> entries, UserTable userTable, Map<String, Object> metadata);
 
-  private void getRows() throws RemoteException {
+  private void getRows() throws ServicesAvailabilityException, ActionNotAuthorizedException {
     if (request.tableId == null) {
-      reportErrorAndCleanUp("tableId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
       return;
     }
     if (request.rowId == null) {
-      reportErrorAndCleanUp("rowId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": rowId cannot be null");
       return;
     }
     OrderedColumns columns = context.getOrderedColumns(request.tableId);
@@ -558,20 +658,20 @@ public abstract class ExecutorProcessor implements Runnable {
         .getRowsWithId(context.getAppName(), dbHandle, request.tableId, columns, request.rowId);
 
     if ( t == null ) {
-      reportErrorAndCleanUp("Unable to getRows for " +
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to getRows for " +
           request.tableId + "._id = " +  request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
     }
   }
 
-  private void getMostRecentRow() throws RemoteException {
+  private void getMostRecentRow() throws ServicesAvailabilityException, ActionNotAuthorizedException {
     if (request.tableId == null) {
-      reportErrorAndCleanUp("tableId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
       return;
     }
     if (request.rowId == null) {
-      reportErrorAndCleanUp("rowId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": rowId cannot be null");
       return;
     }
     OrderedColumns columns = context.getOrderedColumns(request.tableId);
@@ -584,20 +684,20 @@ public abstract class ExecutorProcessor implements Runnable {
             request.rowId);
 
     if ( t == null ) {
-      reportErrorAndCleanUp("Unable to getMostRecentRow for " +
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to getMostRecentRow for " +
           request.tableId + "._id = " +  request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
     }
   }
 
-  private void updateRow() throws RemoteException {
+  private void updateRow() throws ServicesAvailabilityException, ActionNotAuthorizedException {
     if (request.tableId == null) {
-      reportErrorAndCleanUp("tableId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
       return;
     }
     if (request.rowId == null) {
-      reportErrorAndCleanUp("rowId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": rowId cannot be null");
       return;
     }
     OrderedColumns columns = context.getOrderedColumns(request.tableId);
@@ -612,20 +712,20 @@ public abstract class ExecutorProcessor implements Runnable {
             request.rowId);
 
     if ( t == null ) {
-      reportErrorAndCleanUp("Unable to updateRow for " +
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to updateRow for " +
           request.tableId + "._id = " +  request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
     }
   }
 
-  private void deleteRow() throws RemoteException {
+  private void deleteRow() throws ServicesAvailabilityException, ActionNotAuthorizedException {
     if (request.tableId == null) {
-      reportErrorAndCleanUp("tableId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
       return;
     }
     if (request.rowId == null) {
-      reportErrorAndCleanUp("rowId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": rowId cannot be null");
       return;
     }
     OrderedColumns columns = context.getOrderedColumns(request.tableId);
@@ -638,20 +738,20 @@ public abstract class ExecutorProcessor implements Runnable {
         .deleteRowWithId(context.getAppName(), dbHandle, request.tableId, columns, request.rowId);
 
     if ( t == null ) {
-      reportErrorAndCleanUp("Unable to deleteRow for " +
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to deleteRow for " +
           request.tableId + "._id = " +  request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
     }
   }
 
-  private void addRow() throws RemoteException {
+  private void addRow() throws ServicesAvailabilityException, ActionNotAuthorizedException {
     if (request.tableId == null) {
-      reportErrorAndCleanUp("tableId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
       return;
     }
     if (request.rowId == null) {
-      reportErrorAndCleanUp("rowId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": rowId cannot be null");
       return;
     }
     OrderedColumns columns = context.getOrderedColumns(request.tableId);
@@ -666,20 +766,20 @@ public abstract class ExecutorProcessor implements Runnable {
             request.rowId);
 
     if ( t == null ) {
-      reportErrorAndCleanUp("Unable to addRow for " +
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to addRow for " +
           request.tableId + "._id = " +  request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
     }
   }
 
-  private void addCheckpoint() throws RemoteException {
+  private void addCheckpoint() throws ServicesAvailabilityException, ActionNotAuthorizedException {
     if ( request.tableId == null ) {
-      reportErrorAndCleanUp("tableId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
       return;
     }
     if ( request.rowId == null ) {
-      reportErrorAndCleanUp("rowId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": rowId cannot be null");
       return;
     }
     OrderedColumns columns = context.getOrderedColumns(request.tableId);
@@ -694,20 +794,20 @@ public abstract class ExecutorProcessor implements Runnable {
             cvValues, request.rowId);
 
     if ( t == null ) {
-      reportErrorAndCleanUp("Unable to addCheckpoint for " +
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to addCheckpoint for " +
           request.tableId + "._id = " +  request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
     }
   }
 
-  private void saveCheckpointAsIncomplete() throws RemoteException {
+  private void saveCheckpointAsIncomplete() throws ServicesAvailabilityException, ActionNotAuthorizedException {
     if (request.tableId == null) {
-      reportErrorAndCleanUp("tableId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
       return;
     }
     if (request.rowId == null) {
-      reportErrorAndCleanUp("rowId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": rowId cannot be null");
       return;
     }
     OrderedColumns columns = context.getOrderedColumns(request.tableId);
@@ -716,26 +816,25 @@ public abstract class ExecutorProcessor implements Runnable {
       context.putOrderedColumns(request.tableId, columns);
     }
 
-    ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
     UserTable t = dbInterface
         .saveAsIncompleteMostRecentCheckpointRowWithId(context.getAppName(), dbHandle,
-            request.tableId, columns, cvValues, request.rowId);
+            request.tableId, columns, request.rowId);
 
     if ( t == null ) {
-      reportErrorAndCleanUp("Unable to saveCheckpointAsIncomplete for " +
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to saveCheckpointAsIncomplete for " +
           request.tableId + "._id = " +  request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
     }
   }
 
-  private void saveCheckpointAsComplete() throws RemoteException {
+  private void saveCheckpointAsComplete() throws ServicesAvailabilityException, ActionNotAuthorizedException {
     if (request.tableId == null) {
-      reportErrorAndCleanUp("tableId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
       return;
     }
     if (request.rowId == null) {
-      reportErrorAndCleanUp("rowId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": rowId cannot be null");
       return;
     }
     OrderedColumns columns = context.getOrderedColumns(request.tableId);
@@ -744,26 +843,25 @@ public abstract class ExecutorProcessor implements Runnable {
       context.putOrderedColumns(request.tableId, columns);
     }
 
-    ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
     UserTable t = dbInterface
         .saveAsCompleteMostRecentCheckpointRowWithId(context.getAppName(), dbHandle,
-            request.tableId, columns, cvValues, request.rowId);
+            request.tableId, columns, request.rowId);
 
     if ( t == null ) {
-      reportErrorAndCleanUp("Unable to saveCheckpointAsComplete for " +
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to saveCheckpointAsComplete for " +
           request.tableId + "._id = " +  request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
     }
   }
 
-  private void deleteLastCheckpoint() throws RemoteException {
+  private void deleteLastCheckpoint() throws ServicesAvailabilityException, ActionNotAuthorizedException {
     if ( request.tableId == null ) {
-      reportErrorAndCleanUp("tableId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
       return;
     }
     if ( request.rowId == null ) {
-      reportErrorAndCleanUp("rowId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": rowId cannot be null");
       return;
     }
 
@@ -778,20 +876,20 @@ public abstract class ExecutorProcessor implements Runnable {
             request.rowId);
 
     if ( t == null ) {
-      reportErrorAndCleanUp("Unable to deleteLastCheckpoint for " +
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to deleteLastCheckpoint for " +
           request.tableId + "._id = " +  request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
     }
   }
 
-  private void deleteAllCheckpoints() throws RemoteException {
+  private void deleteAllCheckpoints() throws ServicesAvailabilityException, ActionNotAuthorizedException {
     if ( request.tableId == null ) {
-      reportErrorAndCleanUp("tableId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
       return;
     }
     if ( request.rowId == null ) {
-      reportErrorAndCleanUp("rowId cannot be null");
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": rowId cannot be null");
       return;
     }
 
@@ -807,7 +905,7 @@ public abstract class ExecutorProcessor implements Runnable {
             request.rowId);
 
     if ( t == null ) {
-      reportErrorAndCleanUp("Unable to deleteAllCheckpoints for " +
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to deleteAllCheckpoints for " +
           request.tableId + "._id = " +  request.rowId);
     } else {
       reportSuccessAndCleanUp(t);

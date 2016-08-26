@@ -1,5 +1,7 @@
 package org.opendatakit.common.android.data;
 
+import org.opendatakit.database.service.OdkDbRow;
+
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -27,7 +29,7 @@ public class ColorGuideGroup {
 
     for (int i = 0; i < mUT.getNumberOfRows(); i++) {
       ColorGuide tcg = mCRG.getColorGuide(mUT.getColumnDefinitions(), mUT.getRowAtIndex(i));
-      mRowIdToColors.put(mUT.getRowAtIndex(i).getRowId(), tcg);
+      mRowIdToColors.put(mUT.getRowId(i), tcg);
     }
 
   }
@@ -39,7 +41,7 @@ public class ColorGuideGroup {
   public ColorGuide getColorGuideForRowIndex(int i) {
     ColorGuide cg = null;
 
-    Row colorRow = null;
+    OdkDbRow colorRow = null;
 
     try {
       colorRow = mUT.getRowAtIndex(i);
@@ -48,8 +50,8 @@ public class ColorGuideGroup {
     }
 
     if (colorRow != null && mRowIdToColors != null) {
-      if (mRowIdToColors.containsKey(colorRow.getRowId())) {
-        cg = mRowIdToColors.get(colorRow.getRowId());
+      if (mRowIdToColors.containsKey(mUT.getRowId(i))) {
+        cg = mRowIdToColors.get(mUT.getRowId(i));
       }
     }
     return cg;

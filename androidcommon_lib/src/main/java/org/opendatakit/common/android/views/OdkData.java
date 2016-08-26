@@ -167,11 +167,35 @@ public class OdkData {
 
     if (rowId != null && !rowId.isEmpty()) {
       query(tableId, DataTableColumns.ID + "=?", new String[] { rowId }, null, null,
-          DataTableColumns.SAVEPOINT_TIMESTAMP, descOrder, true, callbackJSON);
+          DataTableColumns.SAVEPOINT_TIMESTAMP, descOrder, null, null, true, callbackJSON);
     } else {
-      query(tableId, whereClause, selArgs, groupBy, havingClause, orderByElemKey, orderByDir, true,
-          callbackJSON);
+      query(tableId, whereClause, selArgs, groupBy, havingClause, orderByElemKey, orderByDir,
+          null, null, true, callbackJSON);
     }
+  }
+
+  /**
+   * Get all the roles granted to this user by the server.
+   *
+   * @param callbackJSON
+   */
+  public void getRoles(String callbackJSON) {
+    logDebug("getRoles");
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.GET_ROLES_LIST, callbackJSON);
+
+    queueRequest(request);
+  }
+
+  /**
+   * Get all the users on the server and their roles.
+   *
+   * @param callbackJSON
+   */
+  public void getUsers(String callbackJSON) {
+    logDebug("getUsers");
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.GET_USERS_LIST, callbackJSON);
+
+    queueRequest(request);
   }
 
   /**
@@ -196,16 +220,19 @@ public class OdkData {
    * @param having                  The having clause
    * @param orderByElementKey       The column to order by
    * @param orderByDirection        'ASC' or 'DESC' ordering
+   * @param limit         The maximum number of rows to return (null returns all)
+   * @param offset        The offset into the result set of the first row to return (null ok)
    * @param includeKeyValueStoreMap true if the keyValueStoreMap should be returned
    * @param callbackJSON            The JSON object used by the JS layer to recover the callback function
    *                                that can process the response
    */
-  public void query(String tableId, String whereClause, String[] sqlBindParams, String[] groupBy,
+  public void query(String tableId, String whereClause, Object[] sqlBindParams, String[] groupBy,
       String having, String orderByElementKey, String orderByDirection,
-      boolean includeKeyValueStoreMap, String callbackJSON) {
+      Integer limit, Integer offset, boolean includeKeyValueStoreMap, String callbackJSON) {
     logDebug("query: " + tableId + " whereClause: " + whereClause);
     ExecutorRequest request = new ExecutorRequest(tableId, whereClause, sqlBindParams, groupBy,
-        having, orderByElementKey, orderByDirection, includeKeyValueStoreMap, callbackJSON);
+        having, orderByElementKey, orderByDirection, limit, offset, includeKeyValueStoreMap,
+        callbackJSON);
 
     queueRequest(request);
   }
@@ -220,14 +247,17 @@ public class OdkData {
    * @param sqlCommand    The Select statement to issue. It can reference any table in the database,
    *                      including system tables.
    * @param sqlBindParams The array of bind parameter values (including any in the having clause)
+   * @param limit         The maximum number of rows to return (null returns all)
+   * @param offset        The offset into the result set of the first row to return (null ok)
    * @param callbackJSON  The JSON object used by the JS layer to recover the callback function
    *                      that can process the response
    * @return see description in class header
    */
-  public void arbitraryQuery(String tableId, String sqlCommand, String[] sqlBindParams,
-      String callbackJSON) {
+  public void arbitraryQuery(String tableId, String sqlCommand, Object[] sqlBindParams,
+      Integer limit, Integer offset, String callbackJSON) {
     logDebug("arbitraryQuery: " + tableId + " sqlCommand: " + sqlCommand);
-    ExecutorRequest request = new ExecutorRequest(tableId, sqlCommand, sqlBindParams, callbackJSON);
+    ExecutorRequest request = new ExecutorRequest(tableId, sqlCommand, sqlBindParams,
+        limit, offset, callbackJSON);
 
     queueRequest(request);
   }
