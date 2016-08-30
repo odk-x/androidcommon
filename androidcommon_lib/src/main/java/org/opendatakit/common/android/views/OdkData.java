@@ -16,12 +16,15 @@ package org.opendatakit.common.android.views;
 
 import android.os.Bundle;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.opendatakit.IntentConsts;
 import org.opendatakit.common.android.activities.IOdkDataActivity;
 import org.opendatakit.common.android.provider.DataTableColumns;
+import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
 
 import java.lang.ref.WeakReference;
+import java.util.HashMap;
 
 public class OdkData {
 
@@ -316,6 +319,37 @@ public class OdkData {
     queueRequest(request);
   }
 
+  /**
+   * Update a row in the table with the given filter type and value.
+   *
+   * @param tableId
+   * @param filterType
+   * @param filterValue
+   * @param rowId
+   * @param callbackJSON
+    */
+  public void changeAccessFilter(String tableId, String filterType, String
+      filterValue, String rowId, String callbackJSON) {
+
+    logDebug("changeAccessFilter: " + tableId + " _id: " + rowId);
+    HashMap<String,String> valueMap = new HashMap<String,String>();
+    valueMap.put(DataTableColumns.FILTER_TYPE, filterType);
+    valueMap.put(DataTableColumns.FILTER_VALUE, filterValue);
+
+    String stringifiedJSON = null;
+    try {
+      stringifiedJSON = ODKFileUtils.mapper.writeValueAsString(valueMap);
+    } catch (JsonProcessingException e) {
+      WebLogger.getLogger(mActivity.getAppName()).printStackTrace(e);
+      return;
+    }
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType
+        .USER_TABLE_CHANGE_ACCESS_FILTER_ROW,
+        tableId, stringifiedJSON, rowId, callbackJSON);
+
+    queueRequest(request);
+
+  }
   /**
    * Delete a row from the table
    *

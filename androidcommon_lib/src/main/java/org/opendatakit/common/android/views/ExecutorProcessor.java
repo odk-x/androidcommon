@@ -143,6 +143,9 @@ public abstract class ExecutorProcessor implements Runnable {
       case USER_TABLE_UPDATE_ROW:
         updateRow();
         break;
+      case USER_TABLE_CHANGE_ACCESS_FILTER_ROW:
+        changeAccessFilterRow();
+        break;
       case USER_TABLE_DELETE_ROW:
         deleteRow();
         break;
@@ -713,6 +716,38 @@ public abstract class ExecutorProcessor implements Runnable {
 
     if ( t == null ) {
       reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to updateRow for " +
+          request.tableId + "._id = " +  request.rowId);
+    } else {
+      reportSuccessAndCleanUp(t);
+    }
+  }
+
+  private void changeAccessFilterRow() throws ServicesAvailabilityException,
+      ActionNotAuthorizedException {
+    if (request.tableId == null) {
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
+      return;
+    }
+    if (request.rowId == null) {
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": rowId cannot be null");
+      return;
+    }
+    OrderedColumns columns = context.getOrderedColumns(request.tableId);
+    if (columns == null) {
+      columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
+      context.putOrderedColumns(request.tableId, columns);
+    }
+
+    ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
+    String filterType = cvValues.getAsString(DataTableColumns.FILTER_TYPE);
+    String filterValue = cvValues.getAsString(DataTableColumns.FILTER_VALUE);
+
+    UserTable t = dbInterface
+        .changeRowFilterWithId(context.getAppName(), dbHandle, request.tableId,
+            columns, filterType, filterValue, request.rowId);
+
+    if ( t == null ) {
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to changeAccessFilterRow for " +
           request.tableId + "._id = " +  request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
