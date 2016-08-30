@@ -14,11 +14,7 @@
 
 package org.opendatakit.common.android.views;
 
-import android.webkit.ConsoleMessage;
-import android.webkit.JsResult;
-import android.webkit.ValueCallback;
-import android.webkit.WebChromeClient;
-import android.webkit.WebView;
+import android.webkit.*;
 
 public class ODKWebChromeClient extends WebChromeClient {
 
@@ -61,6 +57,12 @@ public class ODKWebChromeClient extends WebChromeClient {
   public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
     wrappedWebView.getLogger().w(t, url + ": " + message);
     return false;
+  }
+
+  @Override
+  public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback
+      callback) {
+    callback.invoke(origin, true, false);
   }
 
 }
