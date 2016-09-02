@@ -143,6 +143,9 @@ public abstract class ExecutorProcessor implements Runnable {
       case USER_TABLE_UPDATE_ROW:
         updateRow();
         break;
+      case USER_TABLE_CHANGE_ACCESS_FILTER_ROW:
+        changeAccessFilterRow();
+        break;
       case USER_TABLE_DELETE_ROW:
         deleteRow();
         break;
@@ -259,9 +262,12 @@ public abstract class ExecutorProcessor implements Runnable {
       for (Object okey : map.keySet()) {
         String key = (String) okey;
         // the only 3 metadata fields that the user should update are formId, locale, and creator
+        // and administrators or super-users can modify the filter type and filter value
         if ( !key.equals(DataTableColumns.FORM_ID) &&
              !key.equals(DataTableColumns.LOCALE) &&
-             !key.equals(DataTableColumns.SAVEPOINT_CREATOR) ) {
+             !key.equals(DataTableColumns.SAVEPOINT_CREATOR) &&
+             !key.equals(DataTableColumns.FILTER_TYPE) &&
+             !key.equals(DataTableColumns.FILTER_VALUE) ) {
           ColumnDefinition cd = columns.find(key);
           if (!cd.isUnitOfRetention()) {
             throw new IllegalStateException("key is not a database column name: " + key);
@@ -473,6 +479,7 @@ public abstract class ExecutorProcessor implements Runnable {
       metadata.put("limit", q.getSqlLimit());
       metadata.put("offset", q.getSqlOffset());
     }
+    metadata.put("canCreateRow", userTable.getEffectiveAccessCreateRow());
     metadata.put("tableId", columnDefinitions.getTableId());
     metadata.put("schemaETag", tdef.getSchemaETag());
     metadata.put("lastDataETag", tdef.getLastDataETag());
@@ -580,23 +587,25 @@ public abstract class ExecutorProcessor implements Runnable {
     // assemble the data and metadata objects
     ArrayList<List<Object>> data = new ArrayList<List<Object>>();
     Map<String, Integer> elementKeyToIndexMap = userTable.getElementKeyToIndex();
+    Integer idxEffectiveAccessColumn =
+        elementKeyToIndexMap.get(DataTableColumns.EFFECTIVE_ACCESS);
 
     OrderedColumns columnDefinitions = userTable.getColumnDefinitions();
 
     for (int i = 0; i < userTable.getNumberOfRows(); ++i) {
       OdkDbRow r = userTable.getRowAtIndex(i);
-      List<Object> values = Arrays
-          .asList(new Object[ADMIN_COLUMNS.size() + elementKeyToIndexMap.size()]);
-      data.add(values);
+      Object[] typedValues = new Object[elementKeyToIndexMap.size()];
+      List<Object> typedValuesAsList = Arrays.asList(typedValues);
+      data.add(typedValuesAsList);
 
       for (String name : ADMIN_COLUMNS) {
         int idx = elementKeyToIndexMap.get(name);
         if (name.equals(DataTableColumns.CONFLICT_TYPE)) {
           Integer value = r.getDataType(name, Integer.class);
-          values.set(idx, value);
+          typedValues[idx] = value;
         } else {
           String value = r.getDataType(name, String.class);
-          values.set(idx, value);
+          typedValues[idx] = value;
         }
       }
 
@@ -608,17 +617,24 @@ public abstract class ExecutorProcessor implements Runnable {
         ElementDataType dataType = defn.getType().getDataType();
         Class<?> clazz = ColumnUtil.get().getOdkDataIfType(dataType);
         Object value = r.getDataType(name, clazz);
-        values.set(idx, value);
+        typedValues[idx] = value;
+      }
+
+      if ( idxEffectiveAccessColumn != null ) {
+
+        typedValues[idxEffectiveAccessColumn] =
+            r.getDataType(DataTableColumns.EFFECTIVE_ACCESS, String.class);
       }
     }
 
     Map<String, Object> metadata = new HashMap<String, Object>();
-    metadata.put("tableId", userTable.getTableId());
     OdkDbResumableQuery q = userTable.getQuery();
     if ( q != null ) {
       metadata.put("limit", q.getSqlLimit());
       metadata.put("offset", q.getSqlOffset());
     }
+    metadata.put("canCreateRow", userTable.getEffectiveAccessCreateRow());
+    metadata.put("tableId", userTable.getTableId());
     metadata.put("schemaETag", tdef.getSchemaETag());
     metadata.put("lastDataETag", tdef.getLastDataETag());
     metadata.put("lastSyncTime", tdef.getLastSyncTime());
@@ -713,6 +729,38 @@ public abstract class ExecutorProcessor implements Runnable {
 
     if ( t == null ) {
       reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to updateRow for " +
+          request.tableId + "._id = " +  request.rowId);
+    } else {
+      reportSuccessAndCleanUp(t);
+    }
+  }
+
+  private void changeAccessFilterRow() throws ServicesAvailabilityException,
+      ActionNotAuthorizedException {
+    if (request.tableId == null) {
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
+      return;
+    }
+    if (request.rowId == null) {
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": rowId cannot be null");
+      return;
+    }
+    OrderedColumns columns = context.getOrderedColumns(request.tableId);
+    if (columns == null) {
+      columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
+      context.putOrderedColumns(request.tableId, columns);
+    }
+
+    ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
+    String filterType = cvValues.getAsString(DataTableColumns.FILTER_TYPE);
+    String filterValue = cvValues.getAsString(DataTableColumns.FILTER_VALUE);
+
+    UserTable t = dbInterface
+        .changeRowFilterWithId(context.getAppName(), dbHandle, request.tableId,
+            columns, filterType, filterValue, request.rowId);
+
+    if ( t == null ) {
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to changeAccessFilterRow for " +
           request.tableId + "._id = " +  request.rowId);
     } else {
       reportSuccessAndCleanUp(t);

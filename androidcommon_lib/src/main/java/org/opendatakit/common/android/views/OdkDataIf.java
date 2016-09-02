@@ -326,6 +326,23 @@ public class OdkDataIf {
   }
 
   /**
+   * Update a row in the table with the given filter type and value.
+   *
+   * @param tableId         The table being updated
+   * @param filterType      cannot be null. One of DEFAULT, MODIFY, READ_ONLY, HIDDEN
+   * @param filterValue     can be null. userid of owner of the row.
+   * @param rowId           The rowId of the row being changed.
+   * @param callbackJSON    The JSON object used by the JS layer to recover the callback function
+   *                        that can process the response
+   */
+  @android.webkit.JavascriptInterface public void changeAccessFilterOfRow(String tableId,
+      String filterType, String filterValue, String rowId, String callbackJSON) {
+    if (isInactive())
+      return;
+    weakData.get().changeAccessFilterOfRow(tableId, filterType, filterValue, rowId, callbackJSON);
+  }
+
+  /**
    * Delete a row from the table
    *
    * @param tableId         The table being updated
