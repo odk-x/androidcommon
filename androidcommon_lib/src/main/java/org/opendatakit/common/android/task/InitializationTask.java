@@ -14,19 +14,10 @@
 
 package org.opendatakit.common.android.task;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileFilter;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.*;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
+import android.content.ContentValues;
+import android.database.Cursor;
+import android.net.Uri;
+import android.os.AsyncTask;
 
 import org.apache.commons.io.FileUtils;
 import org.opendatakit.androidcommon.R;
@@ -42,11 +33,26 @@ import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
 import org.opendatakit.database.service.OdkDbHandle;
 
-import android.content.ContentValues;
-import android.content.res.AssetFileDescriptor;
-import android.database.Cursor;
-import android.net.Uri;
-import android.os.AsyncTask;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileFilter;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * Background task for exploding the built-in zipfile resource into the
@@ -445,25 +451,12 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
       }
     });
 
-    List<String> tableIds;
     ODKFileUtils.assertDirectoryStructure(appName);
-    OdkDbHandle db = null;
-    try {
-      db = getApplication().getDatabase().openDatabase(appName);
-      tableIds = getApplication().getDatabase().getAllTableIds(appName, db);
-    } finally {
-      if (db != null) {
-        getApplication().getDatabase().closeDatabase(appName, db);
-      }
-    }
+
 
     for (int i = 0; i < tableIdDirs.length; ++i) {
       File tableIdDir = tableIdDirs[i];
       String tableId = tableIdDir.getName();
-      if (tableIds.contains(tableId)) {
-        // assume it is up-to-date
-        continue;
-      }
 
       File definitionCsv = new File(ODKFileUtils.getTableDefinitionCsvFile(appName, tableId));
       File propertiesCsv = new File(ODKFileUtils.getTablePropertiesCsvFile(appName, tableId));
@@ -484,6 +477,16 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
           mPendingResult.add(appContext.getString(R.string.defining_tableid_error, tableId));
           WebLogger.getLogger(appName).e(t, "Unexpected error during update from csv");
         }
+      }
+    }
+    
+    OdkDbHandle db = null;
+    try {
+      db = getApplication().getDatabase().openDatabase(appName);
+      getApplication().getDatabase().deleteAppAndTableLevelManifestSyncETags(appName, db);
+    } finally {
+      if (db != null) {
+        getApplication().getDatabase().closeDatabase(appName, db);
       }
     }
 
