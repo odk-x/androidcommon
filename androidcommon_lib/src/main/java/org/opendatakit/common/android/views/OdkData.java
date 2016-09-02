@@ -328,7 +328,7 @@ public class OdkData {
    * @param rowId
    * @param callbackJSON
     */
-  public void changeAccessFilter(String tableId, String filterType, String
+  public void changeAccessFilterOfRow(String tableId, String filterType, String
       filterValue, String rowId, String callbackJSON) {
 
     logDebug("changeAccessFilter: " + tableId + " _id: " + rowId);

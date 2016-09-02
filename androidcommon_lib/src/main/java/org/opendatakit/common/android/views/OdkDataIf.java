@@ -335,11 +335,11 @@ public class OdkDataIf {
    * @param callbackJSON    The JSON object used by the JS layer to recover the callback function
    *                        that can process the response
    */
-  @android.webkit.JavascriptInterface public void changeAccessFilter(String tableId,
+  @android.webkit.JavascriptInterface public void changeAccessFilterOfRow(String tableId,
       String filterType, String filterValue, String rowId, String callbackJSON) {
     if (isInactive())
       return;
-    weakData.get().changeAccessFilter(tableId, filterType, filterValue, rowId, callbackJSON);
+    weakData.get().changeAccessFilterOfRow(tableId, filterType, filterValue, rowId, callbackJSON);
   }
 
   /**

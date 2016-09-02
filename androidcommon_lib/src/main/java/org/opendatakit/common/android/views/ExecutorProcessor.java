@@ -262,9 +262,12 @@ public abstract class ExecutorProcessor implements Runnable {
       for (Object okey : map.keySet()) {
         String key = (String) okey;
         // the only 3 metadata fields that the user should update are formId, locale, and creator
+        // and administrators or super-users can modify the filter type and filter value
         if ( !key.equals(DataTableColumns.FORM_ID) &&
              !key.equals(DataTableColumns.LOCALE) &&
-             !key.equals(DataTableColumns.SAVEPOINT_CREATOR) ) {
+             !key.equals(DataTableColumns.SAVEPOINT_CREATOR) &&
+             !key.equals(DataTableColumns.FILTER_TYPE) &&
+             !key.equals(DataTableColumns.FILTER_VALUE) ) {
           ColumnDefinition cd = columns.find(key);
           if (!cd.isUnitOfRetention()) {
             throw new IllegalStateException("key is not a database column name: " + key);
@@ -584,23 +587,25 @@ public abstract class ExecutorProcessor implements Runnable {
     // assemble the data and metadata objects
     ArrayList<List<Object>> data = new ArrayList<List<Object>>();
     Map<String, Integer> elementKeyToIndexMap = userTable.getElementKeyToIndex();
+    Integer idxEffectiveAccessColumn =
+        elementKeyToIndexMap.get(DataTableColumns.EFFECTIVE_ACCESS);
 
     OrderedColumns columnDefinitions = userTable.getColumnDefinitions();
 
     for (int i = 0; i < userTable.getNumberOfRows(); ++i) {
       OdkDbRow r = userTable.getRowAtIndex(i);
-      List<Object> values = Arrays
-          .asList(new Object[ADMIN_COLUMNS.size() + elementKeyToIndexMap.size()]);
-      data.add(values);
+      Object[] typedValues = new Object[elementKeyToIndexMap.size()];
+      List<Object> typedValuesAsList = Arrays.asList(typedValues);
+      data.add(typedValuesAsList);
 
       for (String name : ADMIN_COLUMNS) {
         int idx = elementKeyToIndexMap.get(name);
         if (name.equals(DataTableColumns.CONFLICT_TYPE)) {
           Integer value = r.getDataType(name, Integer.class);
-          values.set(idx, value);
+          typedValues[idx] = value;
         } else {
           String value = r.getDataType(name, String.class);
-          values.set(idx, value);
+          typedValues[idx] = value;
         }
       }
 
@@ -612,7 +617,13 @@ public abstract class ExecutorProcessor implements Runnable {
         ElementDataType dataType = defn.getType().getDataType();
         Class<?> clazz = ColumnUtil.get().getOdkDataIfType(dataType);
         Object value = r.getDataType(name, clazz);
-        values.set(idx, value);
+        typedValues[idx] = value;
+      }
+
+      if ( idxEffectiveAccessColumn != null ) {
+
+        typedValues[idxEffectiveAccessColumn] =
+            r.getDataType(DataTableColumns.EFFECTIVE_ACCESS, String.class);
       }
     }
 
