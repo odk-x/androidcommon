@@ -15,6 +15,28 @@
  */
 package org.opendatakit.common.android.utilities;
 
+import android.content.ContentValues;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.CharEncoding;
+import org.opendatakit.aggregate.odktables.rest.ConflictType;
+import org.opendatakit.aggregate.odktables.rest.ElementDataType;
+import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
+import org.opendatakit.aggregate.odktables.rest.RFC4180CsvReader;
+import org.opendatakit.aggregate.odktables.rest.RFC4180CsvWriter;
+import org.opendatakit.aggregate.odktables.rest.SavepointTypeManipulator;
+import org.opendatakit.aggregate.odktables.rest.SyncState;
+import org.opendatakit.aggregate.odktables.rest.TableConstants;
+import org.opendatakit.common.android.application.CommonApplication;
+import org.opendatakit.common.android.data.ColumnDefinition;
+import org.opendatakit.common.android.data.OrderedColumns;
+import org.opendatakit.common.android.data.UserTable;
+import org.opendatakit.common.android.exception.ServicesAvailabilityException;
+import org.opendatakit.common.android.provider.DataTableColumns;
+import org.opendatakit.database.service.KeyValueStoreEntry;
+import org.opendatakit.database.service.OdkDbHandle;
+import org.opendatakit.database.service.OdkDbRow;
+
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
@@ -24,43 +46,11 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.UUID;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.CharEncoding;
-import org.opendatakit.aggregate.odktables.rest.ConflictType;
-import org.opendatakit.aggregate.odktables.rest.ElementDataType;
-import org.opendatakit.aggregate.odktables.rest.ElementType;
-import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
-import org.opendatakit.aggregate.odktables.rest.RFC4180CsvReader;
-import org.opendatakit.aggregate.odktables.rest.RFC4180CsvWriter;
-import org.opendatakit.aggregate.odktables.rest.SavepointTypeManipulator;
-import org.opendatakit.aggregate.odktables.rest.SyncState;
-import org.opendatakit.aggregate.odktables.rest.TableConstants;
-import org.opendatakit.aggregate.odktables.rest.entity.Column;
-import org.opendatakit.common.android.application.CommonApplication;
-import org.opendatakit.common.android.data.ColumnDefinition;
-import org.opendatakit.common.android.data.ColumnList;
-import org.opendatakit.common.android.data.OrderedColumns;
-import org.opendatakit.common.android.data.UserTable;
-import org.opendatakit.common.android.data.Row;
-import org.opendatakit.common.android.provider.ColumnDefinitionsColumns;
-import org.opendatakit.common.android.provider.DataTableColumns;
-import org.opendatakit.common.android.provider.KeyValueStoreColumns;
-import org.opendatakit.database.OdkDbSerializedInterface;
-import org.opendatakit.database.service.KeyValueStoreEntry;
-import org.opendatakit.database.service.OdkDbHandle;
-
-import android.content.ContentValues;
-import android.os.RemoteException;
-import org.apache.commons.io.FileUtils;
 
 /**
  * Various utilities for importing/exporting tables from/to CSV.
@@ -110,17 +100,17 @@ public class CsvUtil {
    * <li>tableid.definition.csv - data table column definition</li>
    * <li>tableid.properties.csv - key-value store of this table</li>
    * </ul>
-    *
-    * @param exportListener
-    * @param db
-    * @param tableId
-    * @param orderedDefns
-    * @param fileQualifier
-    * @return
-    * @throws RemoteException
-    */
+   *
+   * @param exportListener
+   * @param db
+   * @param tableId
+   * @param orderedDefns
+   * @param fileQualifier
+   * @return
+   * @throws ServicesAvailabilityException
+   */
   public boolean exportSeparable(ExportListener exportListener, OdkDbHandle db, String tableId,
-      OrderedColumns orderedDefns, String fileQualifier) throws RemoteException {
+      OrderedColumns orderedDefns, String fileQualifier) throws ServicesAvailabilityException {
     // building array of columns to select and header row for output file
     // then we are including all the metadata columns.
     ArrayList<String> columns = new ArrayList<String>();
@@ -153,7 +143,7 @@ public class CsvUtil {
       }
       columns.add(colName);
     }
-    
+
     File tableInstancesFolder = new File(ODKFileUtils.getInstancesFolder(appName, tableId));
     HashSet<File> instancesWithData = new HashSet<File>();
     if ( tableInstancesFolder.exists() && tableInstancesFolder.isDirectory() ) {
@@ -177,7 +167,7 @@ public class CsvUtil {
       File definitionCsv = new File(ODKFileUtils.getOutputTableDefinitionCsvFile(appName, tableId,
           fileQualifier));
       File propertiesCsv = new File(ODKFileUtils.getOutputTablePropertiesCsvFile(appName, tableId,
-              fileQualifier));
+          fileQualifier));
 
       if (!writePropertiesCsv(db, tableId, orderedDefns, definitionCsv, propertiesCsv)) {
         return false;
@@ -192,7 +182,7 @@ public class CsvUtil {
 
       UserTable table = context.getDatabase()
           .rawSqlQuery(appName, db, tableId, orderedDefns, whereString, emptyArray, emptyArray,
-              null, null, null);
+              null, null, null, null, null);
 
       // emit data table...
       File file = new File(outputCsv, tableId
@@ -205,19 +195,19 @@ public class CsvUtil {
       cw.writeNext(columns.toArray(new String[columns.size()]));
       String[] row = new String[columns.size()];
       for (int i = 0; i < table.getNumberOfRows(); i++) {
-        Row dataRow = table.getRowAtIndex(i);
+        OdkDbRow dataRow = table.getRowAtIndex(i);
         for (int j = 0; j < columns.size(); ++j) {
-          row[j] = dataRow.getRawDataOrMetadataByElementKey(columns.get(j));
+          row[j] = dataRow.getDataByKey(columns.get(j));
           ;
         }
         cw.writeNext(row);
         /**
          * Copy all attachment files into the output directory tree.
          * Don't worry about whether they are referenced in the current
-         * row. This is a simplification (and biases toward preserving 
+         * row. This is a simplification (and biases toward preserving
          * data).
          */
-        String instanceId = dataRow.getRowId();
+        String instanceId = table.getRowId(i);
         File tableInstanceFolder = new File(ODKFileUtils.getInstanceFolder(appName, tableId, instanceId));
         if ( instancesWithData.contains(tableInstanceFolder) ) {
           File outputInstanceFolder = new File(ODKFileUtils.getOutputCsvInstanceFolder(appName, tableId, instanceId));
@@ -269,15 +259,15 @@ public class CsvUtil {
    * store). The md5hash of it corresponds to the propertiesETag.
    *
    * For use by the sync mechanism.
-    *
-    * @param db
-    * @param tableId
-    * @param orderedDefns
-    * @return
-    * @throws RemoteException
-    */
+   *
+   * @param db
+   * @param tableId
+   * @param orderedDefns
+   * @return
+   * @throws ServicesAvailabilityException
+   */
   public boolean writePropertiesCsv(OdkDbHandle db, String tableId,
-      OrderedColumns orderedDefns) throws RemoteException {
+      OrderedColumns orderedDefns) throws ServicesAvailabilityException {
     File definitionCsv = new File(ODKFileUtils.getTableDefinitionCsvFile(appName, tableId));
     File propertiesCsv = new File(ODKFileUtils.getTablePropertiesCsvFile(appName, tableId));
 
@@ -286,17 +276,17 @@ public class CsvUtil {
 
   /**
    * Common routine to write the definition and properties files.
-    *
-    * @param db
-    * @param tableId
-    * @param orderedDefns
-    * @param definitionCsv
-    * @param propertiesCsv
-    * @return
-    * @throws RemoteException
-    */
+   *
+   * @param db
+   * @param tableId
+   * @param orderedDefns
+   * @param definitionCsv
+   * @param propertiesCsv
+   * @return
+   * @throws ServicesAvailabilityException
+   */
   private boolean writePropertiesCsv(OdkDbHandle db, String tableId,
-      OrderedColumns orderedDefns, File definitionCsv, File propertiesCsv) throws RemoteException {
+      OrderedColumns orderedDefns, File definitionCsv, File propertiesCsv) throws ServicesAvailabilityException {
     WebLogger.getLogger(appName).i(TAG, "writePropertiesCsv: tableId: " + tableId);
 
     /**
@@ -349,10 +339,10 @@ public class CsvUtil {
    *
    * @param tableId
    * @throws IOException
-   * @throws RemoteException 
+   * @throws ServicesAvailabilityException
    */
   public synchronized void updateTablePropertiesFromCsv(String tableId)
-      throws IOException, RemoteException {
+      throws IOException, ServicesAvailabilityException {
 
     PropertiesFileUtils.DataTableDefinition dtd = PropertiesFileUtils.readPropertiesFromCsv(appName,
         tableId);
@@ -406,10 +396,10 @@ public class CsvUtil {
    * @param createIfNotPresent
    *          -- true if we should try to create the table.
    * @return
-   * @throws RemoteException 
+   * @throws ServicesAvailabilityException
    */
   public boolean importSeparable(ImportListener importListener, String tableId,
-      String fileQualifier, boolean createIfNotPresent) throws RemoteException {
+      String fileQualifier, boolean createIfNotPresent) throws ServicesAvailabilityException {
 
     OdkDbHandle db = null;
     try {
@@ -435,7 +425,7 @@ public class CsvUtil {
       // reading data
       InputStreamReader input = null;
       try {
-        
+
         File assetsCsvInstances = new File(ODKFileUtils.getAssetsCsvInstancesFolder(appName, tableId));
         HashSet<File> instancesHavingData = new HashSet<File>();
         if ( assetsCsvInstances.exists() && assetsCsvInstances.isDirectory() ) {
@@ -447,7 +437,7 @@ public class CsvUtil {
             }});
           instancesHavingData.addAll(Arrays.asList(subDirectories));
         }
-        
+
         // both files are read from config/assets/csv directory...
         File assetsCsv = new File(ODKFileUtils.getAssetsCsvFolder(appName));
 
@@ -495,8 +485,9 @@ public class CsvUtil {
           v_savepoint_creator = ODKCursorUtils.DEFAULT_CREATOR;
           v_savepoint_timestamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
           v_row_etag = null;
-          v_filter_type = null;
-          v_filter_value = null;
+          v_filter_type = DataTableColumns.DEFAULT_FILTER_TYPE;
+          v_filter_value = DataTableColumns.DEFAULT_FILTER_VALUE;
+
           // clear value map
           valueMap.clear();
 
@@ -574,7 +565,7 @@ public class CsvUtil {
           // uncommitted edits. For now, we just add our csv import to those,
           // rather
           // than resolve the problems.
-          UserTable table = context.getDatabase().getRowsWithId(appName, db,
+          UserTable table = context.getDatabase().privilegedGetRowsWithId(appName, db,
               tableId, orderedDefns, v_id);
           if (table.getNumberOfRows() > 1) {
             throw new IllegalStateException(
@@ -583,8 +574,7 @@ public class CsvUtil {
 
           SyncState syncState = null;
           if (foundId && table.getNumberOfRows() == 1) {
-            String syncStateStr = table.getRowAtIndex(0).getRawDataOrMetadataByElementKey(
-                DataTableColumns.SYNC_STATE);
+            String syncStateStr = table.getRowAtIndex(0).getDataByKey(DataTableColumns.SYNC_STATE);
             if (syncStateStr == null) {
               throw new IllegalStateException("Unexpected null syncState value");
             }
@@ -605,9 +595,6 @@ public class CsvUtil {
           if (syncState != null) {
 
             ContentValues cv = new ContentValues();
-            if (v_id != null) {
-              cv.put(DataTableColumns.ID, v_id);
-            }
             for (String column : valueMap.keySet()) {
               if (column != null) {
                 cv.put(column, valueMap.get(column));
@@ -625,24 +612,28 @@ public class CsvUtil {
             cv.put(DataTableColumns.FILTER_VALUE, v_filter_value);
 
             cv.put(DataTableColumns.SYNC_STATE, SyncState.new_row.name());
+            cv.putNull(DataTableColumns.CONFLICT_TYPE);
+
+            if (v_id != null) {
+              cv.put(DataTableColumns.ID, v_id);
+            }
 
             if (syncState == SyncState.new_row) {
               // we do the actual update here
-              context.getDatabase().updateRowWithId(appName, db, tableId, orderedDefns,
-                  cv, v_id);
+              context.getDatabase().privilegedUpdateRowWithId(appName, db, tableId, orderedDefns,
+                  cv, v_id, true);
             }
             // otherwise, do NOT update the row.
+            // i.e., if the row has been sync'd with
+            // the server, then we don't revise it.
 
           } else {
+
             ContentValues cv = new ContentValues();
             for (String column : valueMap.keySet()) {
               if (column != null) {
                 cv.put(column, valueMap.get(column));
               }
-            }
-
-            if (v_id == null) {
-              v_id = ODKDataUtils.genUUID();
             }
 
             // The admin columns get added here
@@ -655,12 +646,21 @@ public class CsvUtil {
             cv.put(DataTableColumns.FILTER_TYPE, v_filter_type);
             cv.put(DataTableColumns.FILTER_VALUE, v_filter_value);
 
+            cv.put(DataTableColumns.SYNC_STATE, SyncState.new_row.name());
+            cv.putNull(DataTableColumns.CONFLICT_TYPE);
+
+            if (v_id == null) {
+              v_id = ODKDataUtils.genUUID();
+            }
+
             cv.put(DataTableColumns.ID, v_id);
 
-            context.getDatabase().insertRowWithId(appName, db, tableId, orderedDefns,
-                cv, v_id);
+            // imports assume super-user level powers. Treat these as if they were
+            // directed by the server during a sync.
+            context.getDatabase().privilegedInsertRowWithId(appName, db, tableId, orderedDefns,
+                cv, v_id, true);
           }
-          
+
           /**
            * Copy all attachment files into the destination row.
            * Don't worry about whether they are present in the current

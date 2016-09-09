@@ -27,18 +27,21 @@ public class ExecutorRequest {
 
     // For raw query interaction
     public final String sqlCommand;
-    // String[] sqlBindParams; // shared
+
+    // shared between raw query and user table query interactions
+    public final Object[] sqlBindParams;
 
     // For user table interactions
     public final String tableId;
 
     // For user table query interaction
     public final String whereClause;
-    public final String[] sqlBindParams;
     public final String[] groupBy;
     public final String having;
     public final String orderByElementKey;
     public final String orderByDirection;
+    public final Integer limit;
+    public final Integer offset;
     public final boolean includeKeyValueStoreMap;
 
     // For user table modification interactions
@@ -68,6 +71,8 @@ public class ExecutorRequest {
         this.having = null;
         this.orderByElementKey = null;
         this.orderByDirection = null;
+        this.limit = null;
+        this.offset = null;
         this.includeKeyValueStoreMap = false;
         this.stringifiedJSON = null;
         this.rowId = null;
@@ -84,15 +89,19 @@ public class ExecutorRequest {
      *                             column (e.g., integer, number, array, object conversions).
      * @param sqlCommand The Select statement to issue. It can reference any table in the database, including system tables.
      * @param sqlBindParams The array of bind parameter values (including any in the having clause)
+     * @param limit null to return everything. Otherwise, max number or rows to return
+     * @param offset if limit is not null, specify the offset into the result set to return.
      * @param callbackJSON The JSON object used by the JS layer to recover the callback function
      *                     that can process the response
      */
-    public ExecutorRequest(String tableId, String sqlCommand, String[] sqlBindParams,
-                           String callbackJSON) {
+    public ExecutorRequest(String tableId, String sqlCommand, Object[] sqlBindParams,
+                Integer limit, Integer offset, String callbackJSON) {
         this.executorRequestType = ExecutorRequestType.ARBITRARY_QUERY;
         this.tableId = tableId;
         this.sqlCommand = sqlCommand;
         this.sqlBindParams = sqlBindParams;
+        this.limit = limit;
+        this.offset = offset;
         this.callbackJSON = callbackJSON;
 
         // unused:
@@ -119,13 +128,15 @@ public class ExecutorRequest {
      * @param having The having clause
      * @param orderByElementKey The column to order by
      * @param orderByDirection 'ASC' or 'DESC' ordering
+     * @param limit null to return everything. Otherwise, max number or rows to return
+     * @param offset if limit is not null, specify the offset into the result set to return.
      * @param includeKeyValueStoreMap true if the keyValueStoreMap should be returned
      * @param callbackJSON The JSON object used by the JS layer to recover the callback function
      *                     that can process the response
      */
-    public ExecutorRequest(String tableId, String whereClause, String[] sqlBindParams,
+    public ExecutorRequest(String tableId, String whereClause, Object[] sqlBindParams,
                            String[] groupBy, String having, String orderByElementKey, String orderByDirection,
-                           boolean includeKeyValueStoreMap,
+                           Integer limit, Integer offset, boolean includeKeyValueStoreMap,
                            String callbackJSON) {
         this.executorRequestType = ExecutorRequestType.USER_TABLE_QUERY;
         this. tableId = tableId;
@@ -135,6 +146,8 @@ public class ExecutorRequest {
         this.having = having;
         this.orderByElementKey = orderByElementKey;
         this.orderByDirection = orderByDirection;
+        this.limit = limit;
+        this.offset = offset;
         this.includeKeyValueStoreMap = includeKeyValueStoreMap;
         this.callbackJSON = callbackJSON;
 
@@ -185,6 +198,8 @@ public class ExecutorRequest {
         this.having = null;
         this.orderByElementKey = null;
         this.orderByDirection = null;
+        this.limit = null;
+        this.offset = null;
         this.includeKeyValueStoreMap = false;
         this.deleteAllCheckpoints = false;
         this.commitTransaction = false;
@@ -206,6 +221,8 @@ public class ExecutorRequest {
         this.having = null;
         this.orderByElementKey = null;
         this.orderByDirection = null;
+        this.limit = null;
+        this.offset = null;
         this.includeKeyValueStoreMap = false;
         this.deleteAllCheckpoints = false;
         this.commitTransaction = false;

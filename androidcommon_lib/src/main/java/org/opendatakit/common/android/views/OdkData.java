@@ -16,12 +16,15 @@ package org.opendatakit.common.android.views;
 
 import android.os.Bundle;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.opendatakit.IntentConsts;
 import org.opendatakit.common.android.activities.IOdkDataActivity;
 import org.opendatakit.common.android.provider.DataTableColumns;
+import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.utilities.WebLogger;
 
 import java.lang.ref.WeakReference;
+import java.util.HashMap;
 
 public class OdkData {
 
@@ -167,11 +170,35 @@ public class OdkData {
 
     if (rowId != null && !rowId.isEmpty()) {
       query(tableId, DataTableColumns.ID + "=?", new String[] { rowId }, null, null,
-          DataTableColumns.SAVEPOINT_TIMESTAMP, descOrder, true, callbackJSON);
+          DataTableColumns.SAVEPOINT_TIMESTAMP, descOrder, null, null, true, callbackJSON);
     } else {
-      query(tableId, whereClause, selArgs, groupBy, havingClause, orderByElemKey, orderByDir, true,
-          callbackJSON);
+      query(tableId, whereClause, selArgs, groupBy, havingClause, orderByElemKey, orderByDir,
+          null, null, true, callbackJSON);
     }
+  }
+
+  /**
+   * Get all the roles granted to this user by the server.
+   *
+   * @param callbackJSON
+   */
+  public void getRoles(String callbackJSON) {
+    logDebug("getRoles");
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.GET_ROLES_LIST, callbackJSON);
+
+    queueRequest(request);
+  }
+
+  /**
+   * Get all the users on the server and their roles.
+   *
+   * @param callbackJSON
+   */
+  public void getUsers(String callbackJSON) {
+    logDebug("getUsers");
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.GET_USERS_LIST, callbackJSON);
+
+    queueRequest(request);
   }
 
   /**
@@ -196,16 +223,19 @@ public class OdkData {
    * @param having                  The having clause
    * @param orderByElementKey       The column to order by
    * @param orderByDirection        'ASC' or 'DESC' ordering
+   * @param limit         The maximum number of rows to return (null returns all)
+   * @param offset        The offset into the result set of the first row to return (null ok)
    * @param includeKeyValueStoreMap true if the keyValueStoreMap should be returned
    * @param callbackJSON            The JSON object used by the JS layer to recover the callback function
    *                                that can process the response
    */
-  public void query(String tableId, String whereClause, String[] sqlBindParams, String[] groupBy,
+  public void query(String tableId, String whereClause, Object[] sqlBindParams, String[] groupBy,
       String having, String orderByElementKey, String orderByDirection,
-      boolean includeKeyValueStoreMap, String callbackJSON) {
+      Integer limit, Integer offset, boolean includeKeyValueStoreMap, String callbackJSON) {
     logDebug("query: " + tableId + " whereClause: " + whereClause);
     ExecutorRequest request = new ExecutorRequest(tableId, whereClause, sqlBindParams, groupBy,
-        having, orderByElementKey, orderByDirection, includeKeyValueStoreMap, callbackJSON);
+        having, orderByElementKey, orderByDirection, limit, offset, includeKeyValueStoreMap,
+        callbackJSON);
 
     queueRequest(request);
   }
@@ -220,14 +250,17 @@ public class OdkData {
    * @param sqlCommand    The Select statement to issue. It can reference any table in the database,
    *                      including system tables.
    * @param sqlBindParams The array of bind parameter values (including any in the having clause)
+   * @param limit         The maximum number of rows to return (null returns all)
+   * @param offset        The offset into the result set of the first row to return (null ok)
    * @param callbackJSON  The JSON object used by the JS layer to recover the callback function
    *                      that can process the response
    * @return see description in class header
    */
-  public void arbitraryQuery(String tableId, String sqlCommand, String[] sqlBindParams,
-      String callbackJSON) {
+  public void arbitraryQuery(String tableId, String sqlCommand, Object[] sqlBindParams,
+      Integer limit, Integer offset, String callbackJSON) {
     logDebug("arbitraryQuery: " + tableId + " sqlCommand: " + sqlCommand);
-    ExecutorRequest request = new ExecutorRequest(tableId, sqlCommand, sqlBindParams, callbackJSON);
+    ExecutorRequest request = new ExecutorRequest(tableId, sqlCommand, sqlBindParams,
+        limit, offset, callbackJSON);
 
     queueRequest(request);
   }
@@ -286,6 +319,37 @@ public class OdkData {
     queueRequest(request);
   }
 
+  /**
+   * Update a row in the table with the given filter type and value.
+   *
+   * @param tableId
+   * @param filterType
+   * @param filterValue
+   * @param rowId
+   * @param callbackJSON
+    */
+  public void changeAccessFilterOfRow(String tableId, String filterType, String
+      filterValue, String rowId, String callbackJSON) {
+
+    logDebug("changeAccessFilter: " + tableId + " _id: " + rowId);
+    HashMap<String,String> valueMap = new HashMap<String,String>();
+    valueMap.put(DataTableColumns.FILTER_TYPE, filterType);
+    valueMap.put(DataTableColumns.FILTER_VALUE, filterValue);
+
+    String stringifiedJSON = null;
+    try {
+      stringifiedJSON = ODKFileUtils.mapper.writeValueAsString(valueMap);
+    } catch (JsonProcessingException e) {
+      WebLogger.getLogger(mActivity.getAppName()).printStackTrace(e);
+      return;
+    }
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType
+        .USER_TABLE_CHANGE_ACCESS_FILTER_ROW,
+        tableId, stringifiedJSON, rowId, callbackJSON);
+
+    queueRequest(request);
+
+  }
   /**
    * Delete a row from the table
    *
