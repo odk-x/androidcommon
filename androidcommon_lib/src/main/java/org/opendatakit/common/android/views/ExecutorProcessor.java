@@ -556,7 +556,7 @@ public abstract class ExecutorProcessor implements Runnable {
       context.putOrderedColumns(request.tableId, columns);
     }
     UserTable t = dbInterface
-        .rawSqlQuery(context.getAppName(), dbHandle, request.tableId, columns, request.whereClause,
+        .simpleQuery(context.getAppName(), dbHandle, request.tableId, columns, request.whereClause,
             request.sqlBindParams, request.groupBy, request.having,
             (request.orderByElementKey == null) ?
                 emptyArray :

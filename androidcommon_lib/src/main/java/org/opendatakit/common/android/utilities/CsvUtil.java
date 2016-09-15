@@ -183,7 +183,7 @@ public class CsvUtil {
       String[] emptyArray = {};
 
       UserTable table = context.getDatabase()
-          .rawSqlQuery(appName, db, tableId, orderedDefns, whereString, emptyArray, emptyArray,
+          .simpleQuery(appName, db, tableId, orderedDefns, whereString, emptyArray, emptyArray,
               null, null, null, null, null);
 
       // emit data table...
