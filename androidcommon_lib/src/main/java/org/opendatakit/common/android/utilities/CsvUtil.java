@@ -28,14 +28,16 @@ import org.opendatakit.aggregate.odktables.rest.SavepointTypeManipulator;
 import org.opendatakit.aggregate.odktables.rest.SyncState;
 import org.opendatakit.aggregate.odktables.rest.TableConstants;
 import org.opendatakit.common.android.application.CommonApplication;
-import org.opendatakit.common.android.data.ColumnDefinition;
-import org.opendatakit.common.android.data.OrderedColumns;
-import org.opendatakit.common.android.data.UserTable;
+import org.opendatakit.common.android.database.data.ColumnDefinition;
+import org.opendatakit.common.android.database.data.OrderedColumns;
+import org.opendatakit.common.android.database.data.UserTable;
+import org.opendatakit.common.android.database.utilities.CursorUtils;
 import org.opendatakit.common.android.exception.ServicesAvailabilityException;
+import org.opendatakit.common.android.logging.WebLogger;
 import org.opendatakit.common.android.provider.DataTableColumns;
-import org.opendatakit.database.service.KeyValueStoreEntry;
-import org.opendatakit.database.service.OdkDbHandle;
-import org.opendatakit.database.service.OdkDbRow;
+import org.opendatakit.common.android.database.data.KeyValueStoreEntry;
+import org.opendatakit.common.android.database.service.DbHandle;
+import org.opendatakit.common.android.database.data.Row;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -109,7 +111,7 @@ public class CsvUtil {
    * @return
    * @throws ServicesAvailabilityException
    */
-  public boolean exportSeparable(ExportListener exportListener, OdkDbHandle db, String tableId,
+  public boolean exportSeparable(ExportListener exportListener, DbHandle db, String tableId,
       OrderedColumns orderedDefns, String fileQualifier) throws ServicesAvailabilityException {
     // building array of columns to select and header row for output file
     // then we are including all the metadata columns.
@@ -195,7 +197,7 @@ public class CsvUtil {
       cw.writeNext(columns.toArray(new String[columns.size()]));
       String[] row = new String[columns.size()];
       for (int i = 0; i < table.getNumberOfRows(); i++) {
-        OdkDbRow dataRow = table.getRowAtIndex(i);
+        Row dataRow = table.getRowAtIndex(i);
         for (int j = 0; j < columns.size(); ++j) {
           row[j] = dataRow.getDataByKey(columns.get(j));
           ;
@@ -266,7 +268,7 @@ public class CsvUtil {
    * @return
    * @throws ServicesAvailabilityException
    */
-  public boolean writePropertiesCsv(OdkDbHandle db, String tableId,
+  public boolean writePropertiesCsv(DbHandle db, String tableId,
       OrderedColumns orderedDefns) throws ServicesAvailabilityException {
     File definitionCsv = new File(ODKFileUtils.getTableDefinitionCsvFile(appName, tableId));
     File propertiesCsv = new File(ODKFileUtils.getTablePropertiesCsvFile(appName, tableId));
@@ -285,7 +287,7 @@ public class CsvUtil {
    * @return
    * @throws ServicesAvailabilityException
    */
-  private boolean writePropertiesCsv(OdkDbHandle db, String tableId,
+  private boolean writePropertiesCsv(DbHandle db, String tableId,
       OrderedColumns orderedDefns, File definitionCsv, File propertiesCsv) throws ServicesAvailabilityException {
     WebLogger.getLogger(appName).i(TAG, "writePropertiesCsv: tableId: " + tableId);
 
@@ -347,7 +349,7 @@ public class CsvUtil {
     PropertiesFileUtils.DataTableDefinition dtd = PropertiesFileUtils.readPropertiesFromCsv(appName,
         tableId);
 
-    OdkDbHandle db = null;
+    DbHandle db = null;
     try {
 
       db = context.getDatabase().openDatabase(appName);
@@ -401,7 +403,7 @@ public class CsvUtil {
   public boolean importSeparable(ImportListener importListener, String tableId,
       String fileQualifier, boolean createIfNotPresent) throws ServicesAvailabilityException {
 
-    OdkDbHandle db = null;
+    DbHandle db = null;
     try {
       db = context.getDatabase().openDatabase(appName);
       if (!context.getDatabase().hasTableId(appName, db, tableId)) {
@@ -480,9 +482,9 @@ public class CsvUtil {
           // default values for metadata columns if not provided
           v_id = UUID.randomUUID().toString();
           v_form_id = null;
-          v_locale = ODKCursorUtils.DEFAULT_LOCALE;
+          v_locale = CursorUtils.DEFAULT_LOCALE;
           v_savepoint_type = SavepointTypeManipulator.complete();
-          v_savepoint_creator = ODKCursorUtils.DEFAULT_CREATOR;
+          v_savepoint_creator = CursorUtils.DEFAULT_CREATOR;
           v_savepoint_timestamp = TableConstants.nanoSecondsFromMillis(System.currentTimeMillis());
           v_row_etag = null;
           v_filter_type = DataTableColumns.DEFAULT_FILTER_TYPE;
@@ -650,7 +652,7 @@ public class CsvUtil {
             cv.putNull(DataTableColumns.CONFLICT_TYPE);
 
             if (v_id == null) {
-              v_id = ODKDataUtils.genUUID();
+              v_id = LocalizationUtils.genUUID();
             }
 
             cv.put(DataTableColumns.ID, v_id);

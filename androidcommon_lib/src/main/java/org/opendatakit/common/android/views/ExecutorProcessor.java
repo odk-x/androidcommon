@@ -19,26 +19,25 @@ import android.content.ContentValues;
 import android.database.sqlite.SQLiteException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
-import org.opendatakit.common.android.data.ColumnDefinition;
-import org.opendatakit.common.android.data.OrderedColumns;
-import org.opendatakit.common.android.data.TableDefinitionEntry;
-import org.opendatakit.common.android.data.UserTable;
+import org.opendatakit.common.android.database.data.ColumnDefinition;
+import org.opendatakit.common.android.database.data.OrderedColumns;
+import org.opendatakit.common.android.database.data.TableDefinitionEntry;
+import org.opendatakit.common.android.database.data.UserTable;
 import org.opendatakit.common.android.exception.ActionNotAuthorizedException;
 import org.opendatakit.common.android.exception.ServicesAvailabilityException;
 import org.opendatakit.common.android.provider.DataTableColumns;
-import org.opendatakit.common.android.utilities.ColumnUtil;
-import org.opendatakit.common.android.utilities.DataHelper;
+import org.opendatakit.common.android.data.utilities.ColumnUtil;
+import org.opendatakit.common.android.data.utilities.DataHelper;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
-import org.opendatakit.common.android.utilities.WebLogger;
-import org.opendatakit.database.OdkDbSerializedInterface;
-import org.opendatakit.database.service.KeyValueStoreEntry;
-import org.opendatakit.database.service.OdkDbHandle;
-import org.opendatakit.database.service.OdkDbRow;
-import org.opendatakit.database.service.OdkDbTable;
-import org.opendatakit.database.service.queries.OdkDbResumableQuery;
+import org.opendatakit.common.android.logging.WebLogger;
+import org.opendatakit.common.android.database.service.UserDbInterface;
+import org.opendatakit.common.android.database.data.KeyValueStoreEntry;
+import org.opendatakit.common.android.database.service.DbHandle;
+import org.opendatakit.common.android.database.data.Row;
+import org.opendatakit.common.android.database.data.BaseTable;
+import org.opendatakit.common.android.database.queries.ResumableQuery;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -81,9 +80,9 @@ public abstract class ExecutorProcessor implements Runnable {
   private ExecutorContext context;
 
   private ExecutorRequest request;
-  private OdkDbSerializedInterface dbInterface;
+  private UserDbInterface dbInterface;
   private String transId;
-  private OdkDbHandle dbHandle;
+  private DbHandle dbHandle;
 
   protected ExecutorProcessor(ExecutorContext context) {
     this.context = context;
@@ -335,15 +334,15 @@ public abstract class ExecutorProcessor implements Runnable {
       columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
       context.putOrderedColumns(request.tableId, columns);
     }
-    OdkDbTable rawUserTable = dbInterface
+    BaseTable baseTable = dbInterface
         .arbitrarySqlQuery(context.getAppName(), dbHandle, request.tableId, request.sqlCommand,
             request.sqlBindParams, request.limit, request.offset);
 
-    if ( rawUserTable == null ) {
+    if ( baseTable == null ) {
       reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to rawQuery against: " + request.tableId +
           " sql: " + request.sqlCommand );
     } else {
-      reportArbitraryQuerySuccessAndCleanUp(columns, rawUserTable);
+      reportArbitraryQuerySuccessAndCleanUp(columns, baseTable);
     }
   }
 
@@ -413,7 +412,7 @@ public abstract class ExecutorProcessor implements Runnable {
   }
 
   private void reportArbitraryQuerySuccessAndCleanUp(OrderedColumns columnDefinitions,
-      OdkDbTable userTable) throws ServicesAvailabilityException {
+      BaseTable userTable) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> entries = null;
 
     // We are assuming that we always have the KVS
@@ -463,7 +462,7 @@ public abstract class ExecutorProcessor implements Runnable {
 
         // assemble the data array
         for (int i = 0; i < userTable.getNumberOfRows(); ++i) {
-          OdkDbRow r = userTable.getRowAtIndex(i);
+          Row r = userTable.getRowAtIndex(i);
           Object[] values = new Object[userTable.getWidth()];
 
           for ( idx = 0 ; idx < userTable.getWidth() ; ++idx ) {
@@ -474,7 +473,7 @@ public abstract class ExecutorProcessor implements Runnable {
     }
 
     Map<String, Object> metadata = new HashMap<String, Object>();
-    OdkDbResumableQuery q = userTable.getQuery();
+    ResumableQuery q = userTable.getQuery();
     if ( q != null ) {
       metadata.put("limit", q.getSqlLimit());
       metadata.put("offset", q.getSqlOffset());
@@ -593,7 +592,7 @@ public abstract class ExecutorProcessor implements Runnable {
     OrderedColumns columnDefinitions = userTable.getColumnDefinitions();
 
     for (int i = 0; i < userTable.getNumberOfRows(); ++i) {
-      OdkDbRow r = userTable.getRowAtIndex(i);
+      Row r = userTable.getRowAtIndex(i);
       Object[] typedValues = new Object[elementKeyToIndexMap.size()];
       List<Object> typedValuesAsList = Arrays.asList(typedValues);
       data.add(typedValuesAsList);
@@ -628,7 +627,7 @@ public abstract class ExecutorProcessor implements Runnable {
     }
 
     Map<String, Object> metadata = new HashMap<String, Object>();
-    OdkDbResumableQuery q = userTable.getQuery();
+    ResumableQuery q = userTable.getQuery();
     if ( q != null ) {
       metadata.put("limit", q.getSqlLimit());
       metadata.put("offset", q.getSqlOffset());
@@ -653,7 +652,7 @@ public abstract class ExecutorProcessor implements Runnable {
     reportSuccessAndCleanUp(data, metadata);
   }
 
-  protected abstract void extendQueryMetadata(OdkDbHandle dbHandle,
+  protected abstract void extendQueryMetadata(DbHandle dbHandle,
       List<KeyValueStoreEntry> entries, UserTable userTable, Map<String, Object> metadata);
 
   private void getRows() throws ServicesAvailabilityException, ActionNotAuthorizedException {

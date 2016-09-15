@@ -16,13 +16,13 @@ package org.opendatakit.common.android.views;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.opendatakit.common.android.activities.IOdkDataActivity;
-import org.opendatakit.common.android.data.OrderedColumns;
+import org.opendatakit.common.android.database.data.OrderedColumns;
 import org.opendatakit.common.android.exception.ServicesAvailabilityException;
 import org.opendatakit.common.android.listener.DatabaseConnectionListener;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
-import org.opendatakit.common.android.utilities.WebLogger;
-import org.opendatakit.database.OdkDbSerializedInterface;
-import org.opendatakit.database.service.OdkDbHandle;
+import org.opendatakit.common.android.logging.WebLogger;
+import org.opendatakit.common.android.database.service.UserDbInterface;
+import org.opendatakit.common.android.database.service.DbHandle;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -84,7 +84,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
      */
     private final LinkedList<ExecutorRequest> workQueue = new LinkedList<ExecutorRequest>();
 
-    private Map<String, OdkDbHandle> activeConnections = new HashMap<String, OdkDbHandle>();
+    private Map<String, DbHandle> activeConnections = new HashMap<String, DbHandle>();
     private Map<String, OrderedColumns> mCachedOrderedDefns = new HashMap<String, OrderedColumns>();
 
     private ExecutorContext(IOdkDataActivity fragment) {
@@ -192,15 +192,15 @@ public class ExecutorContext implements DatabaseConnectionListener {
    * Get the connection on which this transaction is active.
    *
    * @param transId
-   * @return OdkDbHandle
+   * @return DbHandle
    */
-  public OdkDbHandle getActiveConnection(String transId) {
+  public DbHandle getActiveConnection(String transId) {
     synchronized (mutex) {
       return activeConnections.get(transId);
     }
   }
 
-  public void registerActiveConnection(String transId, OdkDbHandle dbHandle) {
+  public void registerActiveConnection(String transId, DbHandle dbHandle) {
     boolean alreadyExists = false;
     synchronized (mutex) {
       if ( activeConnections.containsKey(transId) ) {
@@ -250,7 +250,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
   /**
    * @return
    */
-    public OdkDbSerializedInterface getDatabase() {
+    public UserDbInterface getDatabase() {
         return activity.getDatabase();
     }
 
@@ -290,12 +290,12 @@ public class ExecutorContext implements DatabaseConnectionListener {
         if ( transId == null ) {
           break;
         }
-        OdkDbHandle dbh = getActiveConnection(transId);
+        DbHandle dbh = getActiveConnection(transId);
         removeActiveConnection(transId);
         if ( dbh == null ) {
           WebLogger.getLogger(getAppName()).w(TAG, "Unexpected failure to retrieve dbHandle for " + transId);
         }
-        OdkDbSerializedInterface dbInterface = currentContext.getDatabase();
+        UserDbInterface dbInterface = currentContext.getDatabase();
         if ( dbInterface != null ) {
           try {
             WebLogger.getLogger(currentContext.getAppName()).i(TAG, "releaseResources - closing dbHandle " + dbh.toString());

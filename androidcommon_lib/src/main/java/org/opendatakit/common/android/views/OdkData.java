@@ -17,11 +17,11 @@ package org.opendatakit.common.android.views;
 import android.os.Bundle;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.opendatakit.IntentConsts;
+import org.opendatakit.common.android.logic.IntentConsts;
 import org.opendatakit.common.android.activities.IOdkDataActivity;
 import org.opendatakit.common.android.provider.DataTableColumns;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
-import org.opendatakit.common.android.utilities.WebLogger;
+import org.opendatakit.common.android.logging.WebLogger;
 
 import java.lang.ref.WeakReference;
 import java.util.HashMap;

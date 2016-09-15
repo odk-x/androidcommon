@@ -31,8 +31,8 @@ import org.opendatakit.common.android.activities.IOdkCommonActivity;
 import org.opendatakit.common.android.activities.IOdkDataActivity;
 import org.opendatakit.common.android.application.CommonApplication;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
-import org.opendatakit.common.android.utilities.WebLogger;
-import org.opendatakit.common.android.utilities.WebLoggerIf;
+import org.opendatakit.common.android.logging.WebLogger;
+import org.opendatakit.common.android.logging.WebLoggerIf;
 
 import java.util.LinkedList;
 

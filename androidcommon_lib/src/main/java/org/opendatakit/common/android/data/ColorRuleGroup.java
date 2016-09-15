@@ -18,18 +18,22 @@ package org.opendatakit.common.android.data;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.ElementType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.common.android.application.CommonApplication;
+import org.opendatakit.common.android.data.utilities.ColorRuleUtil;
+import org.opendatakit.common.android.database.LocalKeyValueStoreConstants;
+import org.opendatakit.common.android.database.data.ColumnDefinition;
+import org.opendatakit.common.android.database.data.OrderedColumns;
+import org.opendatakit.common.android.database.utilities.KeyValueStoreUtils;
 import org.opendatakit.common.android.exception.ServicesAvailabilityException;
+import org.opendatakit.common.android.logging.WebLogger;
 import org.opendatakit.common.android.provider.DataTableColumns;
-import org.opendatakit.common.android.utilities.*;
-import org.opendatakit.database.service.KeyValueStoreEntry;
-import org.opendatakit.database.service.OdkDbHandle;
+import org.opendatakit.common.android.database.data.KeyValueStoreEntry;
+import org.opendatakit.common.android.database.service.DbHandle;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.core.JsonGenerationException;
@@ -37,7 +41,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
-import org.opendatakit.database.service.OdkDbRow;
+import org.opendatakit.common.android.database.data.Row;
 
 /**
  * A ColorRuleGroup aggregates a collection of {@link ColorRule} objects and is
@@ -95,7 +99,7 @@ public class ColorRuleGroup {
    * @param adminColumns
    * @throws ServicesAvailabilityException
    */
-  private ColorRuleGroup(CommonApplication ctxt, String appName, OdkDbHandle db, String tableId, String elementKey,
+  private ColorRuleGroup(CommonApplication ctxt, String appName, DbHandle db, String tableId, String elementKey,
       Type type, String[] adminColumns) throws ServicesAvailabilityException {
     this.mType = type;
     this.mAppName = appName;
@@ -144,17 +148,17 @@ public class ColorRuleGroup {
     return this.mAdminColumns;
   }
 
-  public static ColorRuleGroup getColumnColorRuleGroup(CommonApplication ctxt, String appName, OdkDbHandle db,
+  public static ColorRuleGroup getColumnColorRuleGroup(CommonApplication ctxt, String appName, DbHandle db,
       String tableId, String elementKey, String[] adminColumns) throws ServicesAvailabilityException {
     return new ColorRuleGroup(ctxt, appName, db, tableId, elementKey, Type.COLUMN, adminColumns);
   }
 
-  public static ColorRuleGroup getTableColorRuleGroup(CommonApplication ctxt, String appName, OdkDbHandle db,
+  public static ColorRuleGroup getTableColorRuleGroup(CommonApplication ctxt, String appName, DbHandle db,
       String tableId, String[] adminColumns) throws ServicesAvailabilityException {
     return new ColorRuleGroup(ctxt, appName, db, tableId, null, Type.TABLE, adminColumns);
   }
 
-  public static ColorRuleGroup getStatusColumnRuleGroup(CommonApplication ctxt, String appName, OdkDbHandle db,
+  public static ColorRuleGroup getStatusColumnRuleGroup(CommonApplication ctxt, String appName, DbHandle db,
       String tableId, String[] adminColumns) throws ServicesAvailabilityException {
     return new ColorRuleGroup(ctxt, appName, db, tableId, null, Type.STATUS_COLUMN, adminColumns);
   }
@@ -230,7 +234,7 @@ public class ColorRuleGroup {
       // nothing to save
       return;
     }
-    OdkDbHandle db = null;
+    DbHandle db = null;
     try {
       db = ctxt.getDatabase().openDatabase(mAppName);
       // initialize the KVS helpers...
@@ -325,7 +329,7 @@ public class ColorRuleGroup {
    * @param row the data from the row
    * @return null or the matching rule in the group, {@link ColorGuide}.
    */
-  public ColorGuide getColorGuide(OrderedColumns orderedDefns, OdkDbRow row) {
+  public ColorGuide getColorGuide(OrderedColumns orderedDefns, Row row) {
     for (int i = 0; i < ruleList.size(); i++) {
       ColorRule cr = ruleList.get(i);
       // First get the data about the column. It is possible that we are trying

@@ -1,4 +1,4 @@
-package org.opendatakit.common.android.utilities;
+package org.opendatakit.common.android.dependencies;
 
 import android.app.Activity;
 import android.app.AlertDialog;

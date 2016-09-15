@@ -28,10 +28,10 @@ import org.opendatakit.common.android.provider.FormsColumns;
 import org.opendatakit.common.android.provider.FormsProviderAPI;
 import org.opendatakit.common.android.utilities.CsvUtil;
 import org.opendatakit.common.android.utilities.CsvUtil.ImportListener;
-import org.opendatakit.common.android.utilities.ODKCursorUtils;
+import org.opendatakit.common.android.database.utilities.CursorUtils;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
-import org.opendatakit.common.android.utilities.WebLogger;
-import org.opendatakit.database.service.OdkDbHandle;
+import org.opendatakit.common.android.logging.WebLogger;
+import org.opendatakit.common.android.database.service.DbHandle;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -336,9 +336,9 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
 
       if (c.moveToFirst()) {
         do {
-          String tableId = ODKCursorUtils
+          String tableId = CursorUtils
               .getIndexAsString(c, c.getColumnIndex(FormsColumns.TABLE_ID));
-          String formId = ODKCursorUtils
+          String formId = CursorUtils
               .getIndexAsString(c, c.getColumnIndex(FormsColumns.FORM_ID));
           Uri otherUri = Uri.withAppendedPath(
               Uri.withAppendedPath(Uri.withAppendedPath(formsProviderContentUri, appName), tableId),
@@ -358,7 +358,7 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
             // ////////////////////////////////
             // formdef.json exists. See if it is
             // unchanged...
-            String json_md5 = ODKCursorUtils
+            String json_md5 = CursorUtils
                 .getIndexAsString(c, c.getColumnIndex(FormsColumns.JSON_MD5_HASH));
             String fileMd5 = ODKFileUtils.getMd5Hash(appName, formDefJson);
             if (json_md5.equals(fileMd5)) {
@@ -480,7 +480,7 @@ public class InitializationTask extends AsyncTask<Void, String, ArrayList<String
       }
     }
     
-    OdkDbHandle db = null;
+    DbHandle db = null;
     try {
       db = getApplication().getDatabase().openDatabase(appName);
       getApplication().getDatabase().deleteAppAndTableLevelManifestSyncETags(appName, db);

@@ -12,9 +12,10 @@
  * the License.
  */
 
-package org.opendatakit.common.android.utilities;
+package org.opendatakit.common.android.webkitserver.utilities;
 
 import android.test.AndroidTestCase;
+import org.opendatakit.common.android.webkitserver.utilities.UrlUtils;
 
 public class UrlUtilsTest extends AndroidTestCase {
   

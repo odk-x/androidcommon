@@ -18,8 +18,8 @@ import android.os.Bundle;
 import org.opendatakit.common.android.listener.DatabaseConnectionListener;
 import org.opendatakit.common.android.views.ExecutorContext;
 import org.opendatakit.common.android.views.ExecutorProcessor;
-import org.opendatakit.database.OdkDbSerializedInterface;
-import org.opendatakit.database.service.OdkDbInterface;
+import org.opendatakit.common.android.database.service.UserDbInterface;
+import org.opendatakit.common.android.database.service.AidlDbInterface;
 
 /**
  * @author mitchellsundt@gmail.com
@@ -65,7 +65,7 @@ public interface IOdkDataActivity {
    *
    * @return null if not available.
    */
-  public OdkDbSerializedInterface getDatabase();
+  public UserDbInterface getDatabase();
 
   /**
    * Get our application name

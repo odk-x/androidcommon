@@ -36,11 +36,11 @@ import org.opendatakit.common.android.logic.PropertiesSingleton;
 import org.opendatakit.common.android.task.InitializationTask;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
 import org.opendatakit.common.android.views.ODKWebView;
-import org.opendatakit.database.DatabaseConsts;
-import org.opendatakit.database.OdkDbSerializedInterface;
-import org.opendatakit.database.service.OdkDbInterface;
-import org.opendatakit.webkitserver.WebkitServerConsts;
-import org.opendatakit.webkitserver.service.OdkWebkitServerInterface;
+import org.opendatakit.common.android.database.DatabaseConstants;
+import org.opendatakit.common.android.database.service.UserDbInterface;
+import org.opendatakit.common.android.database.service.AidlDbInterface;
+import org.opendatakit.common.android.webkitserver.WebkitServerConsts;
+import org.opendatakit.common.android.webkitserver.service.WebkitServerInterface;
 
 import java.util.ArrayList;
 
@@ -60,8 +60,8 @@ public abstract class CommonApplication extends AppAwareApplication implements
   private static boolean disableInitializeCascade = true;
   
   // Hack for handling mock interfaces...
-  private static OdkDbSerializedInterface mockDatabaseService = null;
-  private static OdkWebkitServerInterface mockWebkitServerService = null;
+  private static UserDbInterface mockDatabaseService = null;
+  private static WebkitServerInterface mockWebkitServerService = null;
   
   public static void setMocked() {
     isMocked = true;
@@ -83,11 +83,11 @@ public abstract class CommonApplication extends AppAwareApplication implements
     disableInitializeCascade = true;
   }
   
-  public static void setMockDatabase(OdkDbSerializedInterface mock) {
+  public static void setMockDatabase(UserDbInterface mock) {
     CommonApplication.mockDatabaseService = mock;
   }
 
-  public static void setMockWebkitServer(OdkWebkitServerInterface mock) {
+  public static void setMockWebkitServer(WebkitServerInterface mock) {
     CommonApplication.mockWebkitServerService = mock;
   }
 
@@ -98,9 +98,9 @@ public abstract class CommonApplication extends AppAwareApplication implements
           WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS);
     }
 
-    if (name.equals(DatabaseConsts.DATABASE_SERVICE_CLASS)) {
-      className = new ComponentName(DatabaseConsts.DATABASE_SERVICE_PACKAGE,
-          DatabaseConsts.DATABASE_SERVICE_CLASS);
+    if (name.equals(DatabaseConstants.DATABASE_SERVICE_CLASS)) {
+      className = new ComponentName(DatabaseConstants.DATABASE_SERVICE_PACKAGE,
+          DatabaseConstants.DATABASE_SERVICE_CLASS);
     }
     
     if ( className == null ) {
@@ -117,9 +117,9 @@ public abstract class CommonApplication extends AppAwareApplication implements
           WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS);
     }
 
-    if (name.equals(DatabaseConsts.DATABASE_SERVICE_CLASS)) {
-      className = new ComponentName(DatabaseConsts.DATABASE_SERVICE_PACKAGE,
-          DatabaseConsts.DATABASE_SERVICE_CLASS);
+    if (name.equals(DatabaseConstants.DATABASE_SERVICE_CLASS)) {
+      className = new ComponentName(DatabaseConstants.DATABASE_SERVICE_PACKAGE,
+          DatabaseConstants.DATABASE_SERVICE_CLASS);
     }
     
     if ( className == null ) {
@@ -151,9 +151,9 @@ public abstract class CommonApplication extends AppAwareApplication implements
   private static final class BackgroundServices {
 
     private ServiceConnection webkitfilesServiceConnection = null;
-    private OdkWebkitServerInterface webkitfilesService = null;
+    private WebkitServerInterface webkitfilesService = null;
     private ServiceConnection databaseServiceConnection = null;
-    private OdkDbSerializedInterface databaseService = null;
+    private UserDbInterface databaseService = null;
     private boolean isDestroying = false;
 
     BackgroundServices() {
@@ -167,11 +167,11 @@ public abstract class CommonApplication extends AppAwareApplication implements
     synchronized boolean isDestroyingFlag() {
       return isDestroying;
     }
-    public synchronized OdkDbSerializedInterface getDatabase() {
+    public synchronized UserDbInterface getDatabase() {
       return databaseService;
     }
 
-    private synchronized OdkWebkitServerInterface getWebkitServer() {
+    private synchronized WebkitServerInterface getWebkitServer() {
       return webkitfilesService;
     }
     private void bindToService(final CommonApplication application,
@@ -225,8 +225,8 @@ public abstract class CommonApplication extends AppAwareApplication implements
       if ( databaseBinder != null ) {
         Log.i(t, "Attempting bind to Database service");
         Intent bind_intent = new Intent();
-        bind_intent.setClassName(DatabaseConsts.DATABASE_SERVICE_PACKAGE,
-            DatabaseConsts.DATABASE_SERVICE_CLASS);
+        bind_intent.setClassName(DatabaseConstants.DATABASE_SERVICE_PACKAGE,
+            DatabaseConstants.DATABASE_SERVICE_CLASS);
         application.bindService(
             bind_intent,
             databaseBinder,
@@ -241,18 +241,18 @@ public abstract class CommonApplication extends AppAwareApplication implements
         Log.i(t, "Bound to WebServer service");
         synchronized (this) {
           try {
-            webkitfilesService = (service == null) ? null : OdkWebkitServerInterface.Stub.asInterface(service);
+            webkitfilesService = (service == null) ? null : WebkitServerInterface.Stub.asInterface(service);
           } catch (Exception e) {
             webkitfilesService = null;
           }
         }
       }
 
-      if (className.getClassName().equals(DatabaseConsts.DATABASE_SERVICE_CLASS)) {
+      if (className.getClassName().equals(DatabaseConstants.DATABASE_SERVICE_CLASS)) {
         Log.i(t, "Bound to Database service");
         synchronized (this) {
           try {
-            databaseService = (service == null) ? null : new OdkDbSerializedInterface(OdkDbInterface.Stub.asInterface(service));
+            databaseService = (service == null) ? null : new UserDbInterface(AidlDbInterface.Stub.asInterface(service));
           } catch (Exception e) {
             databaseService = null;
           }
@@ -287,7 +287,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
         }
       }
 
-      if (className.getClassName().equals(DatabaseConsts.DATABASE_SERVICE_CLASS)) {
+      if (className.getClassName().equals(DatabaseConstants.DATABASE_SERVICE_CLASS)) {
         ServiceConnection tmpDb = null;
         synchronized (this) {
           if (isDestroying) {
@@ -556,7 +556,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
     }
   }
 
-  public OdkDbSerializedInterface getDatabase() {
+  public UserDbInterface getDatabase() {
     if ( isMocked ) {
       return mockDatabaseService;
     } else {
@@ -564,7 +564,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
     }
   }
   
-  private OdkWebkitServerInterface getWebkitServer() {
+  private WebkitServerInterface getWebkitServer() {
     if ( isMocked ) {
       return mockWebkitServerService;
     } else {
@@ -582,8 +582,8 @@ public abstract class CommonApplication extends AppAwareApplication implements
           if (mBackgroundServices.isDestroyingFlag()) {
             wv.serviceChange(false);
           } else {
-            OdkWebkitServerInterface webkitServerIf = getWebkitServer();
-            OdkDbSerializedInterface dbIf = getDatabase();
+            WebkitServerInterface webkitServerIf = getWebkitServer();
+            UserDbInterface dbIf = getDatabase();
             wv.serviceChange(webkitServerIf != null && dbIf != null);
           }
         }

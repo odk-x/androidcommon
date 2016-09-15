@@ -24,7 +24,7 @@ import org.json.JSONTokener;
 import org.opendatakit.common.android.activities.IOdkCommonActivity;
 import org.opendatakit.common.android.provider.FormsProviderAPI;
 import org.opendatakit.common.android.utilities.ODKFileUtils;
-import org.opendatakit.common.android.utilities.WebLogger;
+import org.opendatakit.common.android.logging.WebLogger;
 
 import java.io.File;
 import java.lang.ref.WeakReference;
