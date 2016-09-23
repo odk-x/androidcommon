@@ -71,7 +71,7 @@ public interface IOdkCommonActivity extends IAppAwareActivity, IInitResumeActivi
    * @param dispatchString   Opaque string -- typically identifies prompt and user action
    *
    * @param action    The intent. e.g.,
-   *                   org.opendatakit.survey.android.activities.MediaCaptureImageActivity
+   *                   org.opendatakit.survey.MediaCaptureImageActivity
    *
    * @param valueMap  Map of the following structure:
    *                   {

@@ -154,7 +154,7 @@ public class OdkCommonIf {
    *
    * @param dispatchString Opaque string -- typically identifies prompt and user action
    * @param action         The intent. e.g.,
-   *                       org.opendatakit.survey.android.activities.MediaCaptureImageActivity
+   *                       org.opendatakit.survey.activities.MediaCaptureImageActivity
    * @param jsonMap        JSON.stringify of Map of the following structure:
    *                       {
    *                       "uri" : intent.setData(value)

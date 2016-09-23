@@ -16,7 +16,7 @@ import org.opendatakit.application.CommonApplication;
  */
 public class DependencyChecker {
 
-    public static final String surveyAppPkgName = "org.opendatakit.survey.android";
+    public static final String surveyAppPkgName = "org.opendatakit.survey";
     public static final String collectAppPkgName = "org.odk.collect.android";
 
     private static final String oiFileMgr = "org.openintents.filemanager";
