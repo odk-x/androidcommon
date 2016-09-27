@@ -17,10 +17,9 @@ import org.opendatakit.application.CommonApplication;
 public class DependencyChecker {
 
     public static final String surveyAppPkgName = "org.opendatakit.survey";
-    public static final String collectAppPkgName = "org.odk.collect.android";
+    private static final String oiFileMgrPkgName = "org.openintents.filemanager";
+    private static final String servicesAppPkgName = "org.opendatakit.services";
 
-    private static final String oiFileMgr = "org.openintents.filemanager";
-    private static final String services = "org.opendatakit.services";
     private static final String tables = "tables";
     private static final String scan = "scan";
 
@@ -40,12 +39,12 @@ public class DependencyChecker {
         if (tables.equals(((CommonApplication)context).getToolName()) ||
             scan.equals(((CommonApplication)context).getToolName())) { // need to check
         // for OI and Services
-            oiInstalled = isPackageInstalled(context, oiFileMgr);
+            oiInstalled = isPackageInstalled(context, oiFileMgrPkgName);
         } else { // only need to check for Services
             oiInstalled = true;
         }
 
-        servicesInstalled = isPackageInstalled(context, services);
+        servicesInstalled = isPackageInstalled(context, servicesAppPkgName);
 
         if (oiInstalled && servicesInstalled) { // correct dependencies installed
             return true;
