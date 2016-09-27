@@ -98,7 +98,8 @@ public class ColumnUtil {
 
     List<KeyValueStoreEntry> displayNameList =
             ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
-                    KeyValueStoreConstants.PARTITION_COLUMN, elementKey, KeyValueStoreConstants.COLUMN_DISPLAY_NAME);
+                    KeyValueStoreConstants.PARTITION_COLUMN, elementKey, KeyValueStoreConstants
+                    .COLUMN_DISPLAY_NAME, null).getEntries();
     if ( displayNameList.size() != 1 ) {
       // default to the column elementKey
       return NameUtil.normalizeDisplayName(NameUtil.constructSimpleDisplayName(elementKey));
@@ -112,10 +113,10 @@ public class ColumnUtil {
 
   public ArrayList<Map<String,Object>> getDisplayChoicesList(CommonApplication ctxt, String appName, DbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
 
-    List<KeyValueStoreEntry> choicesListList =
-            ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
-                    KeyValueStoreConstants.PARTITION_COLUMN, elementKey, KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST);
-    if ( choicesListList.size() != 1 ) {
+    List<KeyValueStoreEntry> choicesListList = ctxt.getDatabase()
+        .getDBTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_COLUMN,
+            elementKey, KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST, null).getEntries();
+    if (choicesListList.size() != 1) {
       // default to none
       return new ArrayList<Map<String,Object>>();
     }
@@ -183,11 +184,10 @@ public class ColumnUtil {
   
   public ArrayList<JoinColumn> getJoins(CommonApplication ctxt, String appName, DbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
 
-    List<KeyValueStoreEntry> joinsList =
-            ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
-                KeyValueStoreConstants.PARTITION_COLUMN, elementKey,
-                KeyValueStoreConstants.COLUMN_JOINS);
-    if ( joinsList.size() != 1 ) {
+    List<KeyValueStoreEntry> joinsList = ctxt.getDatabase()
+        .getDBTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_COLUMN,
+            elementKey, KeyValueStoreConstants.COLUMN_JOINS, null).getEntries();
+    if (joinsList.size() != 1) {
       return new ArrayList<JoinColumn>();
     }
 
@@ -205,11 +205,10 @@ public class ColumnUtil {
   }
 
   public int getColumnWidth( CommonApplication ctxt, String appName, DbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
-    List<KeyValueStoreEntry> kvsList =
-            ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
-                    LocalKeyValueStoreConstants.Spreadsheet.PARTITION,
-                    elementKey,
-                    LocalKeyValueStoreConstants.Spreadsheet.KEY_COLUMN_WIDTH);
+    List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
+        .getDBTableMetadata(appName, db, tableId, LocalKeyValueStoreConstants.Spreadsheet.PARTITION,
+            elementKey, LocalKeyValueStoreConstants.Spreadsheet.KEY_COLUMN_WIDTH, null)
+        .getEntries();
     if (kvsList.size() != 1) {
       return LocalKeyValueStoreConstants.Spreadsheet.DEFAULT_COL_WIDTH;
     }
@@ -276,11 +275,10 @@ public class ColumnUtil {
   public Map<String, Integer> getColumnWidths( CommonApplication ctxt, String appName, DbHandle db, String tableId, OrderedColumns columns) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> kvsList =
             ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
-                    LocalKeyValueStoreConstants.Spreadsheet.PARTITION,
-                    null,
-                    LocalKeyValueStoreConstants.Spreadsheet.KEY_COLUMN_WIDTH);
+                LocalKeyValueStoreConstants.Spreadsheet.PARTITION, null,
+                LocalKeyValueStoreConstants.Spreadsheet.KEY_COLUMN_WIDTH, null).getEntries();
     Map<String, Integer> colWidths = new HashMap<String, Integer>();
-    for ( KeyValueStoreEntry entry : kvsList ) {
+    for (KeyValueStoreEntry entry : kvsList) {
       Integer value = KeyValueStoreUtils.getInteger(appName, entry);
       if (value == null || value <= 0) {
         value = LocalKeyValueStoreConstants.Spreadsheet.DEFAULT_COL_WIDTH;

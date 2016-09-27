@@ -419,7 +419,8 @@ public abstract class ExecutorProcessor implements Runnable {
     // otherwise use the request.includeKeyValueStoreMap
     //if (request.includeKeyValueStoreMap) {
     entries = dbInterface
-        .getDBTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null);
+        .getDBTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null,
+            userTable.getMetaDataRev()).getEntries();
     //}
     TableDefinitionEntry tdef = dbInterface
         .getTableDefinitionEntry(context.getAppName(), dbHandle, request.tableId);
@@ -578,7 +579,8 @@ public abstract class ExecutorProcessor implements Runnable {
     // otherwise use the request.includeKeyValueStoreMap
     //if (request.includeKeyValueStoreMap) {
     entries = dbInterface
-        .getDBTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null);
+        .getDBTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null,
+            userTable.getMetaDataRev()).getEntries();
     //}
     TableDefinitionEntry tdef = dbInterface
         .getTableDefinitionEntry(context.getAppName(), dbHandle, request.tableId);

@@ -111,21 +111,21 @@ public class ColorRuleGroup {
     switch (mType) {
     case COLUMN:
       entries = ctxt.getDatabase().getDBTableMetadata(appName, db, mTableId,
-          LocalKeyValueStoreConstants.ColumnColorRules.PARTITION,
-          elementKey,
-          LocalKeyValueStoreConstants.ColumnColorRules.KEY_COLOR_RULES_COLUMN);
+          LocalKeyValueStoreConstants.ColumnColorRules.PARTITION, elementKey,
+          LocalKeyValueStoreConstants.ColumnColorRules.KEY_COLOR_RULES_COLUMN, null).getEntries();
       break;
     case TABLE:
       entries = ctxt.getDatabase().getDBTableMetadata(appName, db, mTableId,
           LocalKeyValueStoreConstants.TableColorRules.PARTITION,
           KeyValueStoreConstants.ASPECT_DEFAULT,
-          LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_ROW);
+          LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_ROW, null).getEntries();
       break;
     case STATUS_COLUMN:
       entries = ctxt.getDatabase().getDBTableMetadata(appName, db, mTableId,
           LocalKeyValueStoreConstants.TableColorRules.PARTITION,
           KeyValueStoreConstants.ASPECT_DEFAULT,
-          LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_STATUS_COLUMN);
+          LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_STATUS_COLUMN, null)
+          .getEntries();
       break;
     default:
       WebLogger.getLogger(mAppName).e(TAG, "unrecognized ColorRuleGroup type: " + mType);

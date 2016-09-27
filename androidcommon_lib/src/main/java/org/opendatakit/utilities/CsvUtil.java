@@ -296,8 +296,8 @@ public class CsvUtil {
      * choiceListId with the underlying choice list.  On input, these are split
      * off and replaced by choiceListIds.
      */
-    List<KeyValueStoreEntry> kvsEntries =
-        context.getDatabase().getDBTableMetadata(appName, db, tableId, null, null, null);
+    List<KeyValueStoreEntry> kvsEntries = context.getDatabase()
+        .getDBTableMetadata(appName, db, tableId, null, null, null, null).getEntries();
     for (int i = 0; i < kvsEntries.size(); i++) {
       KeyValueStoreEntry entry = kvsEntries.get(i);
 
