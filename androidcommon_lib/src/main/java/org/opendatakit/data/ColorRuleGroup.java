@@ -110,18 +110,18 @@ public class ColorRuleGroup {
     List<KeyValueStoreEntry> entries = null;
     switch (mType) {
     case COLUMN:
-      entries = ctxt.getDatabase().getDBTableMetadata(appName, db, mTableId,
+      entries = ctxt.getDatabase().getTableMetadata(appName, db, mTableId,
           LocalKeyValueStoreConstants.ColumnColorRules.PARTITION, elementKey,
           LocalKeyValueStoreConstants.ColumnColorRules.KEY_COLOR_RULES_COLUMN, null).getEntries();
       break;
     case TABLE:
-      entries = ctxt.getDatabase().getDBTableMetadata(appName, db, mTableId,
+      entries = ctxt.getDatabase().getTableMetadata(appName, db, mTableId,
           LocalKeyValueStoreConstants.TableColorRules.PARTITION,
           KeyValueStoreConstants.ASPECT_DEFAULT,
           LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_ROW, null).getEntries();
       break;
     case STATUS_COLUMN:
-      entries = ctxt.getDatabase().getDBTableMetadata(appName, db, mTableId,
+      entries = ctxt.getDatabase().getTableMetadata(appName, db, mTableId,
           LocalKeyValueStoreConstants.TableColorRules.PARTITION,
           KeyValueStoreConstants.ASPECT_DEFAULT,
           LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_STATUS_COLUMN, null)
@@ -267,7 +267,7 @@ public class ColorRuleGroup {
               ElementDataType.array, ruleListJson);
           break;
         }
-        ctxt.getDatabase().replaceDBTableMetadata(mAppName, db, entry);
+        ctxt.getDatabase().replaceTableMetadata(mAppName, db, entry);
       } catch (JsonGenerationException e) {
         WebLogger.getLogger(mAppName).e(TAG, "problem parsing list of color rules");
         WebLogger.getLogger(mAppName).printStackTrace(e);

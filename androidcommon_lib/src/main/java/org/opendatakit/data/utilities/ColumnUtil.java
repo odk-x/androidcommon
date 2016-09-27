@@ -97,7 +97,7 @@ public class ColumnUtil {
   public String getRawDisplayName(CommonApplication ctxt, String appName, DbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
 
     List<KeyValueStoreEntry> displayNameList =
-            ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
+            ctxt.getDatabase().getTableMetadata(appName, db, tableId,
                     KeyValueStoreConstants.PARTITION_COLUMN, elementKey, KeyValueStoreConstants
                     .COLUMN_DISPLAY_NAME, null).getEntries();
     if ( displayNameList.size() != 1 ) {
@@ -114,7 +114,7 @@ public class ColumnUtil {
   public ArrayList<Map<String,Object>> getDisplayChoicesList(CommonApplication ctxt, String appName, DbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
 
     List<KeyValueStoreEntry> choicesListList = ctxt.getDatabase()
-        .getDBTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_COLUMN,
+        .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_COLUMN,
             elementKey, KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST, null).getEntries();
     if (choicesListList.size() != 1) {
       // default to none
@@ -179,13 +179,13 @@ public class ColumnUtil {
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId,
         KeyValueStoreConstants.PARTITION_COLUMN, cd.getElementKey(),
         KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST, ElementDataType.string, choiceListId);
-    ctxt.getDatabase().replaceDBTableMetadata(appName, db, e);
+    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
   }
   
   public ArrayList<JoinColumn> getJoins(CommonApplication ctxt, String appName, DbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
 
     List<KeyValueStoreEntry> joinsList = ctxt.getDatabase()
-        .getDBTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_COLUMN,
+        .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_COLUMN,
             elementKey, KeyValueStoreConstants.COLUMN_JOINS, null).getEntries();
     if (joinsList.size() != 1) {
       return new ArrayList<JoinColumn>();
@@ -206,7 +206,7 @@ public class ColumnUtil {
 
   public int getColumnWidth( CommonApplication ctxt, String appName, DbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
-        .getDBTableMetadata(appName, db, tableId, LocalKeyValueStoreConstants.Spreadsheet.PARTITION,
+        .getTableMetadata(appName, db, tableId, LocalKeyValueStoreConstants.Spreadsheet.PARTITION,
             elementKey, LocalKeyValueStoreConstants.Spreadsheet.KEY_COLUMN_WIDTH, null)
         .getEntries();
     if (kvsList.size() != 1) {
@@ -239,7 +239,7 @@ public class ColumnUtil {
             elementKey,
             LocalKeyValueStoreConstants.Spreadsheet.KEY_COLUMN_WIDTH,
             ElementDataType.integer, (width == null) ? null : Integer.toString(width));
-    ctxt.getDatabase().replaceDBTableMetadata(appName, db, e);
+    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
   }
 
   /**
@@ -274,7 +274,7 @@ public class ColumnUtil {
 
   public Map<String, Integer> getColumnWidths( CommonApplication ctxt, String appName, DbHandle db, String tableId, OrderedColumns columns) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> kvsList =
-            ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
+            ctxt.getDatabase().getTableMetadata(appName, db, tableId,
                 LocalKeyValueStoreConstants.Spreadsheet.PARTITION, null,
                 LocalKeyValueStoreConstants.Spreadsheet.KEY_COLUMN_WIDTH, null).getEntries();
     Map<String, Integer> colWidths = new HashMap<String, Integer>();

@@ -130,7 +130,7 @@ public class TableUtil {
       ServicesAvailabilityException {
 
     List<KeyValueStoreEntry> lockedList =
-        ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
+        ctxt.getDatabase().getTableMetadata(appName, db, tableId,
             KeyValueStoreConstants.PARTITION_TABLE,
             LocalKeyValueStoreConstants.TableSecurity.ASPECT,
             LocalKeyValueStoreConstants.TableSecurity.KEY_LOCKED, null).getEntries();
@@ -175,7 +175,7 @@ public class TableUtil {
     }
 
     List<KeyValueStoreEntry> anonAddList = ctxt.getDatabase()
-          .getDBTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
+          .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
               LocalKeyValueStoreConstants.TableSecurity.ASPECT,
               LocalKeyValueStoreConstants.TableSecurity.KEY_UNVERIFIED_USER_CAN_CREATE, null)
         .getEntries();
@@ -227,7 +227,7 @@ public class TableUtil {
   public String getRawDisplayName(CommonApplication ctxt, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
 
     List<KeyValueStoreEntry> displayNameList =
-            ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
+            ctxt.getDatabase().getTableMetadata(appName, db, tableId,
                     KeyValueStoreConstants.PARTITION_TABLE, KeyValueStoreConstants.ASPECT_DEFAULT,
                 KeyValueStoreConstants.TABLE_DISPLAY_NAME, null).getEntries();
     if (displayNameList.size() != 1) {
@@ -255,7 +255,7 @@ public class TableUtil {
             KeyValueStoreConstants.ASPECT_DEFAULT,
             KeyValueStoreConstants.TABLE_DISPLAY_NAME,
             ElementDataType.object, rawDisplayName);
-    ctxt.getDatabase().replaceDBTableMetadata(appName, db, e);
+    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
   }
 
   /**
@@ -306,7 +306,7 @@ public class TableUtil {
   public TableViewType getDefaultViewType( CommonApplication ctxt, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
 
     List<KeyValueStoreEntry> kvsList =
-            ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
+            ctxt.getDatabase().getTableMetadata(appName, db, tableId,
                     KeyValueStoreConstants.PARTITION_TABLE,
                     KeyValueStoreConstants.ASPECT_DEFAULT,
                 LocalKeyValueStoreConstants.Tables.TABLE_DEFAULT_VIEW_TYPE, null).getEntries();
@@ -340,7 +340,7 @@ public class TableUtil {
             KeyValueStoreConstants.ASPECT_DEFAULT,
             LocalKeyValueStoreConstants.Tables.TABLE_DEFAULT_VIEW_TYPE,
             ElementDataType.string, viewType.name());
-    ctxt.getDatabase().replaceDBTableMetadata(appName, db, e);
+    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
   }
 
   /**
@@ -387,7 +387,7 @@ public class TableUtil {
 
     // TODO: this should probably use the detailView name as the aspect
     List<KeyValueStoreEntry> kvsList =
-            ctxt.getDatabase().getDBTableMetadata(appName, db, tableId,
+            ctxt.getDatabase().getTableMetadata(appName, db, tableId,
                 KeyValueStoreConstants.PARTITION_TABLE, KeyValueStoreConstants.ASPECT_DEFAULT,
                 LocalKeyValueStoreConstants.Tables.KEY_DETAIL_VIEW_FILE_NAME, null).getEntries();
     if (kvsList.size() != 1) {
@@ -414,7 +414,7 @@ public class TableUtil {
             KeyValueStoreConstants.ASPECT_DEFAULT,
             LocalKeyValueStoreConstants.Tables.KEY_DETAIL_VIEW_FILE_NAME,
             ElementDataType.configpath, detailViewRelativePath);
-    ctxt.getDatabase().replaceDBTableMetadata(appName, db, e);
+    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
   }
 
   /**
@@ -461,7 +461,7 @@ public class TableUtil {
 
     // TODO: this should probably use the listView name as the aspect
     List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
-        .getDBTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
+        .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             LocalKeyValueStoreConstants.Tables.KEY_LIST_VIEW_FILE_NAME, null).getEntries();
     if (kvsList.size() != 1) {
@@ -488,7 +488,7 @@ public class TableUtil {
             KeyValueStoreConstants.ASPECT_DEFAULT,
             LocalKeyValueStoreConstants.Tables.KEY_LIST_VIEW_FILE_NAME,
             ElementDataType.configpath, listViewRelativePath);
-    ctxt.getDatabase().replaceDBTableMetadata(appName, db, e);
+    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
   }
 
   /**
@@ -534,7 +534,7 @@ public class TableUtil {
   public String getMapListViewFilename( CommonApplication ctxt, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
     // TODO: this should probably use a mapView name as the aspect
     List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
-        .getDBTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
+        .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             LocalKeyValueStoreConstants.Tables.KEY_MAP_LIST_VIEW_FILE_NAME, null).getEntries();
     if (kvsList.size() != 1) {
@@ -560,7 +560,7 @@ public class TableUtil {
             KeyValueStoreConstants.ASPECT_DEFAULT,
             LocalKeyValueStoreConstants.Tables.KEY_MAP_LIST_VIEW_FILE_NAME,
             ElementDataType.configpath, mapListViewRelativePath);
-    ctxt.getDatabase().replaceDBTableMetadata(appName, db, e);
+    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
   }
 
   /**
@@ -597,7 +597,7 @@ public class TableUtil {
       DbHandle db, String tableId) throws ServicesAvailabilityException {
     // TODO: this should probably use the mapView name as the aspect
     List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
-        .getDBTableMetadata(appName, db, tableId, LocalKeyValueStoreConstants.Map.PARTITION,
+        .getTableMetadata(appName, db, tableId, LocalKeyValueStoreConstants.Map.PARTITION,
             KeyValueStoreConstants.ASPECT_DEFAULT, null, null).getEntries();
     // Grab the key value store helper from the map fragment.
     String colorType = null;
@@ -634,14 +634,14 @@ public class TableUtil {
             LocalKeyValueStoreConstants.Map.KEY_COLOR_RULE_TYPE,
             ElementDataType.string, (info == null) ? null : info.colorType);
 
-      ctxt.getDatabase().replaceDBTableMetadata(appName, db, entryColorElementKey);
-      ctxt.getDatabase().replaceDBTableMetadata(appName, db, entryColorRuleType);
+      ctxt.getDatabase().replaceTableMetadata(appName, db, entryColorElementKey);
+      ctxt.getDatabase().replaceTableMetadata(appName, db, entryColorRuleType);
   }
 
   public String getMapListViewLatitudeElementKey( CommonApplication ctxt, String appName, DbHandle db, String tableId, OrderedColumns orderedDefns) throws ServicesAvailabilityException {
     // TODO: this should probably use a mapView name as the aspect
     List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
-        .getDBTableMetadata(appName, db, tableId, LocalKeyValueStoreConstants.Map.PARTITION,
+        .getTableMetadata(appName, db, tableId, LocalKeyValueStoreConstants.Map.PARTITION,
             KeyValueStoreConstants.ASPECT_DEFAULT, LocalKeyValueStoreConstants.Map.KEY_MAP_LAT_COL,
             null).getEntries();
     String rawValue = null;
@@ -666,7 +666,7 @@ public class TableUtil {
   public String getMapListViewLongitudeElementKey( CommonApplication ctxt, String appName, DbHandle db, String tableId, OrderedColumns orderedDefns) throws ServicesAvailabilityException {
     // TODO: this should probably use a mapView name as the aspect
     List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
-        .getDBTableMetadata(appName, db, tableId, LocalKeyValueStoreConstants.Map.PARTITION,
+        .getTableMetadata(appName, db, tableId, LocalKeyValueStoreConstants.Map.PARTITION,
             KeyValueStoreConstants.ASPECT_DEFAULT, LocalKeyValueStoreConstants.Map.KEY_MAP_LONG_COL,
             null).getEntries();
     String rawValue = null;
@@ -700,7 +700,7 @@ public class TableUtil {
    */
   public String getSortColumn( CommonApplication ctxt, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
-        .getDBTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
+        .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT, KeyValueStoreConstants.TABLE_SORT_COL, null)
         .getEntries();
     if ( kvsList.size() != 1 ) {
@@ -725,7 +725,7 @@ public class TableUtil {
             KeyValueStoreConstants.ASPECT_DEFAULT,
             KeyValueStoreConstants.TABLE_SORT_COL,
             ElementDataType.string, elementKey);
-    ctxt.getDatabase().replaceDBTableMetadata(appName, db, e);
+    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
   }
 
   /**
@@ -770,7 +770,7 @@ public class TableUtil {
    */
   public String getSortOrder( CommonApplication ctxt, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
-        .getDBTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
+        .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT, KeyValueStoreConstants.TABLE_SORT_ORDER, null)
         .getEntries();
     if (kvsList.size() != 1) {
@@ -798,7 +798,7 @@ public class TableUtil {
             KeyValueStoreConstants.ASPECT_DEFAULT,
             KeyValueStoreConstants.TABLE_SORT_ORDER,
             ElementDataType.string, sortOrder);
-    ctxt.getDatabase().replaceDBTableMetadata(appName, db, e);
+    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
   }
 
   /**
@@ -843,7 +843,7 @@ public class TableUtil {
    */
   public String getIndexColumn( CommonApplication ctxt, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
-        .getDBTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
+        .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT, KeyValueStoreConstants.TABLE_INDEX_COL, null)
         .getEntries();
     if (kvsList.size() != 1) {
@@ -868,7 +868,7 @@ public class TableUtil {
             KeyValueStoreConstants.ASPECT_DEFAULT,
             KeyValueStoreConstants.TABLE_INDEX_COL,
             ElementDataType.string, elementKey);
-    ctxt.getDatabase().replaceDBTableMetadata(appName, db, e);
+    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
   }
 
   /**
@@ -903,7 +903,7 @@ public class TableUtil {
 
   public int getSpreadsheetViewFontSize( CommonApplication ctxt, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
-        .getDBTableMetadata(appName, db, tableId, LocalKeyValueStoreConstants.Spreadsheet.PARTITION,
+        .getTableMetadata(appName, db, tableId, LocalKeyValueStoreConstants.Spreadsheet.PARTITION,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             LocalKeyValueStoreConstants.Spreadsheet.KEY_FONT_SIZE, null).getEntries();
     Integer fontSize = null;
@@ -935,7 +935,7 @@ public class TableUtil {
             KeyValueStoreConstants.ASPECT_DEFAULT,
             LocalKeyValueStoreConstants.Spreadsheet.KEY_FONT_SIZE,
             ElementDataType.integer, Integer.toString(fontSize));
-    ctxt.getDatabase().replaceDBTableMetadata(appName, db, e);
+    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
   }
 
   /**
@@ -980,7 +980,7 @@ public class TableUtil {
    */
   public ArrayList<String> getGroupByColumns( CommonApplication ctxt, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
-        .getDBTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
+        .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT, KeyValueStoreConstants.TABLE_GROUP_BY_COLS, null)
         .getEntries();
     if (kvsList.size() != 1) {
@@ -1015,7 +1015,7 @@ public class TableUtil {
             KeyValueStoreConstants.ASPECT_DEFAULT,
             KeyValueStoreConstants.TABLE_GROUP_BY_COLS,
             ElementDataType.array, list);
-    ctxt.getDatabase().replaceDBTableMetadata(appName, db, e);
+    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
   }
 
   /**
@@ -1098,7 +1098,7 @@ public class TableUtil {
    */
   public ArrayList<String> getColumnOrder( CommonApplication ctxt, String appName, DbHandle db, String tableId, OrderedColumns columns) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
-        .getDBTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
+        .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT, KeyValueStoreConstants.TABLE_COL_ORDER, null)
         .getEntries();
     ArrayList<String> rawValue = null;
@@ -1134,7 +1134,7 @@ public class TableUtil {
             KeyValueStoreConstants.ASPECT_DEFAULT,
             KeyValueStoreConstants.TABLE_COL_ORDER,
             ElementDataType.array, list);
-    ctxt.getDatabase().replaceDBTableMetadata(appName, db, e);
+    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
   }
 
   public void atomicSetColumnOrder( CommonApplication ctxt, String appName, String tableId, ArrayList<String> elementKeys) throws ServicesAvailabilityException {

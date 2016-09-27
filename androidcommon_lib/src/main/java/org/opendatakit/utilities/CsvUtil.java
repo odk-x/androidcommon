@@ -297,7 +297,7 @@ public class CsvUtil {
      * off and replaced by choiceListIds.
      */
     List<KeyValueStoreEntry> kvsEntries = context.getDatabase()
-        .getDBTableMetadata(appName, db, tableId, null, null, null, null).getEntries();
+        .getTableMetadata(appName, db, tableId, null, null, null, null).getEntries();
     for (int i = 0; i < kvsEntries.size(); i++) {
       KeyValueStoreEntry entry = kvsEntries.get(i);
 
@@ -369,7 +369,7 @@ public class CsvUtil {
         }
       }
 
-      context.getDatabase().createOrOpenDBTableWithColumnsAndProperties(appName, db, tableId,
+      context.getDatabase().createOrOpenTableWithColumnsAndProperties(appName, db, tableId,
           dtd.columnList, dtd.kvsEntries, true);
 
     } finally {
