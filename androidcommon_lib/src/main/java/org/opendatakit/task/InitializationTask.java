@@ -27,7 +27,7 @@ import org.opendatakit.listener.InitializationListener;
 import org.opendatakit.provider.FormsColumns;
 import org.opendatakit.provider.FormsProviderAPI;
 import org.opendatakit.utilities.CsvUtil;
-import org.opendatakit.utilities.CsvUtil.ImportListener;
+import org.opendatakit.listener.ImportListener;
 import org.opendatakit.database.utilities.CursorUtils;
 import org.opendatakit.utilities.ODKFileUtils;
 import org.opendatakit.logging.WebLogger;

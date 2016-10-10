@@ -33,6 +33,8 @@ import org.opendatakit.database.data.OrderedColumns;
 import org.opendatakit.database.data.UserTable;
 import org.opendatakit.database.utilities.CursorUtils;
 import org.opendatakit.exception.ServicesAvailabilityException;
+import org.opendatakit.listener.ExportListener;
+import org.opendatakit.listener.ImportListener;
 import org.opendatakit.logging.WebLogger;
 import org.opendatakit.provider.DataTableColumns;
 import org.opendatakit.database.data.KeyValueStoreEntry;
@@ -58,21 +60,9 @@ import java.util.UUID;
  * Various utilities for importing/exporting tables from/to CSV.
  *
  * @author sudar.sam@gmail.com
- * @author unknown
  *
  */
 public class CsvUtil {
-
-  public interface ExportListener {
-
-    public void exportComplete(boolean outcome);
-  };
-
-  public interface ImportListener {
-    public void updateProgressDetail(String progressDetailString);
-
-    public void importComplete(boolean outcome);
-  }
 
   private static final String TAG = CsvUtil.class.getSimpleName();
 
