@@ -621,8 +621,10 @@ public class CsvUtil {
             }
 
             if (syncState == SyncState.new_row) {
-              // we do the actual update here
-              context.getDatabase().privilegedUpdateRowWithId(appName, db, tableId, orderedDefns,
+              // delete the existing row then insert the new values for it
+              context.getDatabase().privilegedDeleteRowWithId(appName, db, tableId, orderedDefns,
+                  v_id);
+              context.getDatabase().privilegedInsertRowWithId(appName, db, tableId, orderedDefns,
                   cv, v_id, true);
             }
             // otherwise, do NOT update the row.
@@ -665,8 +667,10 @@ public class CsvUtil {
 
           /**
            * Copy all attachment files into the destination row.
-           * Don't worry about whether they are present in the current
-           * row. This is a simplification.
+           * The attachments are in instance-id-labeled sub-directories.
+           * Anything in the corresponding subdirectory should be
+           * referenced by the valuesMap above. If it isn't, don't worry about
+           * it. This is a simplification.
            */
           File assetsInstanceFolder = new File(ODKFileUtils.getAssetsCsvInstanceFolder(appName, tableId, v_id));
           if ( instancesHavingData.contains(assetsInstanceFolder) ) {
