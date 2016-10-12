@@ -5,7 +5,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <instrumentation android:name="org.opendatakit.common.android.OdkAndroidCommonInstrumentationTestRunner"
+    <instrumentation android:name="org.opendatakit.OdkAndroidCommonInstrumentationTestRunner"
                      android:targetPackage="org.opendatakit.androidcommon.test"/>
 	
 </manifest>
