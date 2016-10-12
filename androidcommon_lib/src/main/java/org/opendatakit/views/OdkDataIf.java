@@ -175,10 +175,15 @@ public class OdkDataIf {
    * they will have to call this via the JS API with success and
    * failure callback functions to manipulate the data for their views
    */
-  @android.webkit.JavascriptInterface public void getViewData(String callbackJSON) {
+  @android.webkit.JavascriptInterface public void getViewData(String callbackJSON, String limit,
+      String offset) {
     if (isInactive())
       return;
-    weakData.get().getViewData(callbackJSON);
+
+    Integer integerLimit = (limit != null ? Integer.valueOf(limit) : null);
+    Integer integerOffset = (offset != null ? Integer.valueOf(offset) : null);
+
+    weakData.get().getViewData(callbackJSON, integerLimit, integerOffset);
   }
 
   /**
@@ -246,13 +251,17 @@ public class OdkDataIf {
    */
   @android.webkit.JavascriptInterface public void query(String tableId, String whereClause,
       String[] sqlBindParams, String[] groupBy, String having, String orderByElementKey,
-      String orderByDirection, Integer limit, Integer offset, boolean includeKeyValueStoreMap,
+      String orderByDirection, String limit, String offset, boolean includeKeyValueStoreMap,
       String callbackJSON)
       {
     if (isInactive())
       return;
+
+    Integer integerLimit = (limit != null ? Integer.valueOf(limit) : null);
+    Integer integerOffset = (offset != null ? Integer.valueOf(offset) : null);
+
     weakData.get().query(tableId, whereClause, sqlBindParams, groupBy, having, orderByElementKey,
-        orderByDirection, limit, offset, includeKeyValueStoreMap, callbackJSON);
+        orderByDirection, integerLimit, integerOffset, includeKeyValueStoreMap, callbackJSON);
   }
 
   /**
