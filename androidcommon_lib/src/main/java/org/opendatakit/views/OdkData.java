@@ -150,7 +150,7 @@ public class OdkData {
    * they will have to call this via the JS API with success and
    * failure callback functions to manipulate the data for their views
    */
-  public void getViewData(String callbackJSON) {
+  public void getViewData(String callbackJSON, Integer limit, Integer offset) {
     logDebug("getViewData");
     Bundle bundle = this.mActivity.getIntentExtras();
 
@@ -170,10 +170,10 @@ public class OdkData {
 
     if (rowId != null && !rowId.isEmpty()) {
       query(tableId, DataTableColumns.ID + "=?", new String[] { rowId }, null, null,
-          DataTableColumns.SAVEPOINT_TIMESTAMP, descOrder, null, null, true, callbackJSON);
+          DataTableColumns.SAVEPOINT_TIMESTAMP, descOrder, limit, offset, true, callbackJSON);
     } else {
-      query(tableId, whereClause, selArgs, groupBy, havingClause, orderByElemKey, orderByDir,
-          null, null, true, callbackJSON);
+      query(tableId, whereClause, selArgs, groupBy, havingClause, orderByElemKey, orderByDir, limit,
+          offset, true, callbackJSON);
     }
   }
 
