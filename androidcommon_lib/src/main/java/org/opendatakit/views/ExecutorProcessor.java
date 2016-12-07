@@ -565,6 +565,7 @@ public abstract class ExecutorProcessor implements Runnable {
                 emptyArray :
                 new String[] { request.orderByDirection }, request.limit, request.offset);
 
+    WebLogger.getLogger(context.getAppName()).e(TAG, "userTableQuery after simpleQuery PERFTEST: " + System.currentTimeMillis());
     if (t == null) {
       reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to query " + request.tableId);
     } else {
