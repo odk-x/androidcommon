@@ -27,6 +27,7 @@ android {
         targetSdkVersion(targetVersion)
         versionCode(releaseVersionCode)
         versionName(versionCodeName)
+        multiDexEnabled(true)
     }
 
 	    // set by command line arguments
@@ -67,6 +68,10 @@ android {
     compileOptions {
         sourceCompatibility javaVersion
         targetCompatibility javaVersion
+    }
+
+    dexOptions {
+        javaMaxHeapSize "2g"
     }
 
     variantFilter { variant ->
@@ -111,7 +116,7 @@ dependencies {
     }
 
     compile 'com.google.android.gms:play-services:' + gpsVersion
-    compile 'com.android.support:support-annotations:23.1.0'
+    compile 'com.android.support:support-annotations:25.1.0'
 
     // Testing dependencies
     testCompile 'junit:junit:4.12'
