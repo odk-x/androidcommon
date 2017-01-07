@@ -15,10 +15,14 @@
 package org.opendatakit.webkitserver.utilities;
 
 import android.test.AndroidTestCase;
-import org.opendatakit.webkitserver.utilities.UrlUtils;
 
 public class UrlUtilsTest extends AndroidTestCase {
-  
+
+  @Override
+  protected void setUp() throws Exception {
+    super.setUp();
+  }
+
   public void testNoHashOrParameters() {
     String fileName = "this/test/file/path/.html";
     this.assertRetrieveFileNameHelper(fileName, fileName);
