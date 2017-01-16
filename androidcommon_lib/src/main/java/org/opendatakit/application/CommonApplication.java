@@ -29,8 +29,10 @@ import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
 import android.webkit.WebView;
-
 import org.opendatakit.consts.IntentConsts;
+import org.opendatakit.consts.WebkitServerConsts;
+import org.opendatakit.database.service.AidlDbInterface;
+import org.opendatakit.database.service.UserDbInterface;
 import org.opendatakit.listener.DatabaseConnectionListener;
 import org.opendatakit.listener.InitializationListener;
 import org.opendatakit.properties.CommonToolProperties;
@@ -38,10 +40,6 @@ import org.opendatakit.properties.PropertiesSingleton;
 import org.opendatakit.task.InitializationTask;
 import org.opendatakit.utilities.ODKFileUtils;
 import org.opendatakit.views.ODKWebView;
-import org.opendatakit.database.DatabaseConstants;
-import org.opendatakit.database.service.UserDbInterface;
-import org.opendatakit.database.service.AidlDbInterface;
-import org.opendatakit.consts.WebkitServerConsts;
 import org.opendatakit.webkitserver.service.WebkitServerInterface;
 
 import java.util.ArrayList;
@@ -141,7 +139,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
     InitializationTask mInitializationTask = null;
 
     BackgroundTasks() {
-    };
+    }
   }
 
   /**
@@ -159,7 +157,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
     private boolean isDestroying = false;
 
     BackgroundServices() {
-    };
+    }
 
     synchronized void clearDestroyingFlag() {
       Log.i(t, "isDestroying reset to false");

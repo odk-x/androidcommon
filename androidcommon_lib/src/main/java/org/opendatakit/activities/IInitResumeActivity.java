@@ -17,6 +17,6 @@ package org.opendatakit.activities;
 public interface IInitResumeActivity {
 
   // for InitializationFragment
-  public void initializationCompleted();
+  void initializationCompleted();
 
 }

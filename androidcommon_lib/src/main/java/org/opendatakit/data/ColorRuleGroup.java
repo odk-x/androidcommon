@@ -72,7 +72,7 @@ public class ColorRuleGroup {
   }
 
   public enum Type {
-    COLUMN, TABLE, STATUS_COLUMN;
+    COLUMN, TABLE, STATUS_COLUMN
   }
 
   // private final KeyValueStoreHelper kvsh;

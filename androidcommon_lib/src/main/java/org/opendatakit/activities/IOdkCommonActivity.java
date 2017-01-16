@@ -30,7 +30,7 @@ public interface IOdkCommonActivity extends IAppAwareActivity, IInitResumeActivi
    * @return  "mailto:" + getProperty(PropertyManager.EMAIL) or if not defined,
    *          "username:" + getProperty(PropertyManager.USERNAME)
    */
-  public String getActiveUser();
+  String getActiveUser();
 
   /**
    * Return the value for the indicated property.
@@ -38,14 +38,14 @@ public interface IOdkCommonActivity extends IAppAwareActivity, IInitResumeActivi
    * @param propertyId
    * @return
    */
-  public String getProperty(String propertyId);
+  String getProperty(String propertyId);
 
   /**
    *  for completing the uriFragment of the media attachments */
   /**
    * @return UrlUtils.getWebViewContentUri(this) with a trailing slash
    */
-  public String getWebViewContentUri();
+  String getWebViewContentUri();
 
   /**
    * Store a persistent key-value. This lasts for the duration of this screen and is
@@ -54,7 +54,7 @@ public interface IOdkCommonActivity extends IAppAwareActivity, IInitResumeActivi
    * @param elementPath
    * @param jsonValue
    */
-  public void setSessionVariable(String elementPath, String jsonValue);
+  void setSessionVariable(String elementPath, String jsonValue);
 
   /**
    * Retrieve a persistent value for a key. This lasts for the duration of this screen and
@@ -63,7 +63,7 @@ public interface IOdkCommonActivity extends IAppAwareActivity, IInitResumeActivi
    * @param elementPath
    * @return
    */
-  public String getSessionVariable(String elementPath);
+  String getSessionVariable(String elementPath);
 
   /**
    * Execute an action (intent call).
@@ -96,7 +96,7 @@ public interface IOdkCommonActivity extends IAppAwareActivity, IInitResumeActivi
    *          "OK"                    -- request issued
    *          "Application not found" -- could not find app to handle intent
    */
-  public String doAction(String dispatchString, String action, JSONObject valueMap);
+  String doAction(String dispatchString, String action, JSONObject valueMap);
 
   /**
    * Queue the outcome of a doAction along with its UI element specifiers.  This is used
@@ -110,7 +110,7 @@ public interface IOdkCommonActivity extends IAppAwareActivity, IInitResumeActivi
    *   jsonValue: { status: integerOutcome,
    *                result: {key-value map of extras returned in the result intent} } }
    */
-  public void queueActionOutcome(String outcome);
+  void queueActionOutcome(String outcome);
 
   /**
    * Queue a hash change action (initiated by the Java side).
@@ -122,24 +122,24 @@ public interface IOdkCommonActivity extends IAppAwareActivity, IInitResumeActivi
    *
    * @param hash
    */
-  public void queueUrlChange(String hash);
+  void queueUrlChange(String hash);
 
   /**
    * @return the oldest queued action outcome.
    *   or Url change. Return null if there are none.
    *   Leaves the action on the action queue.
    */
-  public String viewFirstQueuedAction();
+  String viewFirstQueuedAction();
 
   /**
    * Removes the first queued action, if any.
    */
-  public void removeFirstQueuedAction();
+  void removeFirstQueuedAction();
 
   /**
    * Calls through to the Activity implementation of this.
    *
    * @param r
    */
-  public void runOnUiThread(Runnable r);
+  void runOnUiThread(Runnable r);
 }
