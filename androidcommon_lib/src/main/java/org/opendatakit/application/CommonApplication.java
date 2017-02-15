@@ -52,83 +52,6 @@ public abstract class CommonApplication extends AppAwareApplication implements
   public static final String PERMISSION_WEBSERVER = "org.opendatakit.webkitserver.RUN_WEBSERVER";
   public static final String PERMISSION_DATABASE = "org.opendatakit.database.RUN_DATABASE";
 
-  // Support for mocking the remote interfaces that are actually accessed
-  // vs. the WebKit service, which is merely started.
-  private static boolean isMocked = false;
-  
-  // Hack to determine whether or not to cascade to the initialize task
-  private static boolean disableInitializeCascade = true;
-  
-  // Hack for handling mock interfaces...
-  private static UserDbInterface mockDatabaseService = null;
-  private static WebkitServerInterface mockWebkitServerService = null;
-  
-  public static void setMocked() {
-    isMocked = true;
-  }
-  
-  public static boolean isMocked() {
-    return isMocked;
-  }
-  
-  public static boolean isDisableInitializeCascade() {
-    return disableInitializeCascade;
-  }
-  
-  public static void setEnableInitializeCascade() {
-    disableInitializeCascade = false;
-  }
-  
-  public static void setDisableInitializeCascade() {
-    disableInitializeCascade = true;
-  }
-  
-  public static void setMockDatabase(UserDbInterface mock) {
-    CommonApplication.mockDatabaseService = mock;
-  }
-
-  public static void setMockWebkitServer(WebkitServerInterface mock) {
-    CommonApplication.mockWebkitServerService = mock;
-  }
-
-  public static void mockServiceConnected(CommonApplication app, String name, IBinder service) {
-    ComponentName className = null;
-    if (name.equals(WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS)) {
-      className = new ComponentName(WebkitServerConsts.WEBKITSERVER_SERVICE_PACKAGE,
-          WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS);
-    }
-
-    if (name.equals(IntentConsts.Database.DATABASE_SERVICE_CLASS)) {
-      className = new ComponentName(IntentConsts.Database.DATABASE_SERVICE_PACKAGE,
-              IntentConsts.Database.DATABASE_SERVICE_CLASS);
-    }
-    
-    if ( className == null ) {
-      throw new IllegalStateException("unrecognized mockService");
-    }
-
-    app.mBackgroundServices.doServiceConnected(app, className, service);
-  }
-
-  public static void mockServiceDisconnected(CommonApplication app, String name) {
-    ComponentName className = null;
-    if (name.equals(WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS)) {
-      className = new ComponentName(WebkitServerConsts.WEBKITSERVER_SERVICE_PACKAGE,
-          WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS);
-    }
-
-    if (name.equals(IntentConsts.Database.DATABASE_SERVICE_CLASS)) {
-      className = new ComponentName(IntentConsts.Database.DATABASE_SERVICE_PACKAGE,
-              IntentConsts.Database.DATABASE_SERVICE_CLASS);
-    }
-    
-    if ( className == null ) {
-      throw new IllegalStateException("unrecognized mockService");
-    }
-
-    app.mBackgroundServices.doServiceDisconnected(app, className);
-  }
-
   /**
    * Task instances that are preserved until the application dies.
    * 
@@ -317,39 +240,6 @@ public abstract class CommonApplication extends AppAwareApplication implements
       application.bindToService();
     }
 
-    private void unbindWebkitServerWrapper(CommonApplication application) {
-      ServiceConnection tmpWeb = null;
-      synchronized(this) {
-        tmpWeb = webkitfilesServiceConnection;
-        webkitfilesServiceConnection = null;
-      }
-      try {
-        if ( tmpWeb != null ) {
-          application.unbindService(tmpWeb);
-        }
-      } catch ( Exception e ) {
-        // ignore
-        e.printStackTrace();
-      }
-    }
-
-    private void unbindDatabaseWrapper(CommonApplication application) {
-      ServiceConnection tmpDb = null;
-      synchronized (this) {
-        tmpDb = databaseServiceConnection;
-        databaseServiceConnection = null;
-      }
-      try {
-        if ( tmpDb != null ) {
-          application.unbindService(tmpDb);
-          application.triggerDatabaseEvent(false);
-        }
-      } catch ( Exception e ) {
-        // ignore
-        e.printStackTrace();
-      }
-    }
-
     private void shutdownServices(CommonApplication application) {
       Log.i(t, "shutdownServices - Releasing WebServer and database service");
       ServiceConnection tmpWeb = null;
@@ -384,20 +274,6 @@ public abstract class CommonApplication extends AppAwareApplication implements
       application.configureView();
       application.triggerDatabaseEvent(false);
     }
-  }
-
-  /**
-   * Creates required directories on the SDCard (or other external storage)
-   *
-   * @return true if there are tables present
-   * @throws RuntimeException
-   *           if there is no SDCard or the directory exists as a non directory
-   */
-  public static void createODKDirs(String appName) throws RuntimeException {
-
-    ODKFileUtils.verifyExternalStorageAvailability();
-
-    ODKFileUtils.assertDirectoryStructure(appName);
   }
 
   // handed across orientation changes
@@ -446,11 +322,6 @@ public abstract class CommonApplication extends AppAwareApplication implements
   public abstract int getWebKitResourceId();
   
   public boolean shouldRunInitializationTask(String appName) {
-    if ( isMocked() ) {
-      if ( isDisableInitializeCascade() ) {
-        return false;
-      }
-    }
     PropertiesSingleton props = CommonToolProperties.get(this, appName);
     return props.shouldRunInitializationTask(this.getToolName());
   }
@@ -541,10 +412,6 @@ public abstract class CommonApplication extends AppAwareApplication implements
   }
   
   private void bindToService() {
-    if ( isMocked ) {
-      // we directly control all the service binding interactions if we are mocked
-      return;
-    }
     if (!shuttingDown) {
       PackageManager pm = getPackageManager();
       boolean useWebServer = (pm.checkPermission(PERMISSION_WEBSERVER, getPackageName()) == PackageManager.PERMISSION_GRANTED);
@@ -557,19 +424,12 @@ public abstract class CommonApplication extends AppAwareApplication implements
   }
 
   public UserDbInterface getDatabase() {
-    if ( isMocked ) {
-      return mockDatabaseService;
-    } else {
       return mBackgroundServices.getDatabase();
-    }
   }
   
   private WebkitServerInterface getWebkitServer() {
-    if ( isMocked ) {
-      return mockWebkitServerService;
-    } else {
       return mBackgroundServices.getWebkitServer();
-    }
+
   }
   
   public void configureView() {
