@@ -361,4 +361,37 @@ public abstract class ODKWebView extends WebView {
       }
     }
   }
+
+  protected synchronized void loadPageOnUiThread(final String url, boolean reload) {
+     String typeOfLoad = reload ? "reloadPage" : "loadPage";
+
+     if (url != null) {
+
+        if (!reload || (shouldForceLoadDuringReload() || hasPageFrameworkFinishedLoading() ||
+            !url.equals(getLoadPageUrl())))
+           {
+              resetLoadPageStatus(url);
+
+              log.i(t, typeOfLoad + ": load: " + url);
+
+              // Ensure that this is run on the UI thread
+              if (Thread.currentThread() != Looper.getMainLooper().getThread()) {
+                 post(new Runnable() {
+                    public void run() {
+                       loadUrl(url);
+                    }
+                 });
+              } else {
+                 loadUrl(url);
+              }
+           } else {
+              log.w(t, typeOfLoad + ": framework in process of loading -- ignoring request!");
+           }
+
+     } else {
+        log.w(t, typeOfLoad + ": cannot load anything url is null!");
+     }
+
+  }
+
 }
