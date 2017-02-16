@@ -30,6 +30,7 @@ import org.opendatakit.activities.IAppAwareActivity;
 import org.opendatakit.activities.IOdkCommonActivity;
 import org.opendatakit.activities.IOdkDataActivity;
 import org.opendatakit.application.CommonApplication;
+import org.opendatakit.properties.CommonToolProperties;
 import org.opendatakit.utilities.ODKFileUtils;
 import org.opendatakit.logging.WebLogger;
 import org.opendatakit.logging.WebLoggerIf;
@@ -182,10 +183,10 @@ public abstract class ODKWebView extends WebView {
     ws.setAppCachePath(ODKFileUtils.getAppCacheFolder(appName));
     ws.setCacheMode(WebSettings.LOAD_DEFAULT);
     ws.setDatabaseEnabled(false);
-    ws.setDefaultFixedFontSize(
-        ((CommonApplication) context.getApplicationContext()).getQuestionFontsize(appName));
-    ws.setDefaultFontSize(
-        ((CommonApplication) context.getApplicationContext()).getQuestionFontsize(appName));
+    int fontSize = CommonToolProperties.getQuestionFontsize(context
+        .getApplicationContext(), appName);
+    ws.setDefaultFixedFontSize(fontSize);
+    ws.setDefaultFontSize(fontSize);
     ws.setDomStorageEnabled(true);
     ws.setGeolocationDatabasePath(ODKFileUtils.getGeoCacheFolder(appName));
     ws.setGeolocationEnabled(true);

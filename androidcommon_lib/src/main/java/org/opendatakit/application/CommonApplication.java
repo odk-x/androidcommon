@@ -38,13 +38,12 @@ import org.opendatakit.listener.InitializationListener;
 import org.opendatakit.properties.CommonToolProperties;
 import org.opendatakit.properties.PropertiesSingleton;
 import org.opendatakit.task.InitializationTask;
-import org.opendatakit.utilities.ODKFileUtils;
 import org.opendatakit.views.ODKWebView;
 import org.opendatakit.webkitserver.service.WebkitServerInterface;
 
 import java.util.ArrayList;
 
-public abstract class CommonApplication extends AppAwareApplication implements
+public abstract class CommonApplication extends ToolAwareApplication implements
     InitializationListener {
 
   private static final String t = "CommonApplication";
