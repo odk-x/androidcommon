@@ -140,8 +140,7 @@ public abstract class CommonApplication extends ToolAwareApplication implements
         application.bindService(
             bind_intent,
             webkitServerBinder,
-            Context.BIND_AUTO_CREATE
-                | ((Build.VERSION.SDK_INT >= 14) ? Context.BIND_ADJUST_WITH_ACTIVITY : 0));
+            Context.BIND_AUTO_CREATE);
       }
 
       if ( databaseBinder != null ) {
@@ -152,8 +151,7 @@ public abstract class CommonApplication extends ToolAwareApplication implements
         application.bindService(
             bind_intent,
             databaseBinder,
-            Context.BIND_AUTO_CREATE
-                | ((Build.VERSION.SDK_INT >= 14) ? Context.BIND_ADJUST_WITH_ACTIVITY : 0));
+            Context.BIND_AUTO_CREATE);
       }
     }
 
