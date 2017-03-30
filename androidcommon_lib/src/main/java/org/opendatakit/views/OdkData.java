@@ -329,12 +329,16 @@ public class OdkData {
    * @param callbackJSON
     */
   public void changeAccessFilterOfRow(String tableId, String filterType, String
-      filterValue, String rowId, String callbackJSON) {
+      filterValue, String groupType, String groupsList, String filterExt, String
+      rowId, String callbackJSON) {
 
     logDebug("changeAccessFilter: " + tableId + " _id: " + rowId);
     HashMap<String,String> valueMap = new HashMap<String,String>();
     valueMap.put(DataTableColumns.FILTER_TYPE, filterType);
     valueMap.put(DataTableColumns.FILTER_VALUE, filterValue);
+    valueMap.put(DataTableColumns.GROUP_TYPE, groupType);
+    valueMap.put(DataTableColumns.GROUPS_LIST, groupsList);
+    valueMap.put(DataTableColumns.FILTER_EXT, filterExt);
 
     String stringifiedJSON = null;
     try {

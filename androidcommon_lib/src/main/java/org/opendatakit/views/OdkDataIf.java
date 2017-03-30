@@ -345,10 +345,12 @@ public class OdkDataIf {
    *                        that can process the response
    */
   @android.webkit.JavascriptInterface public void changeAccessFilterOfRow(String tableId,
-      String filterType, String filterValue, String rowId, String callbackJSON) {
+      String filterType, String filterValue, String groupType, String groupsList, String filterExt,
+      String rowId, String callbackJSON) {
     if (isInactive())
       return;
-    weakData.get().changeAccessFilterOfRow(tableId, filterType, filterValue, rowId, callbackJSON);
+    weakData.get().changeAccessFilterOfRow(tableId, filterType, filterValue, groupType, groupsList,
+            filterExt, rowId, callbackJSON);
   }
 
   /**

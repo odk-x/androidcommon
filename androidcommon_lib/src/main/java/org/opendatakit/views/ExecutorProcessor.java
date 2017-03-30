@@ -755,10 +755,13 @@ public abstract class ExecutorProcessor implements Runnable {
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
     String filterType = cvValues.getAsString(DataTableColumns.FILTER_TYPE);
     String filterValue = cvValues.getAsString(DataTableColumns.FILTER_VALUE);
+    String groupType = cvValues.getAsString(DataTableColumns.GROUP_TYPE);
+    String groupsList = cvValues.getAsString(DataTableColumns.GROUPS_LIST);
+    String filterExt = cvValues.getAsString(DataTableColumns.FILTER_EXT);
 
     UserTable t = dbInterface
         .changeRowFilterWithId(context.getAppName(), dbHandle, request.tableId,
-            columns, filterType, filterValue, request.rowId);
+            columns, filterType, filterValue, groupType, groupsList, filterExt, request.rowId);
 
     if ( t == null ) {
       reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to changeAccessFilterRow for " +
