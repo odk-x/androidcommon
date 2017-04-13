@@ -29,6 +29,7 @@ import org.opendatakit.logging.WebLogger;
 import java.io.File;
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -77,6 +78,14 @@ public class OdkCommon {
     platformInfo.put(PlatformInfoKeys.BASE_URI, getBaseContentUri());
     platformInfo.put(PlatformInfoKeys.FORMS_URI, FormsProviderAPI.CONTENT_URI.toString());
     platformInfo.put(PlatformInfoKeys.ACTIVE_USER, getActiveUser());
+
+    Locale d = Locale.getDefault();
+    platformInfo.put(PlatformInfoKeys.ISO_COUNTRY, d.getCountry());
+    platformInfo.put(PlatformInfoKeys.DISPLAY_COUNTRY, d.getDisplayCountry());
+    platformInfo.put(PlatformInfoKeys.ISO_LANGUAGE, d.getLanguage());
+    platformInfo.put(PlatformInfoKeys.DISPLAY_LANGUAGE, d.getDisplayLanguage());
+    platformInfo.put(PlatformInfoKeys.ISO3_LANGUAGE, d.getISO3Language());
+
     platformInfo.put(PlatformInfoKeys.LOG_LEVEL, "D");
     JSONObject jsonObject = new JSONObject(platformInfo);
     String result = jsonObject.toString();
@@ -262,6 +271,11 @@ public class OdkCommon {
     public static final String LOG_LEVEL = "logLevel";
     public static final String FORMS_URI = "formsUri";
     public static final String ACTIVE_USER = "activeUser";
+    public static final String ISO_COUNTRY = "isoCountry";
+    public static final String DISPLAY_COUNTRY = "displayCountry";
+    public static final String ISO_LANGUAGE = "isoLanguage";
+    public static final String DISPLAY_LANGUAGE = "displayLanguage";
+    public static final String ISO3_LANGUAGE = "iso3Language";
 
   }
 }
