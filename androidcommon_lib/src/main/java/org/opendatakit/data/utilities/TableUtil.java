@@ -205,7 +205,7 @@ public class TableUtil {
     String rawDisplayName = getRawDisplayName(ctxt, appName, db, tableId);
     String displayName = null;
     if ( rawDisplayName != null ) {
-      displayName = LocalizationUtils.getLocalizedDisplayName(rawDisplayName);
+      displayName = LocalizationUtils.getLocalizedDisplayName(appName, tableId, rawDisplayName);
     }
     if ( displayName == null ) {
       displayName = NameUtil.constructSimpleDisplayName(tableId);

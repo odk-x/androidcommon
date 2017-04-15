@@ -90,7 +90,7 @@ public class ColumnUtil {
       ServicesAvailabilityException {
 
     String jsonDisplayName = getRawDisplayName(ctxt, appName, db, tableId, elementKey);
-    String displayName = LocalizationUtils.getLocalizedDisplayName(jsonDisplayName);
+    String displayName = LocalizationUtils.getLocalizedDisplayName(appName, tableId, jsonDisplayName);
     return displayName;
   }
 
