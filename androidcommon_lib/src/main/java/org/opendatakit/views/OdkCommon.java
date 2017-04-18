@@ -22,6 +22,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.opendatakit.activities.IOdkCommonActivity;
+import org.opendatakit.properties.CommonToolProperties;
+import org.opendatakit.properties.PropertiesSingleton;
 import org.opendatakit.provider.FormsProviderAPI;
 import org.opendatakit.utilities.ODKFileUtils;
 import org.opendatakit.logging.WebLogger;
@@ -79,12 +81,27 @@ public class OdkCommon {
     platformInfo.put(PlatformInfoKeys.FORMS_URI, FormsProviderAPI.CONTENT_URI.toString());
     platformInfo.put(PlatformInfoKeys.ACTIVE_USER, getActiveUser());
 
+    PropertiesSingleton props = CommonToolProperties.get(mActivity.getApplicationContext(),
+        mActivity.getAppName());
+    String defaultLocale =  props.getProperty(CommonToolProperties.KEY_COMMON_TRANSLATIONS_LOCALE);
+    if ( defaultLocale != null && defaultLocale.length() != 0 && defaultLocale
+        .compareToIgnoreCase("_") != 0 ) {
+      platformInfo.put(PlatformInfoKeys.PREFERRED_LOCALE, defaultLocale);
+      // omit: USING_DEVICE_LOCALE -- i.e., false
+    } else {
+      platformInfo.put(PlatformInfoKeys.PREFERRED_LOCALE, Locale.getDefault().toString());
+      platformInfo.put(PlatformInfoKeys.USING_DEVICE_LOCALE, "true");
+    }
+
     Locale d = Locale.getDefault();
     platformInfo.put(PlatformInfoKeys.ISO_COUNTRY, d.getCountry());
     platformInfo.put(PlatformInfoKeys.DISPLAY_COUNTRY, d.getDisplayCountry());
     platformInfo.put(PlatformInfoKeys.ISO_LANGUAGE, d.getLanguage());
+    // IETF BCP47 language tags only supported in Lollipop and later
+    if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP ) {
+      platformInfo.put(PlatformInfoKeys.BCP47_LANGUAGE_TAG, d.toLanguageTag());
+    }
     platformInfo.put(PlatformInfoKeys.DISPLAY_LANGUAGE, d.getDisplayLanguage());
-    platformInfo.put(PlatformInfoKeys.ISO3_LANGUAGE, d.getISO3Language());
 
     platformInfo.put(PlatformInfoKeys.LOG_LEVEL, "D");
     JSONObject jsonObject = new JSONObject(platformInfo);
@@ -271,11 +288,14 @@ public class OdkCommon {
     public static final String LOG_LEVEL = "logLevel";
     public static final String FORMS_URI = "formsUri";
     public static final String ACTIVE_USER = "activeUser";
+    public static final String USING_DEVICE_LOCALE = "usingDeviceLocale";
+    public static final String PREFERRED_LOCALE = "preferredLocale";
+    // these are populated from the device locale
     public static final String ISO_COUNTRY = "isoCountry";
     public static final String DISPLAY_COUNTRY = "displayCountry";
     public static final String ISO_LANGUAGE = "isoLanguage";
     public static final String DISPLAY_LANGUAGE = "displayLanguage";
-    public static final String ISO3_LANGUAGE = "iso3Language";
+    public static final String BCP47_LANGUAGE_TAG = "bcp47LanguageTag";
 
   }
 }
