@@ -202,10 +202,12 @@ public class TableUtil {
   public String getLocalizedDisplayName(CommonApplication ctxt, String appName, DbHandle db, String tableId) throws
       ServicesAvailabilityException {
 
+    PropertiesSingleton props = CommonToolProperties.get(ctxt, appName);
     String rawDisplayName = getRawDisplayName(ctxt, appName, db, tableId);
     String displayName = null;
     if ( rawDisplayName != null ) {
-      displayName = LocalizationUtils.getLocalizedDisplayName(appName, tableId, rawDisplayName);
+      displayName = LocalizationUtils.getLocalizedDisplayName(appName, tableId,
+          props.getUserSelectedDefaultLocale(), rawDisplayName);
     }
     if ( displayName == null ) {
       displayName = NameUtil.constructSimpleDisplayName(tableId);
