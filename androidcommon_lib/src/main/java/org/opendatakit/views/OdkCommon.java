@@ -73,7 +73,7 @@ public class OdkCommon {
   public String getPlatformInfo() {
     logDebug("getPlatformInfo()");
     String appName = mActivity.getAppName();
-    Map<String, String> platformInfo = new HashMap<String, String>();
+    Map<String, Object> platformInfo = new HashMap<String, Object>();
     platformInfo.put(PlatformInfoKeys.VERSION, Build.VERSION.RELEASE);
     platformInfo.put(PlatformInfoKeys.CONTAINER, "Android");
     platformInfo.put(PlatformInfoKeys.APP_NAME, appName);
@@ -87,10 +87,10 @@ public class OdkCommon {
     if ( defaultLocale != null && defaultLocale.length() != 0 && defaultLocale
         .compareToIgnoreCase("_") != 0 ) {
       platformInfo.put(PlatformInfoKeys.PREFERRED_LOCALE, defaultLocale);
-      // omit: USING_DEVICE_LOCALE -- i.e., false
+      platformInfo.put(PlatformInfoKeys.USING_DEVICE_LOCALE, false);
     } else {
       platformInfo.put(PlatformInfoKeys.PREFERRED_LOCALE, Locale.getDefault().toString());
-      platformInfo.put(PlatformInfoKeys.USING_DEVICE_LOCALE, "true");
+      platformInfo.put(PlatformInfoKeys.USING_DEVICE_LOCALE, true);
     }
 
     Locale d = Locale.getDefault();
