@@ -38,6 +38,7 @@ import org.opendatakit.listener.InitializationListener;
 import org.opendatakit.properties.CommonToolProperties;
 import org.opendatakit.properties.PropertiesSingleton;
 import org.opendatakit.task.InitializationTask;
+import org.opendatakit.utilities.LocalizationUtils;
 import org.opendatakit.views.ODKWebView;
 import org.opendatakit.webkitserver.service.WebkitServerInterface;
 
@@ -326,9 +327,11 @@ public abstract class CommonApplication extends ToolAwareApplication implements
   public void clearRunInitializationTask(String appName) {
     PropertiesSingleton props = CommonToolProperties.get(this, appName);
     props.clearRunInitializationTask(this.getToolName());
+    LocalizationUtils.clearTranslations();
   }
 
   public void setRunInitializationTask(String appName) {
+    LocalizationUtils.clearTranslations();
     PropertiesSingleton props = CommonToolProperties.get(this, appName);
     props.setRunInitializationTask(this.getToolName());
   }

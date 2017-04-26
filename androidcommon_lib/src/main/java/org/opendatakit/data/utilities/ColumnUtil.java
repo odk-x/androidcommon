@@ -21,6 +21,7 @@ import java.util.*;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
+import org.opendatakit.aggregate.odktables.rest.entity.PropertyEntryJson;
 import org.opendatakit.application.CommonApplication;
 import org.opendatakit.database.LocalKeyValueStoreConstants;
 import org.opendatakit.database.data.ColumnDefinition;
@@ -29,6 +30,8 @@ import org.opendatakit.database.data.OrderedColumns;
 import org.opendatakit.database.utilities.KeyValueStoreUtils;
 import org.opendatakit.exception.ServicesAvailabilityException;
 import org.opendatakit.logging.WebLogger;
+import org.opendatakit.properties.CommonToolProperties;
+import org.opendatakit.properties.PropertiesSingleton;
 import org.opendatakit.utilities.LocalizationUtils;
 import org.opendatakit.utilities.NameUtil;
 import org.opendatakit.utilities.ODKFileUtils;
@@ -89,8 +92,10 @@ public class ColumnUtil {
   public String getLocalizedDisplayName(CommonApplication ctxt, String appName, DbHandle db, String tableId, String elementKey) throws
       ServicesAvailabilityException {
 
+    PropertiesSingleton props = CommonToolProperties.get(ctxt, appName);
     String jsonDisplayName = getRawDisplayName(ctxt, appName, db, tableId, elementKey);
-    String displayName = LocalizationUtils.getLocalizedDisplayName(jsonDisplayName);
+    String displayName = LocalizationUtils.getLocalizedDisplayName(appName, tableId,
+        props.getUserSelectedDefaultLocale(), jsonDisplayName);
     return displayName;
   }
 
