@@ -66,8 +66,8 @@ public abstract class ExecutorProcessor implements Runnable {
     adminColumns.add(DataTableColumns.ROW_ETAG);
     adminColumns.add(DataTableColumns.SYNC_STATE); // not exportable
     adminColumns.add(DataTableColumns.CONFLICT_TYPE); // not exportable
-    adminColumns.add(DataTableColumns.FILTER_TYPE);
-    adminColumns.add(DataTableColumns.FILTER_VALUE);
+    adminColumns.add(DataTableColumns.DEFAULT_ACCESS);
+    adminColumns.add(DataTableColumns.OWNER);
     adminColumns.add(DataTableColumns.FORM_ID);
     adminColumns.add(DataTableColumns.LOCALE);
     adminColumns.add(DataTableColumns.SAVEPOINT_TYPE);
@@ -265,8 +265,8 @@ public abstract class ExecutorProcessor implements Runnable {
         if ( !key.equals(DataTableColumns.FORM_ID) &&
              !key.equals(DataTableColumns.LOCALE) &&
              !key.equals(DataTableColumns.SAVEPOINT_CREATOR) &&
-             !key.equals(DataTableColumns.FILTER_TYPE) &&
-             !key.equals(DataTableColumns.FILTER_VALUE) ) {
+             !key.equals(DataTableColumns.DEFAULT_ACCESS) &&
+             !key.equals(DataTableColumns.OWNER) ) {
           ColumnDefinition cd = columns.find(key);
           if (!cd.isUnitOfRetention()) {
             throw new IllegalStateException("key is not a database column name: " + key);
@@ -753,15 +753,15 @@ public abstract class ExecutorProcessor implements Runnable {
     }
 
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
-    String filterType = cvValues.getAsString(DataTableColumns.FILTER_TYPE);
-    String filterValue = cvValues.getAsString(DataTableColumns.FILTER_VALUE);
-    String groupType = cvValues.getAsString(DataTableColumns.GROUP_TYPE);
-    String groupsList = cvValues.getAsString(DataTableColumns.GROUPS_LIST);
-    String filterExt = cvValues.getAsString(DataTableColumns.FILTER_EXT);
+    String defaultAccess = cvValues.getAsString(DataTableColumns.DEFAULT_ACCESS);
+    String owner = cvValues.getAsString(DataTableColumns.OWNER);
+    String groupReadOnly = cvValues.getAsString(DataTableColumns.GROUP_READ_ONLY);
+    String groupModify = cvValues.getAsString(DataTableColumns.GROUP_MODIFY);
+    String groupPrivileged = cvValues.getAsString(DataTableColumns.GROUP_PRIVILEGED);
 
     UserTable t = dbInterface
         .changeRowFilterWithId(context.getAppName(), dbHandle, request.tableId,
-            columns, filterType, filterValue, groupType, groupsList, filterExt, request.rowId);
+            columns, defaultAccess, owner, groupReadOnly, groupModify, groupPrivileged, request.rowId);
 
     if ( t == null ) {
       reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to changeAccessFilterRow for " +

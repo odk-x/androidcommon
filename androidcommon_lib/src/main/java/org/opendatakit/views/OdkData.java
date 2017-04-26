@@ -323,22 +323,22 @@ public class OdkData {
    * Update a row in the table with the given filter type and value.
    *
    * @param tableId
-   * @param filterType
-   * @param filterValue
+   * @param defaultAccess
+   * @param owner
    * @param rowId
    * @param callbackJSON
     */
-  public void changeAccessFilterOfRow(String tableId, String filterType, String
-      filterValue, String groupType, String groupsList, String filterExt, String
+  public void changeAccessFilterOfRow(String tableId, String defaultAccess, String
+      owner, String groupReadOnly, String groupModify, String groupPrivileged, String
       rowId, String callbackJSON) {
 
     logDebug("changeAccessFilter: " + tableId + " _id: " + rowId);
     HashMap<String,String> valueMap = new HashMap<String,String>();
-    valueMap.put(DataTableColumns.FILTER_TYPE, filterType);
-    valueMap.put(DataTableColumns.FILTER_VALUE, filterValue);
-    valueMap.put(DataTableColumns.GROUP_TYPE, groupType);
-    valueMap.put(DataTableColumns.GROUPS_LIST, groupsList);
-    valueMap.put(DataTableColumns.FILTER_EXT, filterExt);
+    valueMap.put(DataTableColumns.DEFAULT_ACCESS, defaultAccess);
+    valueMap.put(DataTableColumns.OWNER, owner);
+    valueMap.put(DataTableColumns.GROUP_READ_ONLY, groupReadOnly);
+    valueMap.put(DataTableColumns.GROUP_MODIFY, groupModify);
+    valueMap.put(DataTableColumns.GROUP_PRIVILEGED, groupPrivileged);
 
     String stringifiedJSON = null;
     try {
