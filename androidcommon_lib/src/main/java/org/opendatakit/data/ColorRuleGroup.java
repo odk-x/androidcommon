@@ -65,9 +65,8 @@ public class ColorRuleGroup {
 
   static {
     mapper = new ObjectMapper();
-    mapper.setVisibilityChecker(mapper.getVisibilityChecker().withFieldVisibility(Visibility.ANY));
-    mapper
-        .setVisibilityChecker(mapper.getVisibilityChecker().withCreatorVisibility(Visibility.ANY));
+    mapper.setVisibility(mapper.getVisibilityChecker().withFieldVisibility(Visibility.ANY));
+    mapper.setVisibility(mapper.getVisibilityChecker().withCreatorVisibility(Visibility.ANY));
     typeFactory = mapper.getTypeFactory();
   }
 
