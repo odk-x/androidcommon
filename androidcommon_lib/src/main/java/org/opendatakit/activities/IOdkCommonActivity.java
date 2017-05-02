@@ -14,6 +14,7 @@
 
 package org.opendatakit.activities;
 
+import android.app.Activity;
 import org.json.JSONObject;
 
 /**
@@ -31,6 +32,16 @@ public interface IOdkCommonActivity extends IAppAwareActivity, IInitResumeActivi
    *          "username:" + getProperty(PropertyManager.USERNAME)
    */
   String getActiveUser();
+
+  /**
+   * Return the current tableId or null if not appropriate.
+   */
+  String getTableId();
+
+  /**
+   * Return the current instanceId or null if not appropriate
+   */
+  String getInstanceId();
 
   /**
    * Return the value for the indicated property.
@@ -68,17 +79,24 @@ public interface IOdkCommonActivity extends IAppAwareActivity, IInitResumeActivi
   /**
    * Execute an action (intent call).
    *
-   * @param dispatchString   Opaque string -- typically identifies prompt and user action
+   * @param dispatchStructAsJSONstring  JSON.stringify(anything) -- typically identifies prompt and
+   *                                    user action. If this is null, then the Javascript layer
+   *                                    is not notified of the result of this action. It just
+   *                                    transparently happens and the webkit might reload as a
+   *                                    result of the activity swapping out.
    *
    * @param action    The intent. e.g.,
    *                   org.opendatakit.survey.MediaCaptureImageActivity
    *
-   * @param valueMap  Map of the following structure:
+   * @param intentObject  an object with the following structure:
    *                   {
    *                         "uri" : intent.setData(value)
    *                         "data" : intent.setData(value)  (preferred over "uri")
    *                         "package" : intent.setPackage(value)
    *                         "type" : intent.setType(value)
+   *                         "action" : intent.setAction(value)
+   *                         "category" : either a single string or a list of strings for intent.addCategory(item)
+   *                         "flags" : the integer code for the values to store
    *                         "extras" : { key-value map describing extras bundle }
    *                   }
    *
@@ -92,11 +110,11 @@ public interface IOdkCommonActivity extends IAppAwareActivity, IInitResumeActivi
    *
    * @return one of:
    *          "IGNORE"                -- there is already a pending action
-   *          "JSONException: " + ex.toString()
+   *          "JSONException"         -- there was a problem with the intentObject (did not launch)
    *          "OK"                    -- request issued
    *          "Application not found" -- could not find app to handle intent
    */
-  String doAction(String dispatchString, String action, JSONObject valueMap);
+  String doAction(String dispatchStructAsJSONstring, String action, JSONObject intentObject);
 
   /**
    * Queue the outcome of a doAction along with its UI element specifiers.  This is used
