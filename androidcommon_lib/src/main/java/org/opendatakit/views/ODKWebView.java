@@ -162,6 +162,13 @@ public abstract class ODKWebView extends WebView {
     }
   }
 
+  @SuppressWarnings("deprecation")
+  private void setGeoLocationCache(String appName, WebSettings ws) {
+    if ( Build.VERSION.SDK_INT < 24 ) {
+          ws.setGeolocationDatabasePath(ODKFileUtils.getGeoCacheFolder(appName));
+    }
+  }
+
   public ODKWebView(Context context, AttributeSet attrs) {
     super(context, attrs);
 
@@ -183,12 +190,11 @@ public abstract class ODKWebView extends WebView {
     ws.setAppCachePath(ODKFileUtils.getAppCacheFolder(appName));
     ws.setCacheMode(WebSettings.LOAD_DEFAULT);
     ws.setDatabaseEnabled(false);
-    int fontSize = CommonToolProperties.getQuestionFontsize(context
-        .getApplicationContext(), appName);
+    int fontSize = CommonToolProperties.getQuestionFontsize(context.getApplicationContext(), appName);
     ws.setDefaultFixedFontSize(fontSize);
     ws.setDefaultFontSize(fontSize);
     ws.setDomStorageEnabled(true);
-    ws.setGeolocationDatabasePath(ODKFileUtils.getGeoCacheFolder(appName));
+    setGeoLocationCache(appName, ws);
     ws.setGeolocationEnabled(true);
     ws.setJavaScriptCanOpenWindowsAutomatically(true);
     ws.setJavaScriptEnabled(true);

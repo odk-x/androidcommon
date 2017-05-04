@@ -14,8 +14,12 @@
 
 package org.opendatakit.views;
 
+import android.annotation.TargetApi;
+import android.os.Build;
 import android.os.Message;
 import android.view.KeyEvent;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
@@ -27,11 +31,21 @@ public class ODKWebViewClient extends WebViewClient {
 	this.wrappedView = wrappedView;
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public boolean shouldOverrideUrlLoading(WebView view, String url) {
     wrappedView.getLogger().i(t,
         "shouldOverrideUrlLoading: " + url + " ms: " + Long.toString(System.currentTimeMillis()));
     return super.shouldOverrideUrlLoading(view, url);
+  }
+
+  @TargetApi(24)
+  @Override
+  public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+    wrappedView.getLogger().i(t,
+        "shouldOverrideUrlLoading: " + request.getUrl().toString() + " ms: " +
+            Long.toString(System.currentTimeMillis()));
+    return super.shouldOverrideUrlLoading(view, request);
   }
 
   @Override
@@ -52,10 +66,22 @@ public class ODKWebViewClient extends WebViewClient {
     super.onPageFinished(view, url);
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
     wrappedView.getLogger().i(t, "onReceivedError: " + failingUrl + " ms: " + Long.toString(System.currentTimeMillis()));
     super.onReceivedError(view, errorCode, description, failingUrl);
+  }
+
+
+  @TargetApi(23)
+  @Override
+  public void onReceivedError(WebView view, WebResourceRequest request,
+      WebResourceError error) {
+    wrappedView.getLogger().i(t, "onReceivedError: " + request.getUrl().toString() + " ms: " + Long
+        .toString(System
+        .currentTimeMillis()));
+    super.onReceivedError(view, request, error);
   }
 
   @Override
@@ -64,14 +90,6 @@ public class ODKWebViewClient extends WebViewClient {
     super.onScaleChanged(view, oldScale, newScale);
   }
 
-  @SuppressWarnings("deprecation")
-  @Override
-  public void onTooManyRedirects(WebView view, Message cancelMsg, Message continueMsg) {
-    wrappedView.getLogger().i(t, "onTooManyRedirects: " + cancelMsg.toString());
-    super.onTooManyRedirects(view, cancelMsg, continueMsg);
-  }
-
-  @SuppressWarnings("deprecation")
   @Override
   public void onUnhandledKeyEvent(WebView view, KeyEvent event) {
     wrappedView.getLogger().i(t, "onUnhandledKeyEvent: " + event.toString());
