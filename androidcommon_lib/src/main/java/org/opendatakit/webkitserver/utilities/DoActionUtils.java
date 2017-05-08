@@ -114,8 +114,9 @@ public class DoActionUtils {
 
             // do type first, as it says in the spec this call deletes any other
             // data (eg by setData()) on the intent.
+            String type = null;
             if (intentObject.has(typeKey)) {
-               String type = intentObject.getString(typeKey);
+               type = intentObject.getString(typeKey);
                i.setType(type);
             }
 
@@ -132,7 +133,11 @@ public class DoActionUtils {
                }
                if (uriValueStr != null) {
                   Uri uri = Uri.parse(uriValueStr);
-                  i.setData(uri);
+                  if ( type != null ) {
+                     i.setDataAndType(uri, type);
+                  } else {
+                     i.setData(uri);
+                  }
                }
             }
 
