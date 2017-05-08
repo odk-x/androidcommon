@@ -121,6 +121,9 @@ public abstract class ExecutorProcessor implements Runnable {
       case GET_ROLES_LIST:
         getRolesList();
         break;
+      case GET_DEFAULT_GROUP:
+        getDefaultGroup();
+        break;
       case GET_USERS_LIST:
         getUsersList();
         break;
@@ -308,6 +311,11 @@ public abstract class ExecutorProcessor implements Runnable {
   private void getRolesList() throws ServicesAvailabilityException {
     String rolesList = dbInterface.getRolesList(context.getAppName());
     reportRolesListSuccessAndCleanUp(rolesList);
+  }
+
+  private void getDefaultGroup() throws ServicesAvailabilityException {
+    String defaultGroup = dbInterface.getDefaultGroup(context.getAppName());
+    reportDefaultGroupSuccessAndCleanUp(defaultGroup);
   }
 
   private void getUsersList() throws ServicesAvailabilityException {
@@ -512,6 +520,17 @@ public abstract class ExecutorProcessor implements Runnable {
 
     Map<String, Object> metadata = new HashMap<String, Object>();
     metadata.put("roles", roles);
+
+    reportSuccessAndCleanUp(null, metadata);
+  }
+
+  private void reportDefaultGroupSuccessAndCleanUp(String defaultGroup) throws
+      ServicesAvailabilityException {
+
+    Map<String, Object> metadata = new HashMap<String, Object>();
+    if ( defaultGroup != null && defaultGroup.length() != 0 ) {
+      metadata.put("defaultGroup", defaultGroup);
+    }
 
     reportSuccessAndCleanUp(null, metadata);
   }

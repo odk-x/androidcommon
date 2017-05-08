@@ -190,6 +190,18 @@ public class OdkData {
   }
 
   /**
+   * Get the default group of the current user as assigned to this user by the server.
+   *
+   * @param callbackJSON
+   */
+  public void getDefaultGroup(String callbackJSON) {
+    logDebug("getDefaultGroup");
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.GET_DEFAULT_GROUP, callbackJSON);
+
+    queueRequest(request);
+  }
+
+  /**
    * Get all the users on the server and their roles.
    *
    * @param callbackJSON

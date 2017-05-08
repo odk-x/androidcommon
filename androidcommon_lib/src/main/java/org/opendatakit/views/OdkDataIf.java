@@ -198,7 +198,7 @@ public class OdkDataIf {
   }
 
   /**
-   * Get all the roles assigned to this user by the server.
+   * Get all the roles and groups assigned to this user by the server.
    *
    * @param callbackJSON The JSON object used by the JS layer to recover the callback function
    *                                that can process the response
@@ -207,6 +207,18 @@ public class OdkDataIf {
     if (isInactive())
       return;
     weakData.get().getRoles(callbackJSON);
+  }
+
+  /**
+   * Get the default group of the current user as assigned to this user by the server.
+   *
+   * @param callbackJSON The JSON object used by the JS layer to recover the callback function
+   *                                that can process the response
+   */
+  @android.webkit.JavascriptInterface public void getDefaultGroup(String callbackJSON) {
+    if (isInactive())
+      return;
+    weakData.get().getDefaultGroup(callbackJSON);
   }
 
   /**

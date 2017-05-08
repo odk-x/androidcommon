@@ -22,6 +22,7 @@ package org.opendatakit.views;
 public enum ExecutorRequestType {
     UPDATE_EXECUTOR_CONTEXT,
     GET_ROLES_LIST,
+    GET_DEFAULT_GROUP,
     GET_USERS_LIST,
     GET_ALL_TABLE_IDS,
     ARBITRARY_QUERY,
