@@ -19,6 +19,7 @@ import org.opendatakit.database.service.UserDbInterface;
 import org.opendatakit.listener.DatabaseConnectionListener;
 import org.opendatakit.views.ExecutorContext;
 import org.opendatakit.views.ExecutorProcessor;
+import org.opendatakit.views.ViewDataQueryParams;
 
 /**
  * @author mitchellsundt@gmail.com
@@ -28,11 +29,12 @@ public interface IOdkDataActivity {
    * The fragment should queue the response in a saveInstanceState queue and notify
    * the JS that there is data available. The JS will then retrieve the responseJSON,
    * decode it and access the callbackJSON to identify the callback and then invoke
-   * the identified callback (in an implementation-dependent manner).
+   * the identified callback (in an implementation-dependent manner). The viewID is
+   * an optional parameter to identify which view should be signalled.
    *
    * @param responseJSON
    */
-  void signalResponseAvailable(String responseJSON);
+  void signalResponseAvailable(String responseJSON, String viewID);
 
   /**
    * Access the queued responseJSON
@@ -79,4 +81,9 @@ public interface IOdkDataActivity {
    * @return the intent extras used to launch this view
    */
   Bundle getIntentExtras();
+
+  /**
+   * Retrieves SQL query parameters
+   */
+  ViewDataQueryParams getViewQueryParams(String viewID) throws IllegalArgumentException;
 }

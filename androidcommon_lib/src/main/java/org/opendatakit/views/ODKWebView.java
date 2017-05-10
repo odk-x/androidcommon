@@ -62,6 +62,7 @@ public abstract class ODKWebView extends WebView {
   private OdkData odkData;
   private boolean isInactive = false;
   private String loadPageUrl = null;
+  private String containerFragmentID = null;
   private boolean isLoadPageFrameworkFinished = false;
   private boolean isLoadPageFinished = false;
   private boolean isJavascriptFlushActive = false;
@@ -102,12 +103,20 @@ public abstract class ODKWebView extends WebView {
     if (ready) {
       loadPage();
     } else {
-      resetLoadPageStatus(loadPageUrl);
+      resetLoadPageStatus(loadPageUrl, containerFragmentID);
     }
   }
 
   public String getLoadPageUrl() {
     return loadPageUrl;
+  }
+
+  public String getContainerFragmentID() {
+    return containerFragmentID;
+  }
+
+  public void setContainerFragmentID(String containerFragmentID) {
+    this.containerFragmentID = containerFragmentID;
   }
 
   @Override
@@ -217,10 +226,12 @@ public abstract class ODKWebView extends WebView {
 
     // set up the odkCommonIf
     odkCommon = new OdkCommon((IOdkCommonActivity) context, this);
-    addJavascriptInterface(odkCommon.getJavascriptInterfaceWithWeakReference(), "odkCommonIf");
+    addJavascriptInterface(odkCommon.getJavascriptInterfaceWithWeakReference(),
+        Constants.JavaScriptHandles.COMMON);
 
     odkData = new OdkData((IOdkDataActivity) context, this);
-    addJavascriptInterface(odkData.getJavascriptInterfaceWithWeakReference(), "odkDataIf");
+    addJavascriptInterface(odkData.getJavascriptInterfaceWithWeakReference(),
+        Constants.JavaScriptHandles.DATA);
   }
 
   @Override public void destroy() {
@@ -352,10 +363,11 @@ public abstract class ODKWebView extends WebView {
     }
   }
 
-  protected synchronized void resetLoadPageStatus(String baseUrl) {
+  protected synchronized void resetLoadPageStatus(String baseUrl, String containerFragmentID) {
     isLoadPageFrameworkFinished = false;
     isLoadPageFinished = false;
     loadPageUrl = baseUrl;
+    this.containerFragmentID = containerFragmentID;
     isJavascriptFlushActive = false;
     shouldForceLoadDuringReload = false;
 
@@ -369,7 +381,8 @@ public abstract class ODKWebView extends WebView {
     }
   }
 
-  protected synchronized void loadPageOnUiThread(final String url, boolean reload) {
+  protected synchronized void loadPageOnUiThread(final String url, final String containerFragmentID,
+                                                 boolean reload) {
      String typeOfLoad = reload ? "reloadPage" : "loadPage";
 
      if (url != null) {
@@ -377,7 +390,7 @@ public abstract class ODKWebView extends WebView {
         if (!reload || (shouldForceLoadDuringReload() || hasPageFrameworkFinishedLoading() ||
             !url.equals(getLoadPageUrl())))
            {
-              resetLoadPageStatus(url);
+              resetLoadPageStatus(url, containerFragmentID);
 
               log.i(t, typeOfLoad + ": load: " + url);
 

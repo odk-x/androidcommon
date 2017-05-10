@@ -57,6 +57,9 @@ public class ExecutorRequest {
     // For most interactions
     public final String callbackJSON;
 
+    // Find its way back to the correct caller
+    public final String callerID;
+
     public ExecutorRequest(ExecutorContext oldContext) {
         this.executorRequestType = ExecutorRequestType.UPDATE_EXECUTOR_CONTEXT;
         this.oldContext = oldContext;
@@ -78,6 +81,7 @@ public class ExecutorRequest {
         this.rowId = null;
         this.deleteAllCheckpoints = false;
         this.commitTransaction = false;
+        this.callerID = null;
     }
 
     /**
@@ -95,7 +99,7 @@ public class ExecutorRequest {
      *                     that can process the response
      */
     public ExecutorRequest(String tableId, String sqlCommand, Object[] sqlBindParams,
-                Integer limit, Integer offset, String callbackJSON) {
+                Integer limit, Integer offset, String callbackJSON, String callerID) {
         this.executorRequestType = ExecutorRequestType.ARBITRARY_QUERY;
         this.tableId = tableId;
         this.sqlCommand = sqlCommand;
@@ -103,6 +107,7 @@ public class ExecutorRequest {
         this.limit = limit;
         this.offset = offset;
         this.callbackJSON = callbackJSON;
+        this.callerID = callerID;
 
         // unused:
         this.oldContext = null;
@@ -137,7 +142,7 @@ public class ExecutorRequest {
     public ExecutorRequest(String tableId, String whereClause, Object[] sqlBindParams,
                            String[] groupBy, String having, String orderByElementKey, String orderByDirection,
                            Integer limit, Integer offset, boolean includeKeyValueStoreMap,
-                           String callbackJSON) {
+                           String callbackJSON, String callerID) {
         this.executorRequestType = ExecutorRequestType.USER_TABLE_QUERY;
         this. tableId = tableId;
         this.whereClause = whereClause;
@@ -150,6 +155,7 @@ public class ExecutorRequest {
         this.offset = offset;
         this.includeKeyValueStoreMap = includeKeyValueStoreMap;
         this.callbackJSON = callbackJSON;
+        this.callerID = callerID;
 
         // unused:
         this.oldContext = null;
@@ -182,12 +188,13 @@ public class ExecutorRequest {
      *                     that can process the response
      */
     public ExecutorRequest(ExecutorRequestType executorRequestType, String tableId, String stringifiedJSON, String rowId,
-        String callbackJSON) {
+        String callbackJSON, String callerID) {
         this.executorRequestType = executorRequestType;
         this.tableId = tableId;
         this.stringifiedJSON = stringifiedJSON;
         this.rowId = rowId;
         this.callbackJSON = callbackJSON;
+        this.callerID = callerID;
 
         // unused:
         this.oldContext = null;
@@ -205,12 +212,14 @@ public class ExecutorRequest {
         this.commitTransaction = false;
     }
 
-    public ExecutorRequest(ExecutorRequestType executorRequestType, String callbackJSON) {
+    public ExecutorRequest(ExecutorRequestType executorRequestType, String callbackJSON,
+        String callerID) {
         this.executorRequestType = executorRequestType;
         this.tableId = null;
         this.stringifiedJSON = null;
         this.rowId = null;
         this.callbackJSON = callbackJSON;
+        this.callerID = callerID;
 
         // unused:
         this.oldContext = null;

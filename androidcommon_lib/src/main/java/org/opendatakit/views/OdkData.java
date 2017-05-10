@@ -152,29 +152,31 @@ public class OdkData {
    */
   public void getViewData(String callbackJSON, Integer limit, Integer offset) {
     logDebug("getViewData");
-    Bundle bundle = this.mActivity.getIntentExtras();
 
-    String tableId = bundle.getString(IntentKeys.TABLE_ID);
-    if (tableId == null || tableId.isEmpty()) {
-      throw new IllegalArgumentException("Tables view launched without tableId specified");
+    ViewDataQueryParams queryParams = this.mActivity.getViewQueryParams(getFragmentID());
+
+    if (queryParams == null) {
+      return;
     }
 
-    // This was changed to use
-    String rowId = bundle.getString(IntentConsts.INTENT_KEY_INSTANCE_ID);
-    String whereClause = bundle.getString(IntentKeys.SQL_WHERE);
-    String[] selArgs = bundle.getStringArray(IntentKeys.SQL_SELECTION_ARGS);
-    String[] groupBy = bundle.getStringArray(IntentKeys.SQL_GROUP_BY_ARGS);
-    String havingClause = bundle.getString(IntentKeys.SQL_HAVING);
-    String orderByElemKey = bundle.getString(IntentKeys.SQL_ORDER_BY_ELEMENT_KEY);
-    String orderByDir = bundle.getString(IntentKeys.SQL_ORDER_BY_DIRECTION);
-
-    if (rowId != null && !rowId.isEmpty()) {
-      query(tableId, DataTableColumns.ID + "=?", new String[] { rowId }, null, null,
-          DataTableColumns.SAVEPOINT_TIMESTAMP, descOrder, limit, offset, true, callbackJSON);
+    if (queryParams.isSingleRowQuery()) {
+      query(queryParams.tableId, DataTableColumns.ID + "=?", new String[] { queryParams.rowId },
+          null, null, DataTableColumns.SAVEPOINT_TIMESTAMP, descOrder, limit, offset, true,
+          callbackJSON);
     } else {
-      query(tableId, whereClause, selArgs, groupBy, havingClause, orderByElemKey, orderByDir, limit,
-          offset, true, callbackJSON);
+      query(queryParams.tableId, queryParams.whereClause, queryParams.selectionArgs,
+          queryParams.groupBy, queryParams.having, queryParams.orderByElemKey,
+          queryParams.orderByDir, limit, offset, true, callbackJSON);
     }
+  }
+
+  private String getFragmentID() {
+     ODKWebView webView = mWebView.get();
+     if (webView == null) {
+        return null;
+     }
+
+     return webView.getContainerFragmentID();
   }
 
   /**
@@ -184,7 +186,8 @@ public class OdkData {
    */
   public void getRoles(String callbackJSON) {
     logDebug("getRoles");
-    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.GET_ROLES_LIST, callbackJSON);
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.GET_ROLES_LIST,
+        callbackJSON, getFragmentID());
 
     queueRequest(request);
   }
@@ -208,7 +211,8 @@ public class OdkData {
    */
   public void getUsers(String callbackJSON) {
     logDebug("getUsers");
-    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.GET_USERS_LIST, callbackJSON);
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.GET_USERS_LIST,
+        callbackJSON, getFragmentID());
 
     queueRequest(request);
   }
@@ -220,7 +224,8 @@ public class OdkData {
    */
   public void getAllTableIds(String callbackJSON) {
     logDebug("getAllTableIds");
-    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.GET_ALL_TABLE_IDS, callbackJSON);
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.GET_ALL_TABLE_IDS,
+        callbackJSON, getFragmentID());
 
     queueRequest(request);
   }
@@ -247,7 +252,7 @@ public class OdkData {
     logDebug("query: " + tableId + " whereClause: " + whereClause);
     ExecutorRequest request = new ExecutorRequest(tableId, whereClause, sqlBindParams, groupBy,
         having, orderByElementKey, orderByDirection, limit, offset, includeKeyValueStoreMap,
-        callbackJSON);
+        callbackJSON, getFragmentID());
 
     queueRequest(request);
   }
@@ -272,7 +277,7 @@ public class OdkData {
       Integer limit, Integer offset, String callbackJSON) {
     logDebug("arbitraryQuery: " + tableId + " sqlCommand: " + sqlCommand);
     ExecutorRequest request = new ExecutorRequest(tableId, sqlCommand, sqlBindParams,
-        limit, offset, callbackJSON);
+        limit, offset, callbackJSON, getFragmentID());
 
     queueRequest(request);
   }
@@ -290,7 +295,7 @@ public class OdkData {
   public void getRows(String tableId, String rowId, String callbackJSON) {
     logDebug("getRows: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_GET_ROWS, tableId,
-        null, rowId, callbackJSON);
+        null, rowId, callbackJSON, getFragmentID());
 
     queueRequest(request);
   }
@@ -308,7 +313,8 @@ public class OdkData {
   public void getMostRecentRow(String tableId, String rowId, String callbackJSON) {
     logDebug("getMostRecentRow: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(
-        ExecutorRequestType.USER_TABLE_GET_MOST_RECENT_ROW, tableId, null, rowId, callbackJSON);
+        ExecutorRequestType.USER_TABLE_GET_MOST_RECENT_ROW, tableId, null, rowId, callbackJSON,
+        getFragmentID());
 
     queueRequest(request);
   }
@@ -323,10 +329,11 @@ public class OdkData {
    *                        that can process the response
    * @return see description in class header
    */
-  public void updateRow(String tableId, String stringifiedJSON, String rowId, String callbackJSON) {
+  public void updateRow(String tableId, String stringifiedJSON, String rowId, String
+      callbackJSON) {
     logDebug("updateRow: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_UPDATE_ROW,
-        tableId, stringifiedJSON, rowId, callbackJSON);
+        tableId, stringifiedJSON, rowId, callbackJSON, getFragmentID());
 
     queueRequest(request);
   }
@@ -361,7 +368,7 @@ public class OdkData {
     }
     ExecutorRequest request = new ExecutorRequest(ExecutorRequestType
         .USER_TABLE_CHANGE_ACCESS_FILTER_ROW,
-        tableId, stringifiedJSON, rowId, callbackJSON);
+        tableId, stringifiedJSON, rowId, callbackJSON, getFragmentID());
 
     queueRequest(request);
 
@@ -378,7 +385,7 @@ public class OdkData {
   public void deleteRow(String tableId, String stringifiedJSON, String rowId, String callbackJSON) {
     logDebug("deleteRow: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_DELETE_ROW,
-        tableId, stringifiedJSON, rowId, callbackJSON);
+        tableId, stringifiedJSON, rowId, callbackJSON, getFragmentID());
 
     queueRequest(request);
   }
@@ -395,7 +402,7 @@ public class OdkData {
   public void addRow(String tableId, String stringifiedJSON, String rowId, String callbackJSON) {
     logDebug("addRow: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_ADD_ROW, tableId,
-        stringifiedJSON, rowId, callbackJSON);
+        stringifiedJSON, rowId, callbackJSON, getFragmentID());
 
     queueRequest(request);
   }
@@ -413,7 +420,7 @@ public class OdkData {
       String callbackJSON) {
     logDebug("addCheckpoint: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_ADD_CHECKPOINT,
-        tableId, stringifiedJSON, rowId, callbackJSON);
+        tableId, stringifiedJSON, rowId, callbackJSON, getFragmentID());
 
     queueRequest(request);
   }
@@ -432,7 +439,7 @@ public class OdkData {
     logDebug("saveCheckpointAsIncomplete: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(
         ExecutorRequestType.USER_TABLE_SAVE_CHECKPOINT_AS_INCOMPLETE, tableId, stringifiedJSON,
-        rowId, callbackJSON);
+        rowId, callbackJSON, getFragmentID());
 
     queueRequest(request);
   }
@@ -451,7 +458,7 @@ public class OdkData {
     logDebug("saveCheckpointAsComplete: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(
         ExecutorRequestType.USER_TABLE_SAVE_CHECKPOINT_AS_COMPLETE, tableId, stringifiedJSON, rowId,
-        callbackJSON);
+        callbackJSON, getFragmentID());
 
     queueRequest(request);
   }
@@ -467,7 +474,8 @@ public class OdkData {
   public void deleteAllCheckpoints(String tableId, String rowId, String callbackJSON) {
     logDebug("deleteAllCheckpoints: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(
-        ExecutorRequestType.USER_TABLE_DELETE_ALL_CHECKPOINTS, tableId, null, rowId, callbackJSON);
+        ExecutorRequestType.USER_TABLE_DELETE_ALL_CHECKPOINTS, tableId, null, rowId,
+        callbackJSON, getFragmentID());
 
     queueRequest(request);
   }
@@ -483,7 +491,8 @@ public class OdkData {
   public void deleteLastCheckpoint(String tableId, String rowId, String callbackJSON) {
     logDebug("deleteLastCheckpoint: " + tableId + " _id: " + rowId);
     ExecutorRequest request = new ExecutorRequest(
-        ExecutorRequestType.USER_TABLE_DELETE_LAST_CHECKPOINT, tableId, null, rowId, callbackJSON);
+        ExecutorRequestType.USER_TABLE_DELETE_LAST_CHECKPOINT, tableId, null, rowId,
+        callbackJSON, getFragmentID());
 
     queueRequest(request);
   }

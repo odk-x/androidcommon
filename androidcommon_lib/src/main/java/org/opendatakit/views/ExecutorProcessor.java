@@ -105,7 +105,7 @@ public abstract class ExecutorProcessor implements Runnable {
       // we have a request and a viable database interface...
       dbHandle = dbInterface.openDatabase(context.getAppName());
       if (dbHandle == null) {
-        context.reportError(request.callbackJSON, null,
+        context.reportError(request.callbackJSON, request.callerID, null,
             IllegalStateException.class.getName() + ": Unable to open database connection");
         context.popRequest(true);
         return;
@@ -202,7 +202,7 @@ public abstract class ExecutorProcessor implements Runnable {
       WebLogger.getLogger(context.getAppName()).w(TAG, "error while releasing database conneciton");
     } finally {
       context.removeActiveConnection(transId);
-      context.reportError(request.callbackJSON, null, errorMessage);
+      context.reportError(request.callbackJSON, request.callerID, null, errorMessage);
       context.popRequest(true);
     }
   }
@@ -237,9 +237,9 @@ public abstract class ExecutorProcessor implements Runnable {
     } finally {
       context.removeActiveConnection(transId);
       if (successful) {
-        context.reportSuccess(request.callbackJSON, null, data, metadata);
+        context.reportSuccess(request.callbackJSON, request.callerID, null, data, metadata);
       } else {
-        context.reportError(request.callbackJSON, null, exceptionString);
+        context.reportError(request.callbackJSON, request.callerID, null, exceptionString);
       }
       context.popRequest(true);
     }
