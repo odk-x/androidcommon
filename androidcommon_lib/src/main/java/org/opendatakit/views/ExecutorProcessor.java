@@ -67,7 +67,7 @@ public abstract class ExecutorProcessor implements Runnable {
     adminColumns.add(DataTableColumns.SYNC_STATE); // not exportable
     adminColumns.add(DataTableColumns.CONFLICT_TYPE); // not exportable
     adminColumns.add(DataTableColumns.DEFAULT_ACCESS);
-    adminColumns.add(DataTableColumns.OWNER);
+    adminColumns.add(DataTableColumns.ROW_OWNER);
     adminColumns.add(DataTableColumns.FORM_ID);
     adminColumns.add(DataTableColumns.LOCALE);
     adminColumns.add(DataTableColumns.SAVEPOINT_TYPE);
@@ -269,7 +269,7 @@ public abstract class ExecutorProcessor implements Runnable {
              !key.equals(DataTableColumns.LOCALE) &&
              !key.equals(DataTableColumns.SAVEPOINT_CREATOR) &&
              !key.equals(DataTableColumns.DEFAULT_ACCESS) &&
-             !key.equals(DataTableColumns.OWNER) ) {
+             !key.equals(DataTableColumns.ROW_OWNER) ) {
           ColumnDefinition cd = columns.find(key);
           if (!cd.isUnitOfRetention()) {
             throw new IllegalStateException("key is not a database column name: " + key);
@@ -773,7 +773,7 @@ public abstract class ExecutorProcessor implements Runnable {
 
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
     String defaultAccess = cvValues.getAsString(DataTableColumns.DEFAULT_ACCESS);
-    String owner = cvValues.getAsString(DataTableColumns.OWNER);
+    String owner = cvValues.getAsString(DataTableColumns.ROW_OWNER);
     String groupReadOnly = cvValues.getAsString(DataTableColumns.GROUP_READ_ONLY);
     String groupModify = cvValues.getAsString(DataTableColumns.GROUP_MODIFY);
     String groupPrivileged = cvValues.getAsString(DataTableColumns.GROUP_PRIVILEGED);
