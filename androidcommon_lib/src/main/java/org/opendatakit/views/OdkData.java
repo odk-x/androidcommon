@@ -199,7 +199,8 @@ public class OdkData {
    */
   public void getDefaultGroup(String callbackJSON) {
     logDebug("getDefaultGroup");
-    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.GET_DEFAULT_GROUP, callbackJSON);
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.GET_DEFAULT_GROUP,
+        callbackJSON, getFragmentID());
 
     queueRequest(request);
   }
