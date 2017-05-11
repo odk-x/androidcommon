@@ -14,14 +14,12 @@
 
 package org.opendatakit.views;
 
-import android.os.Bundle;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.opendatakit.consts.IntentConsts;
+
 import org.opendatakit.activities.IOdkDataActivity;
+import org.opendatakit.logging.WebLogger;
 import org.opendatakit.provider.DataTableColumns;
 import org.opendatakit.utilities.ODKFileUtils;
-import org.opendatakit.logging.WebLogger;
 
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
@@ -355,7 +353,7 @@ public class OdkData {
     logDebug("changeAccessFilter: " + tableId + " _id: " + rowId);
     HashMap<String,String> valueMap = new HashMap<String,String>();
     valueMap.put(DataTableColumns.DEFAULT_ACCESS, defaultAccess);
-    valueMap.put(DataTableColumns.OWNER, owner);
+    valueMap.put(DataTableColumns.ROW_OWNER, owner);
     valueMap.put(DataTableColumns.GROUP_READ_ONLY, groupReadOnly);
     valueMap.put(DataTableColumns.GROUP_MODIFY, groupModify);
     valueMap.put(DataTableColumns.GROUP_PRIVILEGED, groupPrivileged);
