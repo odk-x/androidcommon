@@ -16,7 +16,6 @@ package org.opendatakit.views;
 
 import android.content.ContentValues;
 
-import android.database.sqlite.SQLiteException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.database.data.ColumnDefinition;
@@ -36,6 +35,7 @@ import org.opendatakit.database.service.DbHandle;
 import org.opendatakit.database.data.Row;
 import org.opendatakit.database.data.BaseTable;
 import org.opendatakit.database.queries.ResumableQuery;
+import org.sqlite.database.sqlite.SQLiteException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -669,11 +669,11 @@ public abstract class ExecutorProcessor implements Runnable {
 
     // extend the metadata with whatever else this app needs....
     // e.g., row and column color maps
-    extendQueryMetadata(dbHandle, entries, userTable, metadata);
+    extendQueryMetadata(dbInterface, dbHandle, entries, userTable, metadata);
     reportSuccessAndCleanUp(data, metadata);
   }
 
-  protected abstract void extendQueryMetadata(DbHandle dbHandle,
+  protected abstract void extendQueryMetadata(UserDbInterface dbInterface, DbHandle dbHandle,
       List<KeyValueStoreEntry> entries, UserTable userTable, Map<String, Object> metadata);
 
   private void getRows() throws ServicesAvailabilityException, ActionNotAuthorizedException {
