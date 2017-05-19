@@ -14,7 +14,6 @@
 
 package org.opendatakit.activities;
 
-import android.app.Activity;
 import org.json.JSONObject;
 
 /**

@@ -93,16 +93,16 @@ public class OdkData {
     public static final String SQL_ORDER_BY_DIRECTION = "sqlOrderByDirection";
   }
 
-  private WeakReference<ODKWebView> mWebView;
+  private WeakReference<IOdkWebView> mWebView;
   private IOdkDataActivity mActivity;
 
   private static final String TAG = OdkData.class.getSimpleName();
 
   private ExecutorContext context;
 
-  public OdkData(IOdkDataActivity activity, ODKWebView webView) {
+  public OdkData(IOdkDataActivity activity, IOdkWebView webView) {
     mActivity = activity;
-    mWebView = new WeakReference<ODKWebView>(webView);
+    mWebView = new WeakReference<IOdkWebView>(webView);
     // change to support multiple data objects within a single webpage
     context = ExecutorContext.getContext(mActivity);
   }
@@ -169,7 +169,7 @@ public class OdkData {
   }
 
   private String getFragmentID() {
-     ODKWebView webView = mWebView.get();
+    IOdkWebView webView = mWebView.get();
      if (webView == null) {
         return null;
      }
