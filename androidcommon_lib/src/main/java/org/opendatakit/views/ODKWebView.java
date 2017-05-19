@@ -51,7 +51,7 @@ import java.util.LinkedList;
  *
  */
 @SuppressLint("SetJavaScriptEnabled")
-public abstract class ODKWebView extends WebView {
+public abstract class ODKWebView extends WebView implements IOdkWebView {
 
   private static final String t = "ODKWebView";
   private static final String BASE_STATE = "BASE_STATE";

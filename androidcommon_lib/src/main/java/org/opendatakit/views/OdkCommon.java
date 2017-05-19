@@ -345,7 +345,7 @@ public class OdkCommon {
 
         final DynamicPropertiesCallback cb = new DynamicPropertiesCallback(appName,
             mActivity.getTableId(), mActivity.getInstanceId(),
-            props.getActiveUser(), props.getUserSelectedDefaultLocale(),
+            mActivity.getActiveUser(), props.getUserSelectedDefaultLocale(),
             props.getProperty(CommonToolProperties.KEY_USERNAME),
             props.getProperty(CommonToolProperties.KEY_ACCOUNT));
 
