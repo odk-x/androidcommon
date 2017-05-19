@@ -269,7 +269,10 @@ public abstract class ExecutorProcessor implements Runnable {
              !key.equals(DataTableColumns.LOCALE) &&
              !key.equals(DataTableColumns.SAVEPOINT_CREATOR) &&
              !key.equals(DataTableColumns.DEFAULT_ACCESS) &&
-             !key.equals(DataTableColumns.ROW_OWNER) ) {
+             !key.equals(DataTableColumns.ROW_OWNER) &&
+             !key.equals(DataTableColumns.GROUP_READ_ONLY) &&
+             !key.equals(DataTableColumns.GROUP_MODIFY) &&
+             !key.equals(DataTableColumns.GROUP_PRIVILEGED)) {
           ColumnDefinition cd = columns.find(key);
           if (!cd.isUnitOfRetention()) {
             throw new IllegalStateException("key is not a database column name: " + key);
