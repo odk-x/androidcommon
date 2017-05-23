@@ -68,6 +68,9 @@ public abstract class ExecutorProcessor implements Runnable {
     adminColumns.add(DataTableColumns.CONFLICT_TYPE); // not exportable
     adminColumns.add(DataTableColumns.DEFAULT_ACCESS);
     adminColumns.add(DataTableColumns.ROW_OWNER);
+    adminColumns.add(DataTableColumns.GROUP_READ_ONLY);
+    adminColumns.add(DataTableColumns.GROUP_MODIFY);
+    adminColumns.add(DataTableColumns.GROUP_PRIVILEGED);
     adminColumns.add(DataTableColumns.FORM_ID);
     adminColumns.add(DataTableColumns.LOCALE);
     adminColumns.add(DataTableColumns.SAVEPOINT_TYPE);
