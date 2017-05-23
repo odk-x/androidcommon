@@ -33,6 +33,7 @@ import org.opendatakit.consts.IntentConsts;
 import org.opendatakit.consts.WebkitServerConsts;
 import org.opendatakit.database.service.AidlDbInterface;
 import org.opendatakit.database.service.UserDbInterface;
+import org.opendatakit.database.service.UserDbInterfaceImpl;
 import org.opendatakit.listener.DatabaseConnectionListener;
 import org.opendatakit.listener.InitializationListener;
 import org.opendatakit.properties.CommonToolProperties;
@@ -173,7 +174,8 @@ public abstract class CommonApplication extends ToolAwareApplication implements
         Log.i(t, "Bound to Database service");
         synchronized (this) {
           try {
-            databaseService = (service == null) ? null : new UserDbInterface(AidlDbInterface.Stub.asInterface(service));
+            databaseService = (service == null) ? null : new UserDbInterfaceImpl(
+                AidlDbInterface.Stub.asInterface(service));
           } catch (Exception e) {
             databaseService = null;
           }
