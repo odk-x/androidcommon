@@ -32,6 +32,7 @@ import android.webkit.WebView;
 import org.opendatakit.consts.IntentConsts;
 import org.opendatakit.consts.WebkitServerConsts;
 import org.opendatakit.database.service.AidlDbInterface;
+import org.opendatakit.database.service.InternalUserDbInterfaceAidlWrapperImpl;
 import org.opendatakit.database.service.UserDbInterface;
 import org.opendatakit.database.service.UserDbInterfaceImpl;
 import org.opendatakit.listener.DatabaseConnectionListener;
@@ -175,7 +176,8 @@ public abstract class CommonApplication extends ToolAwareApplication implements
         synchronized (this) {
           try {
             databaseService = (service == null) ? null : new UserDbInterfaceImpl(
-                AidlDbInterface.Stub.asInterface(service));
+                new InternalUserDbInterfaceAidlWrapperImpl(
+                  AidlDbInterface.Stub.asInterface(service)));
           } catch (Exception e) {
             databaseService = null;
           }
