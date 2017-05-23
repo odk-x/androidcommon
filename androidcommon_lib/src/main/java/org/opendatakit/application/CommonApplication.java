@@ -332,12 +332,6 @@ public abstract class CommonApplication extends ToolAwareApplication implements
     LocalizationUtils.clearTranslations();
   }
 
-  public void setRunInitializationTask(String appName) {
-    LocalizationUtils.clearTranslations();
-    PropertiesSingleton props = CommonToolProperties.get(this, appName);
-    props.setRunInitializationTask(this.getToolName());
-  }
-
   private Activity activeActivity = null;
   private Activity databaseListenerActivity = null;
   

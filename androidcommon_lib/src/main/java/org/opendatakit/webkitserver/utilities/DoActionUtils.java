@@ -180,7 +180,7 @@ public class DoActionUtils {
 
             final DynamicPropertiesCallback cb = new DynamicPropertiesCallback(activity.getAppName(),
                 activity.getTableId(), activity.getInstanceId(),
-                props.getActiveUser(), props.getUserSelectedDefaultLocale(),
+                activity.getActiveUser(), props.getUserSelectedDefaultLocale(),
                 props.getProperty(CommonToolProperties.KEY_USERNAME),
                 props.getProperty(CommonToolProperties.KEY_ACCOUNT));
 
