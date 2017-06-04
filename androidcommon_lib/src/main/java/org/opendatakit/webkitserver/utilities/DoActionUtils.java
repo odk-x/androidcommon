@@ -271,7 +271,9 @@ public class DoActionUtils {
          String actionOutcome = result.toString();
          activity.queueActionOutcome(actionOutcome);
 
-         view.signalQueuedActionAvailable();
+         if (view != null) {
+            view.signalQueuedActionAvailable();
+         }
       } catch (Exception e) {
          WebLogger.getLogger(activity.getAppName()).printStackTrace(e);
          try {
@@ -291,7 +293,9 @@ public class DoActionUtils {
             result.put("jsonValue", jsonValue);
             activity.queueActionOutcome(result.toString());
 
-            view.signalQueuedActionAvailable();
+            if (view != null) {
+               view.signalQueuedActionAvailable();
+            }
          } catch (Exception ex) {
             WebLogger.getLogger(activity.getAppName()).printStackTrace(ex);
          }
