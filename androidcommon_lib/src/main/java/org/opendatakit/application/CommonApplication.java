@@ -49,7 +49,8 @@ import java.util.ArrayList;
 public abstract class CommonApplication extends ToolAwareApplication implements
     InitializationListener {
 
-  private static final String t = "CommonApplication";
+  // Used for logging
+  private static final String TAG = CommonApplication.class.getSimpleName();
   
   public static final String PERMISSION_WEBSERVER = "org.opendatakit.webkitserver.RUN_WEBSERVER";
   public static final String PERMISSION_DATABASE = "org.opendatakit.database.RUN_DATABASE";
@@ -85,7 +86,7 @@ public abstract class CommonApplication extends ToolAwareApplication implements
     }
 
     synchronized void clearDestroyingFlag() {
-      Log.i(t, "isDestroying reset to false");
+      Log.i(TAG, "isDestroying reset to false");
       isDestroying = false;
     }
 
@@ -106,7 +107,7 @@ public abstract class CommonApplication extends ToolAwareApplication implements
 
       synchronized (this) {
         if ( !isDestroying ) {
-          Log.i(t, "bindToService -- processing...");
+          Log.i(TAG, "bindToService -- processing...");
           if ( useWebServer && webkitfilesService == null && webkitfilesServiceConnection == null ) {
             webkitfilesServiceConnection = webkitServerBinder = new ServiceConnection() {
 
@@ -131,12 +132,12 @@ public abstract class CommonApplication extends ToolAwareApplication implements
             };
           }
         } else {
-          Log.i(t, "bindToService -- ignored -- isDestroying is true!");
+          Log.i(TAG, "bindToService -- ignored -- isDestroying is true!");
         }
       }
 
       if ( webkitServerBinder != null ) {
-        Log.i(t, "Attempting bind to WebkitServer service");
+        Log.i(TAG, "Attempting bind to WebkitServer service");
         Intent bind_intent = new Intent();
         bind_intent.setClassName(WebkitServerConsts.WEBKITSERVER_SERVICE_PACKAGE,
             WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS);
@@ -147,7 +148,7 @@ public abstract class CommonApplication extends ToolAwareApplication implements
       }
 
       if ( databaseBinder != null ) {
-        Log.i(t, "Attempting bind to Database service");
+        Log.i(TAG, "Attempting bind to Database service");
         Intent bind_intent = new Intent();
         bind_intent.setClassName(IntentConsts.Database.DATABASE_SERVICE_PACKAGE,
                 IntentConsts.Database.DATABASE_SERVICE_CLASS);
@@ -161,7 +162,7 @@ public abstract class CommonApplication extends ToolAwareApplication implements
     private void doServiceConnected(CommonApplication application, ComponentName className,
         IBinder service) {
       if (className.getClassName().equals(WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS)) {
-        Log.i(t, "Bound to WebServer service");
+        Log.i(TAG, "Bound to WebServer service");
         synchronized (this) {
           try {
             webkitfilesService = (service == null) ? null : WebkitServerInterface.Stub.asInterface(service);
@@ -172,7 +173,7 @@ public abstract class CommonApplication extends ToolAwareApplication implements
       }
 
       if (className.getClassName().equals(IntentConsts.Database.DATABASE_SERVICE_CLASS)) {
-        Log.i(t, "Bound to Database service");
+        Log.i(TAG, "Bound to Database service");
         synchronized (this) {
           try {
             databaseService = (service == null) ? null : new UserDbInterfaceImpl(
@@ -193,9 +194,9 @@ public abstract class CommonApplication extends ToolAwareApplication implements
         ServiceConnection tmpWeb = null;
         synchronized (this) {
           if (isDestroying) {
-            Log.i(t, "Unbound from WebServer service (intentionally)");
+            Log.i(TAG, "Unbound from WebServer service (intentionally)");
           } else {
-            Log.w(t, "Unbound from WebServer service (unexpected)");
+            Log.w(TAG, "Unbound from WebServer service (unexpected)");
           }
           webkitfilesService = null;
           tmpWeb = webkitfilesServiceConnection;
@@ -216,9 +217,9 @@ public abstract class CommonApplication extends ToolAwareApplication implements
         ServiceConnection tmpDb = null;
         synchronized (this) {
           if (isDestroying) {
-            Log.i(t, "Unbound from Database service (intentionally)");
+            Log.i(TAG, "Unbound from Database service (intentionally)");
           } else {
-            Log.w(t, "Unbound from Database service (unexpected)");
+            Log.w(TAG, "Unbound from Database service (unexpected)");
           }
           databaseService = null;
           tmpDb = databaseServiceConnection;
@@ -243,7 +244,7 @@ public abstract class CommonApplication extends ToolAwareApplication implements
     }
 
     private void shutdownServices(CommonApplication application) {
-      Log.i(t, "shutdownServices - Releasing WebServer and database service");
+      Log.i(TAG, "shutdownServices - Releasing WebServer and database service");
       ServiceConnection tmpWeb = null;
       ServiceConnection tmpDb = null;
       synchronized (this) {
@@ -307,14 +308,14 @@ public abstract class CommonApplication extends ToolAwareApplication implements
   @Override
   public void onConfigurationChanged(Configuration newConfig) {
     super.onConfigurationChanged(newConfig);
-    Log.i(t, "onConfigurationChanged");
+    Log.i(TAG, "onConfigurationChanged");
   }
 
   @Override
   public void onTerminate() {
     cleanShutdown();
     super.onTerminate();
-    Log.i(t, "onTerminate");
+    Log.i(TAG, "onTerminate");
   }
 
   public abstract int getConfigZipResourceId();
@@ -370,11 +371,11 @@ public abstract class CommonApplication extends ToolAwareApplication implements
   private void cleanShutdown() {
     try {
       shuttingDown = true;
-      Log.i(t, "cleanShutdown (initiating)");
+      Log.i(TAG, "cleanShutdown (initiating)");
       shutdownServices();
     } finally {
       shuttingDown = false;
-      Log.i(t, "cleanShutdown (resetting shuttingDown to false)");
+      Log.i(TAG, "cleanShutdown (resetting shuttingDown to false)");
     }
   }
   
@@ -415,7 +416,7 @@ public abstract class CommonApplication extends ToolAwareApplication implements
       boolean useWebServer = (pm.checkPermission(PERMISSION_WEBSERVER, getPackageName()) == PackageManager.PERMISSION_GRANTED);
       boolean useDatabase = (pm.checkPermission(PERMISSION_DATABASE, getPackageName()) == PackageManager.PERMISSION_GRANTED);
 
-      Log.i(t, "bindToService -- useWebServer " + Boolean.toString(useWebServer)
+      Log.i(TAG, "bindToService -- useWebServer " + Boolean.toString(useWebServer)
           + " useDatabase " + Boolean.toString(useDatabase) );
       mBackgroundServices.bindToService(this, useWebServer, useDatabase);
     }
@@ -432,7 +433,7 @@ public abstract class CommonApplication extends ToolAwareApplication implements
   
   public void configureView() {
     if ( activeActivity != null ) {
-      Log.i(t, "configureView - possibly updating service information within ODKWebView");
+      Log.i(TAG, "configureView - possibly updating service information within ODKWebView");
       if ( getWebKitResourceId() != -1 ) {
         View v = activeActivity.findViewById(getWebKitResourceId());
         if (v != null && v instanceof ODKWebView) {
