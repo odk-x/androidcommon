@@ -77,7 +77,7 @@ public class ViewDataQueryParams implements Parcelable {
 
    private void writeStringToParcel(Parcel p, String s) {
       p.writeByte((byte)(s != null ? 1 : 0));
-      p.writeString(s);
+      if (s != null) p.writeString(s);
    }
 
    private void writeStringArrToParcel(Parcel p, String[] s) {
