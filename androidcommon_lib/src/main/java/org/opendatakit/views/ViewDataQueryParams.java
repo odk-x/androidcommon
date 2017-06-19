@@ -16,6 +16,7 @@ package org.opendatakit.views;
 
 import android.os.Parcel;
 import android.os.Parcelable;
+import org.opendatakit.database.queries.BindArgs;
 
 /**
  * Created by jbeorse on 5/4/17.
@@ -25,13 +26,13 @@ public class ViewDataQueryParams implements Parcelable {
    String tableId;
    String rowId;
    String whereClause;
-   String[] selectionArgs;
+   BindArgs selectionArgs;
    String[] groupBy;
    String having;
    String orderByElemKey;
    String orderByDir;
 
-   public ViewDataQueryParams(String tableId, String rowId, String whereClause, String[]
+   public ViewDataQueryParams(String tableId, String rowId, String whereClause, BindArgs
        selectionArgs, String[] groupBy, String having, String orderByElemKey, String orderByDir) {
       this.tableId = tableId;
       this.rowId = rowId;
@@ -47,7 +48,7 @@ public class ViewDataQueryParams implements Parcelable {
       this.tableId = readStringFromParcel(in);
       this.rowId = readStringFromParcel(in);
       this.whereClause = readStringFromParcel(in);
-      this.selectionArgs = readStringArrFromParcel(in);
+      this.selectionArgs = BindArgs.CREATOR.createFromParcel(in);
       this.groupBy = readStringArrFromParcel(in);
       this.having = readStringFromParcel(in);
       this.orderByElemKey = readStringFromParcel(in);
@@ -68,7 +69,7 @@ public class ViewDataQueryParams implements Parcelable {
       writeStringToParcel(dest, tableId);
       writeStringToParcel(dest, rowId);
       writeStringToParcel(dest, whereClause);
-      writeStringArrToParcel(dest, selectionArgs);
+      selectionArgs.writeToParcel(dest, flags);
       writeStringArrToParcel(dest, groupBy);
       writeStringToParcel(dest, having);
       writeStringToParcel(dest, orderByElemKey);

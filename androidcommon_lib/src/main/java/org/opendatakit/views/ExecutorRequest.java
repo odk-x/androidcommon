@@ -14,6 +14,8 @@
 
 package org.opendatakit.views;
 
+import org.opendatakit.database.queries.BindArgs;
+
 /**
  * @author mitchellsundt@gmail.com
  */
@@ -29,7 +31,7 @@ public class ExecutorRequest {
     public final String sqlCommand;
 
     // shared between raw query and user table query interactions
-    public final Object[] sqlBindParams;
+    public final BindArgs sqlBindParams;
 
     // For user table interactions
     public final String tableId;
@@ -93,12 +95,13 @@ public class ExecutorRequest {
      *                             column (e.g., integer, number, array, object conversions).
      * @param sqlCommand The Select statement to issue. It can reference any table in the database, including system tables.
      * @param sqlBindParams The array of bind parameter values (including any in the having clause)
+     *                      wrapped in a BindArgs object.
      * @param limit null to return everything. Otherwise, max number or rows to return
      * @param offset if limit is not null, specify the offset into the result set to return.
      * @param callbackJSON The JSON object used by the JS layer to recover the callback function
      *                     that can process the response
      */
-    public ExecutorRequest(String tableId, String sqlCommand, Object[] sqlBindParams,
+    public ExecutorRequest(String tableId, String sqlCommand, BindArgs sqlBindParams,
                 Integer limit, Integer offset, String callbackJSON, String callerID) {
         this.executorRequestType = ExecutorRequestType.ARBITRARY_QUERY;
         this.tableId = tableId;
@@ -129,6 +132,7 @@ public class ExecutorRequest {
      * @param tableId  The table being queried. This is a user-defined table.
      * @param whereClause The where clause for the query
      * @param sqlBindParams The array of bind parameter values (including any in the having clause)
+     *                      wrapped in a BindArgs object.
      * @param groupBy The array of columns to group by
      * @param having The having clause
      * @param orderByElementKey The column to order by
@@ -139,7 +143,7 @@ public class ExecutorRequest {
      * @param callbackJSON The JSON object used by the JS layer to recover the callback function
      *                     that can process the response
      */
-    public ExecutorRequest(String tableId, String whereClause, Object[] sqlBindParams,
+    public ExecutorRequest(String tableId, String whereClause, BindArgs sqlBindParams,
                            String[] groupBy, String having, String orderByElementKey, String orderByDirection,
                            Integer limit, Integer offset, boolean includeKeyValueStoreMap,
                            String callbackJSON, String callerID) {

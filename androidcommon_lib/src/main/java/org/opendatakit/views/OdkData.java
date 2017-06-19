@@ -17,6 +17,7 @@ package org.opendatakit.views;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import org.opendatakit.activities.IOdkDataActivity;
+import org.opendatakit.database.queries.BindArgs;
 import org.opendatakit.logging.WebLogger;
 import org.opendatakit.provider.DataTableColumns;
 import org.opendatakit.utilities.ODKFileUtils;
@@ -157,15 +158,19 @@ public class OdkData {
       return;
     }
 
+    ExecutorRequest request;
     if (queryParams.isSingleRowQuery()) {
-      query(queryParams.tableId, DataTableColumns.ID + "=?", new String[] { queryParams.rowId },
+      BindArgs bindArgs = new BindArgs(new Object[] { queryParams.rowId });
+      request = new ExecutorRequest(queryParams.tableId, DataTableColumns.ID + "=?", bindArgs,
           null, null, DataTableColumns.SAVEPOINT_TIMESTAMP, descOrder, limit, offset, true,
-          callbackJSON);
+          callbackJSON, getFragmentID());
     } else {
-      query(queryParams.tableId, queryParams.whereClause, queryParams.selectionArgs,
+      request = new ExecutorRequest(queryParams.tableId, queryParams.whereClause,
+          queryParams.selectionArgs,
           queryParams.groupBy, queryParams.having, queryParams.orderByElemKey,
-          queryParams.orderByDir, limit, offset, true, callbackJSON);
+          queryParams.orderByDir, limit, offset, true, callbackJSON, getFragmentID());
     }
+    queueRequest(request);
   }
 
   private String getFragmentID() {
@@ -234,7 +239,8 @@ public class OdkData {
    *
    * @param tableId                 The table being queried. This is a user-defined table.
    * @param whereClause             The where clause for the query
-   * @param sqlBindParams           The array of bind parameter values (including any in the having clause)
+   * @param sqlBindParamsJSON JSON.stringify of array of bind parameter values (including any in
+   *                          the having clause)
    * @param groupBy                 The array of columns to group by
    * @param having                  The having clause
    * @param orderByElementKey       The column to order by
@@ -245,11 +251,12 @@ public class OdkData {
    * @param callbackJSON            The JSON object used by the JS layer to recover the callback function
    *                                that can process the response
    */
-  public void query(String tableId, String whereClause, Object[] sqlBindParams, String[] groupBy,
+  public void query(String tableId, String whereClause, String sqlBindParamsJSON, String[] groupBy,
       String having, String orderByElementKey, String orderByDirection,
       Integer limit, Integer offset, boolean includeKeyValueStoreMap, String callbackJSON) {
     logDebug("query: " + tableId + " whereClause: " + whereClause);
-    ExecutorRequest request = new ExecutorRequest(tableId, whereClause, sqlBindParams, groupBy,
+    BindArgs bindArgs = new BindArgs(sqlBindParamsJSON);
+    ExecutorRequest request = new ExecutorRequest(tableId, whereClause, bindArgs, groupBy,
         having, orderByElementKey, orderByDirection, limit, offset, includeKeyValueStoreMap,
         callbackJSON, getFragmentID());
 
@@ -265,17 +272,19 @@ public class OdkData {
    *                      column (e.g., integer, number, array, object conversions).
    * @param sqlCommand    The Select statement to issue. It can reference any table in the database,
    *                      including system tables.
-   * @param sqlBindParams The array of bind parameter values (including any in the having clause)
+   * @param sqlBindParamsJSON JSON.stringify of array of bind parameter values (including any in
+   *                          the having clause)
    * @param limit         The maximum number of rows to return (null returns all)
    * @param offset        The offset into the result set of the first row to return (null ok)
    * @param callbackJSON  The JSON object used by the JS layer to recover the callback function
    *                      that can process the response
    * @return see description in class header
    */
-  public void arbitraryQuery(String tableId, String sqlCommand, Object[] sqlBindParams,
+  public void arbitraryQuery(String tableId, String sqlCommand, String sqlBindParamsJSON,
       Integer limit, Integer offset, String callbackJSON) {
     logDebug("arbitraryQuery: " + tableId + " sqlCommand: " + sqlCommand);
-    ExecutorRequest request = new ExecutorRequest(tableId, sqlCommand, sqlBindParams,
+    BindArgs bindArgs = new BindArgs(sqlBindParamsJSON);
+    ExecutorRequest request = new ExecutorRequest(tableId, sqlCommand, bindArgs,
         limit, offset, callbackJSON, getFragmentID());
 
     queueRequest(request);
