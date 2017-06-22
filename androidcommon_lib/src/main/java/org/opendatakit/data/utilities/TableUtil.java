@@ -93,7 +93,7 @@ public class TableUtil {
   
   static {
     // register a state-reset manipulator for 'tableUtil' field.
-    StaticStateManipulator.get().register(50, new IStaticFieldManipulator() {
+    StaticStateManipulator.get().register(new IStaticFieldManipulator() {
 
       @Override
       public void reset() {
