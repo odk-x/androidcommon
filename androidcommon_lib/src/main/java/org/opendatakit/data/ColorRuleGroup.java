@@ -138,7 +138,7 @@ public class ColorRuleGroup {
         this.ruleList = new ArrayList<ColorRule>();
       }
     } else {
-      jsonRulesString = KeyValueStoreUtils.getObject(appName, entries.get(0));
+      jsonRulesString = KeyValueStoreUtils.getObject(entries.get(0));
       this.ruleList = parseJsonString(jsonRulesString);
     }
   }
