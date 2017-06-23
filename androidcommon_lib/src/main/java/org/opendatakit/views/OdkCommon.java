@@ -345,9 +345,7 @@ public class OdkCommon {
 
         final DynamicPropertiesCallback cb = new DynamicPropertiesCallback(appName,
             mActivity.getTableId(), mActivity.getInstanceId(),
-            mActivity.getActiveUser(), props.getUserSelectedDefaultLocale(),
-            props.getProperty(CommonToolProperties.KEY_USERNAME),
-            props.getProperty(CommonToolProperties.KEY_ACCOUNT));
+            mActivity.getActiveUser(), props.getUserSelectedDefaultLocale());
 
         Bundle b = SerializationUtils.convertToBundle(valueMap, new SerializationUtils
             .MacroStringExpander() {

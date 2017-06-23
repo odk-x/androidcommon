@@ -180,9 +180,7 @@ public class DoActionUtils {
 
             final DynamicPropertiesCallback cb = new DynamicPropertiesCallback(activity.getAppName(),
                 activity.getTableId(), activity.getInstanceId(),
-                activity.getActiveUser(), props.getUserSelectedDefaultLocale(),
-                props.getProperty(CommonToolProperties.KEY_USERNAME),
-                props.getProperty(CommonToolProperties.KEY_ACCOUNT));
+                activity.getActiveUser(), props.getUserSelectedDefaultLocale());
 
             b = SerializationUtils.convertToBundle(valueMap, new SerializationUtils.MacroStringExpander() {
 
