@@ -285,7 +285,7 @@ public class ColumnUtil {
                 LocalKeyValueStoreConstants.Spreadsheet.KEY_COLUMN_WIDTH, null).getEntries();
     Map<String, Integer> colWidths = new HashMap<String, Integer>();
     for (KeyValueStoreEntry entry : kvsList) {
-      Integer value = KeyValueStoreUtils.getInteger(appName, entry);
+      Integer value = KeyValueStoreUtils.getInteger(entry);
       if (value == null || value <= 0) {
         value = LocalKeyValueStoreConstants.Spreadsheet.DEFAULT_COL_WIDTH;
       }
