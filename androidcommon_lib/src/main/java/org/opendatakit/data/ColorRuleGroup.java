@@ -15,33 +15,29 @@
  */
 package org.opendatakit.data;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
+import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.ElementType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.data.utilities.ColorRuleUtil;
 import org.opendatakit.database.LocalKeyValueStoreConstants;
 import org.opendatakit.database.data.ColumnDefinition;
+import org.opendatakit.database.data.KeyValueStoreEntry;
 import org.opendatakit.database.data.OrderedColumns;
+import org.opendatakit.database.data.Row;
+import org.opendatakit.database.service.DbHandle;
 import org.opendatakit.database.service.UserDbInterface;
 import org.opendatakit.database.utilities.KeyValueStoreUtils;
 import org.opendatakit.exception.ServicesAvailabilityException;
 import org.opendatakit.logging.WebLogger;
 import org.opendatakit.provider.DataTableColumns;
-import org.opendatakit.database.data.KeyValueStoreEntry;
-import org.opendatakit.database.service.DbHandle;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
-import com.fasterxml.jackson.core.JsonGenerationException;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.TypeFactory;
-import org.opendatakit.database.data.Row;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * A ColorRuleGroup aggregates a collection of {@link ColorRule} objects and is
@@ -49,17 +45,16 @@ import org.opendatakit.database.data.Row;
  * dictated by the collection.
  *
  * @author sudar.sam@gmail.com
- *
  */
-public class ColorRuleGroup {
+public final class ColorRuleGroup {
 
+  /**
+   * Used for logging
+   */
   private static final String TAG = ColorRuleGroup.class.getName();
-
   /*****************************
    * Things needed for the key value store.
    *****************************/
-  public static final String DEFAULT_KEY_COLOR_RULES = "[]";
-
   private static final ObjectMapper mapper;
   private static final TypeFactory typeFactory;
 
@@ -68,10 +63,6 @@ public class ColorRuleGroup {
     mapper.setVisibility(mapper.getVisibilityChecker().withFieldVisibility(Visibility.ANY));
     mapper.setVisibility(mapper.getVisibilityChecker().withCreatorVisibility(Visibility.ANY));
     typeFactory = mapper.getTypeFactory();
-  }
-
-  public enum Type {
-    COLUMN, TABLE, STATUS_COLUMN
   }
 
   // private final KeyValueStoreHelper kvsh;
@@ -89,22 +80,21 @@ public class ColorRuleGroup {
   /**
    * Construct the rule group for the given column.
    *
-   * @param dbInterface
-   * @param appName
-   * @param db
-   * @param tableId
-   * @param elementKey
-   * @param type
-   * @param adminColumns
-   * @throws ServicesAvailabilityException
+   * @param dbInterface  a database to use
+   * @param appName      the app name
+   * @param db           an opened database handle to use
+   * @param tableId      the id of the table that the color rule will operate on
+   * @param elementKey   the id of the column that the color rule will operate on
+   * @param type         The type of color rule, column, status, etc..
+   * @param adminColumns A list of the hidden columns in the table
+   * @throws ServicesAvailabilityException if the database is down
    */
-  private ColorRuleGroup(UserDbInterface dbInterface, String appName, DbHandle db, String tableId, String elementKey,
-      Type type, String[] adminColumns) throws ServicesAvailabilityException {
+  private ColorRuleGroup(UserDbInterface dbInterface, String appName, DbHandle db, String tableId,
+      String elementKey, Type type, String[] adminColumns) throws ServicesAvailabilityException {
     this.mType = type;
     this.mAppName = appName;
     this.mTableId = tableId;
     this.mElementKey = elementKey;
-    String jsonRulesString = DEFAULT_KEY_COLOR_RULES;
     mAdminColumns = adminColumns;
     List<KeyValueStoreEntry> entries = null;
     switch (mType) {
@@ -126,64 +116,91 @@ public class ColorRuleGroup {
           LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_STATUS_COLUMN, null)
           .getEntries();
       break;
-    default:
-      WebLogger.getLogger(mAppName).e(TAG, "unrecognized ColorRuleGroup type: " + mType);
     }
     mDefault = false;
-    if ( entries.size() != 1 ) {
+    if (entries.size() != 1) {
+      this.ruleList = new ArrayList<>();
       if (mType == Type.STATUS_COLUMN) {
-        this.ruleList = new ArrayList<ColorRule>();
         this.ruleList.addAll(ColorRuleUtil.getDefaultSyncStateColorRules());
-      } else {
-        this.ruleList = new ArrayList<ColorRule>();
       }
     } else {
-      jsonRulesString = KeyValueStoreUtils.getObject(entries.get(0));
+      String jsonRulesString = KeyValueStoreUtils.getObject(entries.get(0));
       this.ruleList = parseJsonString(jsonRulesString);
     }
+  }
+
+  /**
+   * Returns a new color rule group with the requested parameters
+   * @param dbInterface  a database to use
+   * @param appName      the app name
+   * @param db           an opened database handle to use
+   * @param tableId      the id of the table that the color rule will operate on
+   * @param elementKey   the id of the column that the color rule will operate on
+   * @param adminColumns A list of the hidden columns in the table
+   *
+   * @return A new color rule group for columns
+   * @throws ServicesAvailabilityException if the database is down
+   */
+  public static ColorRuleGroup getColumnColorRuleGroup(UserDbInterface dbInterface, String appName,
+      DbHandle db, String tableId, String elementKey, String[] adminColumns)
+      throws ServicesAvailabilityException {
+    return new ColorRuleGroup(dbInterface, appName, db, tableId, elementKey, Type.COLUMN,
+        adminColumns);
+  }
+
+  /**
+   * Returns a new color rule group with the requested parameters
+   * @param dbInterface  a database to use
+   * @param appName      the app name
+   * @param db           an opened database handle to use
+   * @param tableId      the id of the table that the color rule will operate on
+   * @param adminColumns A list of the hidden columns in the table
+   *
+   * @return A new color rule group for tables
+   * @throws ServicesAvailabilityException if the database is down
+   */
+  public static ColorRuleGroup getTableColorRuleGroup(UserDbInterface dbInterface, String appName,
+      DbHandle db, String tableId, String[] adminColumns) throws ServicesAvailabilityException {
+    return new ColorRuleGroup(dbInterface, appName, db, tableId, null, Type.TABLE, adminColumns);
+  }
+
+  /**
+   * Returns a new color rule group with the requested parameters
+   * @param dbInterface  a database to use
+   * @param appName      the app name
+   * @param db           an opened database handle to use
+   * @param tableId      the id of the table that the color rule will operate on
+   * @param adminColumns A list of the hidden columns in the table
+   *
+   * @return A new color rule group for a status column
+   * @throws ServicesAvailabilityException if the database is down
+   */
+  public static ColorRuleGroup getStatusColumnRuleGroup(UserDbInterface dbInterface, String appName,
+      DbHandle db, String tableId, String[] adminColumns) throws ServicesAvailabilityException {
+    return new ColorRuleGroup(dbInterface, appName, db, tableId, null, Type.STATUS_COLUMN,
+        adminColumns);
   }
 
   public String[] getAdminColumns() {
     return this.mAdminColumns;
   }
 
-  public static ColorRuleGroup getColumnColorRuleGroup(UserDbInterface dbInterface, String appName, DbHandle db,
-      String tableId, String elementKey, String[] adminColumns) throws ServicesAvailabilityException {
-    return new ColorRuleGroup(dbInterface, appName, db, tableId, elementKey, Type.COLUMN, adminColumns);
-  }
-
-  public static ColorRuleGroup getTableColorRuleGroup(UserDbInterface dbInterface, String appName, DbHandle db,
-      String tableId, String[] adminColumns) throws ServicesAvailabilityException {
-    return new ColorRuleGroup(dbInterface, appName, db, tableId, null, Type.TABLE, adminColumns);
-  }
-
-  public static ColorRuleGroup getStatusColumnRuleGroup(UserDbInterface dbInterface, String appName, DbHandle db,
-      String tableId, String[] adminColumns) throws ServicesAvailabilityException {
-    return new ColorRuleGroup(dbInterface, appName, db, tableId, null, Type.STATUS_COLUMN, adminColumns);
-  }
-
   /**
    * Parse a json String of a list of {@link ColorRule} objects into a
    *
-   * @param json
-   * @return
+   * @param json the json string to parse into a list of color rules
+   * @return A list of the rules read from the file
    */
   private List<ColorRule> parseJsonString(String json) {
-    if (json == null || json.equals("")) { // no values in the kvs
-      return new ArrayList<ColorRule>();
+    List<ColorRule> reclaimedRules = new ArrayList<>();
+    if (json == null || json.isEmpty()) { // no values in the kvs
+      return reclaimedRules;
     }
-    List<ColorRule> reclaimedRules = new ArrayList<ColorRule>();
     try {
-      reclaimedRules = mapper.readValue(json,
-          typeFactory.constructCollectionType(ArrayList.class, ColorRule.class));
-    } catch (JsonParseException e) {
-      WebLogger.getLogger(mAppName).e(TAG, "problem parsing json to colcolorrule");
-      WebLogger.getLogger(mAppName).printStackTrace(e);
-    } catch (JsonMappingException e) {
-      WebLogger.getLogger(mAppName).e(TAG, "problem mapping json to colcolorrule");
-      WebLogger.getLogger(mAppName).printStackTrace(e);
+      reclaimedRules = mapper
+          .readValue(json, typeFactory.constructCollectionType(ArrayList.class, ColorRule.class));
     } catch (IOException e) {
-      WebLogger.getLogger(mAppName).e(TAG, "i/o problem with json to colcolorrule");
+      WebLogger.getLogger(mAppName).e(TAG, "parsing/IO problem with mapping json to color rules");
       WebLogger.getLogger(mAppName).printStackTrace(e);
     }
     return reclaimedRules;
@@ -194,7 +211,7 @@ public class ColorRuleGroup {
    * used for displaying the rules. Any changes to the list should be made via
    * the add, delete, and update methods in ColumnColorRuler.
    *
-   * @return
+   * @return the color rules in the color rule group
    */
   public List<ColorRule> getColorRules() {
     return ruleList;
@@ -204,7 +221,7 @@ public class ColorRuleGroup {
    * Replace the list of rules that define this ColumnColorRuler. Does so while
    * retaining the same reference as was originally held.
    *
-   * @param newRules
+   * @param newRules a new list of rules for the color rule group
    */
   public void replaceColorRuleList(List<ColorRule> newRules) {
     this.ruleList.clear();
@@ -226,11 +243,11 @@ public class ColorRuleGroup {
    * no rules, so will not pollute the key value store unless something has been
    * added.
    *
-   * @param dbInterface
-   * @throws ServicesAvailabilityException
+   * @param dbInterface a database to use
+   * @throws ServicesAvailabilityException if the database is down
    */
   public void saveRuleList(UserDbInterface dbInterface) throws ServicesAvailabilityException {
-    if ( mDefault ) {
+    if (mDefault) {
       // nothing to save
       return;
     }
@@ -249,33 +266,29 @@ public class ColorRuleGroup {
         KeyValueStoreEntry entry = null;
         switch (mType) {
         case COLUMN:
-          entry = KeyValueStoreUtils.buildEntry(mTableId, LocalKeyValueStoreConstants.ColumnColorRules.PARTITION,
-              mElementKey,
-              LocalKeyValueStoreConstants.ColumnColorRules.KEY_COLOR_RULES_COLUMN,
-              ElementDataType.array, ruleListJson);
+          entry = KeyValueStoreUtils
+              .buildEntry(mTableId, LocalKeyValueStoreConstants.ColumnColorRules.PARTITION,
+                  mElementKey, LocalKeyValueStoreConstants.ColumnColorRules.KEY_COLOR_RULES_COLUMN,
+                  ElementDataType.array, ruleListJson);
           break;
         case TABLE:
-          entry = KeyValueStoreUtils.buildEntry(mTableId, LocalKeyValueStoreConstants.TableColorRules.PARTITION,
-              KeyValueStoreConstants.ASPECT_DEFAULT,
-              LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_ROW,
-              ElementDataType.array, ruleListJson);
+          entry = KeyValueStoreUtils
+              .buildEntry(mTableId, LocalKeyValueStoreConstants.TableColorRules.PARTITION,
+                  KeyValueStoreConstants.ASPECT_DEFAULT,
+                  LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_ROW,
+                  ElementDataType.array, ruleListJson);
           break;
         case STATUS_COLUMN:
-          entry = KeyValueStoreUtils.buildEntry(mTableId, LocalKeyValueStoreConstants.TableColorRules.PARTITION,
-              KeyValueStoreConstants.ASPECT_DEFAULT,
-              LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_STATUS_COLUMN,
-              ElementDataType.array, ruleListJson);
+          entry = KeyValueStoreUtils
+              .buildEntry(mTableId, LocalKeyValueStoreConstants.TableColorRules.PARTITION,
+                  KeyValueStoreConstants.ASPECT_DEFAULT,
+                  LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_STATUS_COLUMN,
+                  ElementDataType.array, ruleListJson);
           break;
         }
         dbInterface.replaceTableMetadata(mAppName, db, entry);
-      } catch (JsonGenerationException e) {
-        WebLogger.getLogger(mAppName).e(TAG, "problem parsing list of color rules");
-        WebLogger.getLogger(mAppName).printStackTrace(e);
-      } catch (JsonMappingException e) {
-        WebLogger.getLogger(mAppName).e(TAG, "problem mapping list of color rules");
-        WebLogger.getLogger(mAppName).printStackTrace(e);
       } catch (IOException e) {
-        WebLogger.getLogger(mAppName).e(TAG, "i/o problem with json list of color rules");
+        WebLogger.getLogger(mAppName).e(TAG, "IO or parsing problem parsing list of color rules");
         WebLogger.getLogger(mAppName).printStackTrace(e);
       }
     } finally {
@@ -288,7 +301,7 @@ public class ColorRuleGroup {
   /**
    * Replace the rule matching updatedRule's id with updatedRule.
    *
-   * @param updatedRule
+   * @param updatedRule the rule to change in the internal list of rules
    */
   public void updateRule(ColorRule updatedRule) {
     for (int i = 0; i < ruleList.size(); i++) {
@@ -304,7 +317,7 @@ public class ColorRuleGroup {
   /**
    * Remove the given rule from the rule list.
    *
-   * @param rule
+   * @param rule the rule to be removed from the list.
    */
   public void removeRule(ColorRule rule) {
     for (int i = 0; i < ruleList.size(); i++) {
@@ -318,6 +331,10 @@ public class ColorRuleGroup {
         "a rule was passed to deleteRule that did not match" + " the id of any rules in the list");
   }
 
+  /**
+   * Returns the number of rules in the group
+   * @return the number of rules in the group
+   */
   public int getRuleCount() {
     return ruleList.size();
   }
@@ -326,7 +343,7 @@ public class ColorRuleGroup {
    * Use the rule group to determine if it applies to the given data.
    *
    * @param orderedDefns set of columnDefinitions for the table
-   * @param row the data from the row
+   * @param row          the data from the row
    * @return null or the matching rule in the group, {@link ColorGuide}.
    */
   public ColorGuide getColorGuide(OrderedColumns orderedDefns, Row row) {
@@ -342,19 +359,19 @@ public class ColorRuleGroup {
       ColumnDefinition cd = null;
       try {
         cd = orderedDefns.find(cr.getColumnElementKey());
-      } catch (Exception e) {
+      } catch (Exception ignored) {
         // elementKey must be a metadata column...
       }
       ElementDataType type;
       if (cd == null) {
         // Was likely a metadata column.
         if (!Arrays.asList(mAdminColumns).contains(elementKey)) {
-          throw new IllegalArgumentException("element key passed to "
-              + "ColorRule#checkMatch didn't have a mapping and was "
-              + "not a metadata elementKey: " + elementKey);
+          throw new IllegalArgumentException(
+              "element key passed to " + "ColorRule#checkMatch didn't have a mapping and was "
+                  + "not a metadata elementKey: " + elementKey);
         }
         // if conflict_type then integer
-        if ( elementKey.equals(DataTableColumns.CONFLICT_TYPE) ) {
+        if (elementKey.equals(DataTableColumns.CONFLICT_TYPE)) {
           type = ElementDataType.integer;
         } else {
           type = ElementDataType.string;
@@ -368,6 +385,14 @@ public class ColorRuleGroup {
       }
     }
     return null;
+  }
+
+  /**
+   * The three types of color rule groups
+   */
+  @SuppressWarnings("JavaDoc")
+  public enum Type {
+    COLUMN, TABLE, STATUS_COLUMN
   }
 
 }
