@@ -19,12 +19,8 @@ import org.opendatakit.application.CommonApplication;
 import org.opendatakit.database.service.UserDbInterface;
 
 public class BaseActivity extends AbsBaseActivity {
-  public UserDbInterface getDbInt() {
-    return getCommonApplication().getDatabase();
-  }
-
   public UserDbInterface getDatabase() {
-    return getDbInt();
+    return getCommonApplication().getDatabase();
   }
 
   public CommonApplication getCommonApplication() {
