@@ -22,11 +22,20 @@ import org.opendatakit.consts.WebkitServerConsts;
 import android.content.Context;
 import android.net.Uri;
 
+/**
+ * Utilities class for urls
+ */
 public class UrlUtils {
 
   private static final String SCHEME_HTTP = "http";
 
-  public static Uri getWebViewContentUri(Context c) {
+  /**
+   * Do not instantiate this
+   */
+  private UrlUtils() {
+  }
+
+  public static Uri getWebViewContentUri() {
     return Uri.parse(SCHEME_HTTP + "://" + WebkitServerConsts.HOSTNAME + ":"
         + Integer.toString(WebkitServerConsts.PORT) + "/");
   }
@@ -145,7 +154,7 @@ public class UrlUtils {
    * @return
    */
   public static String getAsWebViewUri(Context context, String appName, String uriFragment) {
-    Uri u = UrlUtils.getWebViewContentUri(context);
+    Uri u = UrlUtils.getWebViewContentUri();
     // we need to escape the segments.
     u = Uri.withAppendedPath(u, encodeSegment(appName));
 
