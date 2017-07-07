@@ -33,9 +33,9 @@ import android.os.Bundle;
  */
 public class AlertDialogFragment extends DialogFragment {
 
-  public static interface ConfirmAlertDialog {
-    public void okAlertDialog();
-  };
+  public interface ConfirmAlertDialog {
+    void okAlertDialog();
+  }
 
   public static AlertDialogFragment newInstance(int fragmentId, String title, String message) {
     AlertDialogFragment frag = new AlertDialogFragment();

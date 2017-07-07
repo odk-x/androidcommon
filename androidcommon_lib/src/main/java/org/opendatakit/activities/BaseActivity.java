@@ -14,29 +14,35 @@
 
 package org.opendatakit.activities;
 
+import android.app.Application;
 import org.opendatakit.application.CommonApplication;
-import org.opendatakit.listener.DatabaseConnectionListener;
+import org.opendatakit.database.service.UserDbInterface;
 
-import android.app.Activity;
+public class BaseActivity extends AbsBaseActivity {
+  public UserDbInterface getDatabase() {
+    return getCommonApplication().getDatabase();
+  }
 
-public abstract class BaseActivity extends Activity implements DatabaseConnectionListener, IAppAwareActivity {
-
-  @Override
-  protected void onResume() {
-    super.onResume();
-    ((CommonApplication) getApplication()).onActivityResume(this);
+  public CommonApplication getCommonApplication() {
+    Application app = getApplication();
+    if (app instanceof CommonApplication) {
+      return (CommonApplication) app;
+    }
+    throw new IllegalStateException("Bad app");
   }
 
   @Override
-  protected void onPause() {
-    ((CommonApplication) getApplication()).onActivityPause(this);
-    super.onPause();
+  public void databaseAvailable() {
+
   }
 
   @Override
-  protected void onDestroy() {
-    ((CommonApplication) getApplication()).onActivityDestroy(this);
-    super.onDestroy();
+  public void databaseUnavailable() {
+
   }
 
+  @Override
+  public String getAppName() {
+    return null;
+  }
 }

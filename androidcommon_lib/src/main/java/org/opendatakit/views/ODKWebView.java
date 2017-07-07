@@ -30,6 +30,7 @@ import org.opendatakit.activities.IAppAwareActivity;
 import org.opendatakit.activities.IOdkCommonActivity;
 import org.opendatakit.activities.IOdkDataActivity;
 import org.opendatakit.application.CommonApplication;
+import org.opendatakit.properties.CommonToolProperties;
 import org.opendatakit.utilities.ODKFileUtils;
 import org.opendatakit.logging.WebLogger;
 import org.opendatakit.logging.WebLoggerIf;
@@ -50,7 +51,7 @@ import java.util.LinkedList;
  *
  */
 @SuppressLint("SetJavaScriptEnabled")
-public abstract class ODKWebView extends WebView {
+public abstract class ODKWebView extends WebView implements IOdkWebView {
 
   private static final String t = "ODKWebView";
   private static final String BASE_STATE = "BASE_STATE";
@@ -61,6 +62,7 @@ public abstract class ODKWebView extends WebView {
   private OdkData odkData;
   private boolean isInactive = false;
   private String loadPageUrl = null;
+  private String containerFragmentID = null;
   private boolean isLoadPageFrameworkFinished = false;
   private boolean isLoadPageFinished = false;
   private boolean isJavascriptFlushActive = false;
@@ -101,12 +103,20 @@ public abstract class ODKWebView extends WebView {
     if (ready) {
       loadPage();
     } else {
-      resetLoadPageStatus(loadPageUrl);
+      resetLoadPageStatus(loadPageUrl, containerFragmentID);
     }
   }
 
   public String getLoadPageUrl() {
     return loadPageUrl;
+  }
+
+  public String getContainerFragmentID() {
+    return containerFragmentID;
+  }
+
+  public void setContainerFragmentID(String containerFragmentID) {
+    this.containerFragmentID = containerFragmentID;
   }
 
   @Override
@@ -161,6 +171,13 @@ public abstract class ODKWebView extends WebView {
     }
   }
 
+  @SuppressWarnings("deprecation")
+  private void setGeoLocationCache(String appName, WebSettings ws) {
+    if ( Build.VERSION.SDK_INT < 24 ) {
+          ws.setGeolocationDatabasePath(ODKFileUtils.getGeoCacheFolder(appName));
+    }
+  }
+
   public ODKWebView(Context context, AttributeSet attrs) {
     super(context, attrs);
 
@@ -182,12 +199,11 @@ public abstract class ODKWebView extends WebView {
     ws.setAppCachePath(ODKFileUtils.getAppCacheFolder(appName));
     ws.setCacheMode(WebSettings.LOAD_DEFAULT);
     ws.setDatabaseEnabled(false);
-    ws.setDefaultFixedFontSize(
-        ((CommonApplication) context.getApplicationContext()).getQuestionFontsize(appName));
-    ws.setDefaultFontSize(
-        ((CommonApplication) context.getApplicationContext()).getQuestionFontsize(appName));
+    int fontSize = CommonToolProperties.getQuestionFontsize(context.getApplicationContext(), appName);
+    ws.setDefaultFixedFontSize(fontSize);
+    ws.setDefaultFontSize(fontSize);
     ws.setDomStorageEnabled(true);
-    ws.setGeolocationDatabasePath(ODKFileUtils.getGeoCacheFolder(appName));
+    setGeoLocationCache(appName, ws);
     ws.setGeolocationEnabled(true);
     ws.setJavaScriptCanOpenWindowsAutomatically(true);
     ws.setJavaScriptEnabled(true);
@@ -210,10 +226,12 @@ public abstract class ODKWebView extends WebView {
 
     // set up the odkCommonIf
     odkCommon = new OdkCommon((IOdkCommonActivity) context, this);
-    addJavascriptInterface(odkCommon.getJavascriptInterfaceWithWeakReference(), "odkCommonIf");
+    addJavascriptInterface(odkCommon.getJavascriptInterfaceWithWeakReference(),
+        Constants.JavaScriptHandles.COMMON);
 
     odkData = new OdkData((IOdkDataActivity) context, this);
-    addJavascriptInterface(odkData.getJavascriptInterfaceWithWeakReference(), "odkDataIf");
+    addJavascriptInterface(odkData.getJavascriptInterfaceWithWeakReference(),
+        Constants.JavaScriptHandles.DATA);
   }
 
   @Override public void destroy() {
@@ -345,10 +363,11 @@ public abstract class ODKWebView extends WebView {
     }
   }
 
-  protected synchronized void resetLoadPageStatus(String baseUrl) {
+  protected synchronized void resetLoadPageStatus(String baseUrl, String containerFragmentID) {
     isLoadPageFrameworkFinished = false;
     isLoadPageFinished = false;
     loadPageUrl = baseUrl;
+    this.containerFragmentID = containerFragmentID;
     isJavascriptFlushActive = false;
     shouldForceLoadDuringReload = false;
 
@@ -361,4 +380,38 @@ public abstract class ODKWebView extends WebView {
       }
     }
   }
+
+  protected synchronized void loadPageOnUiThread(final String url, final String containerFragmentID,
+                                                 boolean reload) {
+     String typeOfLoad = reload ? "reloadPage" : "loadPage";
+
+     if (url != null) {
+
+        if (!reload || (shouldForceLoadDuringReload() || hasPageFrameworkFinishedLoading() ||
+            !url.equals(getLoadPageUrl())))
+           {
+              resetLoadPageStatus(url, containerFragmentID);
+
+              log.i(t, typeOfLoad + ": load: " + url);
+
+              // Ensure that this is run on the UI thread
+              if (Thread.currentThread() != Looper.getMainLooper().getThread()) {
+                 post(new Runnable() {
+                    public void run() {
+                       loadUrl(url);
+                    }
+                 });
+              } else {
+                 loadUrl(url);
+              }
+           } else {
+              log.w(t, typeOfLoad + ": framework in process of loading -- ignoring request!");
+           }
+
+     } else {
+        log.w(t, typeOfLoad + ": cannot load anything url is null!");
+     }
+
+  }
+
 }

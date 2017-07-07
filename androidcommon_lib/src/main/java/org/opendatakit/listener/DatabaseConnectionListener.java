@@ -16,7 +16,7 @@ package org.opendatakit.listener;
 
 public interface DatabaseConnectionListener {
 
-  public void databaseAvailable();
+  void databaseAvailable();
   
-  public void databaseUnavailable();
+  void databaseUnavailable();
 }

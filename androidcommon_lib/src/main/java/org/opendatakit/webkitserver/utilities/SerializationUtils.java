@@ -34,13 +34,13 @@ import org.opendatakit.logging.WebLogger;
 public class SerializationUtils {
   private static final String tag = "SerializationUtils";
 
-  public static interface MacroStringExpander {
-    public String expandString(String value);
+  public interface MacroStringExpander {
+    String expandString(String value);
   }
 
   // no constructor
   private SerializationUtils() {
-  };
+  }
 
   public static JSONObject convertFromBundle(String appName, Bundle b) throws JSONException {
     JSONObject jo = new JSONObject();
@@ -164,7 +164,7 @@ public class SerializationUtils {
                 if (a.isNull(j)) {
                   va[j] = null;
                 } else {
-                  va[j] = convertToBundle((JSONObject) a.getJSONObject(j), expander);
+                  va[j] = convertToBundle(a.getJSONObject(j), expander);
                 }
               }
               b.putParcelableArray(key, va);

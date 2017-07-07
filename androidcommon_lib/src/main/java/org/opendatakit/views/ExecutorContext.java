@@ -273,7 +273,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
           break;
         }
         try {
-           reportError(req.callbackJSON, null, errorMessage);
+           reportError(req.callbackJSON, req.callerID, null, errorMessage);
         } catch(Exception e) {
            WebLogger.getLogger(getAppName()).w(TAG, "releaseResources - exception while "
                + "cancelling outstanding requests");
@@ -313,7 +313,8 @@ public class ExecutorContext implements DatabaseConnectionListener {
               "releaseResources - closed " + activeConns + " associated dbHandles");
     }
 
-    public void reportError(String callbackJSON, String transId, String errorMessage) {
+    public void reportError(String callbackJSON, String callerID, String transId,
+        String errorMessage) {
       if ( callbackJSON != null ) {
         Map<String, Object> response = new HashMap<String, Object>();
         response.put("callbackJSON", callbackJSON);
@@ -329,12 +330,13 @@ public class ExecutorContext implements DatabaseConnectionListener {
           WebLogger.getLogger(currentContext.getAppName()).printStackTrace(e);
           throw new IllegalStateException("should never have a conversion error");
         }
-        activity.signalResponseAvailable(responseStr);
+        activity.signalResponseAvailable(responseStr, callerID);
       }
     }
 
 
-    public void reportSuccess(String callbackJSON, String transId, ArrayList<List<Object>> data, Map<String,Object> metadata) {
+    public void reportSuccess(String callbackJSON, String callerID, String transId,
+        ArrayList<List<Object>> data, Map<String,Object> metadata) {
         Map<String,Object> response = new HashMap<String,Object>();
         response.put("callbackJSON", callbackJSON);
         if ( transId != null ) {
@@ -354,7 +356,7 @@ public class ExecutorContext implements DatabaseConnectionListener {
           WebLogger.getLogger(currentContext.getAppName()).printStackTrace(e);
           throw new IllegalStateException("should never have a conversion error");
         }
-        activity.signalResponseAvailable(responseStr);
+        activity.signalResponseAvailable(responseStr, callerID);
     }
 
     @Override

@@ -15,11 +15,11 @@
 package org.opendatakit.activities;
 
 import android.os.Bundle;
+import org.opendatakit.database.service.UserDbInterface;
 import org.opendatakit.listener.DatabaseConnectionListener;
 import org.opendatakit.views.ExecutorContext;
 import org.opendatakit.views.ExecutorProcessor;
-import org.opendatakit.database.service.UserDbInterface;
-import org.opendatakit.database.service.AidlDbInterface;
+import org.opendatakit.views.ViewDataQueryParams;
 
 /**
  * @author mitchellsundt@gmail.com
@@ -29,18 +29,19 @@ public interface IOdkDataActivity {
    * The fragment should queue the response in a saveInstanceState queue and notify
    * the JS that there is data available. The JS will then retrieve the responseJSON,
    * decode it and access the callbackJSON to identify the callback and then invoke
-   * the identified callback (in an implementation-dependent manner).
+   * the identified callback (in an implementation-dependent manner). The viewID is
+   * an optional parameter to identify which view should be signalled.
    *
    * @param responseJSON
    */
-  public void signalResponseAvailable(String responseJSON);
+  void signalResponseAvailable(String responseJSON, String viewID);
 
   /**
    * Access the queued responseJSON
    *
    * @return responseJSON or null if there is none available
    */
-  public String getResponseJSON();
+  String getResponseJSON();
 
   /**
    * Return a new ExecutorProcessor that will be able to process data off the
@@ -49,7 +50,7 @@ public interface IOdkDataActivity {
    * @param context
    * @return
    */
-  public ExecutorProcessor newExecutorProcessor(ExecutorContext context);
+  ExecutorProcessor newExecutorProcessor(ExecutorContext context);
 
   /**
    * The fragment should remember this listener and notify it of any databse connection
@@ -58,26 +59,31 @@ public interface IOdkDataActivity {
    *
    * @param listener
    */
-  public void registerDatabaseConnectionBackgroundListener(DatabaseConnectionListener listener);
+  void registerDatabaseConnectionBackgroundListener(DatabaseConnectionListener listener);
 
   /**
    * Get the active database interface, if any.
    *
    * @return null if not available.
    */
-  public UserDbInterface getDatabase();
+  UserDbInterface getDatabase();
 
   /**
    * Get our application name
    *
    * @return the appName under which we are running
    */
-  public String getAppName();
+  String getAppName();
 
   /**
    * Retrieves the extras so that the filter criteria for a view can be obtained.
    *
    * @return the intent extras used to launch this view
    */
-  public Bundle getIntentExtras();
+  Bundle getIntentExtras();
+
+  /**
+   * Retrieves SQL query parameters
+   */
+  ViewDataQueryParams getViewQueryParams(String viewID) throws IllegalArgumentException;
 }

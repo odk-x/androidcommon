@@ -13,15 +13,20 @@
  */
 package org.opendatakit.data.utilities;
 
+import android.content.Context;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.opendatakit.database.LocalKeyValueStoreConstants;
-import org.opendatakit.database.RoleConsts;
+
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
-import org.opendatakit.application.CommonApplication;
-import org.opendatakit.database.data.ColumnDefinition;
-import org.opendatakit.database.data.OrderedColumns;
 import org.opendatakit.data.TableViewType;
+import org.opendatakit.database.LocalKeyValueStoreConstants;
+import org.opendatakit.database.RoleConsts;
+import org.opendatakit.database.data.ColumnDefinition;
+import org.opendatakit.database.data.KeyValueStoreEntry;
+import org.opendatakit.database.data.OrderedColumns;
+import org.opendatakit.database.service.DbHandle;
+import org.opendatakit.database.service.UserDbInterface;
 import org.opendatakit.database.utilities.KeyValueStoreUtils;
 import org.opendatakit.exception.ServicesAvailabilityException;
 import org.opendatakit.logging.WebLogger;
@@ -32,8 +37,6 @@ import org.opendatakit.utilities.NameUtil;
 import org.opendatakit.utilities.ODKFileUtils;
 import org.opendatakit.utilities.StaticStateManipulator;
 import org.opendatakit.utilities.StaticStateManipulator.IStaticFieldManipulator;
-import org.opendatakit.database.data.KeyValueStoreEntry;
-import org.opendatakit.database.service.DbHandle;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -90,7 +93,7 @@ public class TableUtil {
   
   static {
     // register a state-reset manipulator for 'tableUtil' field.
-    StaticStateManipulator.get().register(50, new IStaticFieldManipulator() {
+    StaticStateManipulator.get().register(new IStaticFieldManipulator() {
 
       @Override
       public void reset() {
@@ -118,19 +121,19 @@ public class TableUtil {
   /**
    * Determine whether table is locked or not
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @return true if locked. False otherwise.
    * @throws ServicesAvailabilityException
    */
-  public boolean isTableLocked(CommonApplication ctxt, String appName, DbHandle db,
+  public boolean isTableLocked(UserDbInterface dbInterface, String appName, DbHandle db,
       String tableId) throws
       ServicesAvailabilityException {
 
     List<KeyValueStoreEntry> lockedList =
-        ctxt.getDatabase().getTableMetadata(appName, db, tableId,
+        dbInterface.getTableMetadata(appName, db, tableId,
             KeyValueStoreConstants.PARTITION_TABLE,
             LocalKeyValueStoreConstants.TableSecurity.ASPECT,
             LocalKeyValueStoreConstants.TableSecurity.KEY_LOCKED, null).getEntries();
@@ -140,25 +143,25 @@ public class TableUtil {
     if ( lockedList.size() != 1 ) {
       throw new IllegalStateException("should be impossible");
     }
-    Boolean outcome = KeyValueStoreUtils.getBoolean(appName, lockedList.get(0));
+    Boolean outcome = KeyValueStoreUtils.getBoolean(lockedList.get(0));
     return outcome;
   }
 
   /**
    * Determine whether user can add a row to the table
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @return true if locked. False otherwise.
    * @throws ServicesAvailabilityException
    */
-  public boolean canAddRowToTable(CommonApplication ctxt, String appName, DbHandle db,
+  public boolean canAddRowToTable(UserDbInterface dbInterface, String appName, DbHandle db,
       String tableId) throws
       ServicesAvailabilityException {
 
-    String rolesList = ctxt.getDatabase().getRolesList(appName);
+    String rolesList = dbInterface.getRolesList(appName);
 
     if ( rolesList != null &&
         ( rolesList.contains(RoleConsts.ROLE_ADMINISTRATOR) ||
@@ -166,7 +169,7 @@ public class TableUtil {
       return true;
     }
 
-    if ( isTableLocked(ctxt, appName, db, tableId) ) {
+    if ( isTableLocked(dbInterface, appName, db, tableId) ) {
       return false;
     }
 
@@ -174,7 +177,7 @@ public class TableUtil {
       return true;
     }
 
-    List<KeyValueStoreEntry> anonAddList = ctxt.getDatabase()
+    List<KeyValueStoreEntry> anonAddList = dbInterface
           .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
               LocalKeyValueStoreConstants.TableSecurity.ASPECT,
               LocalKeyValueStoreConstants.TableSecurity.KEY_UNVERIFIED_USER_CAN_CREATE, null)
@@ -185,27 +188,29 @@ public class TableUtil {
     if ( anonAddList.size() != 1 ) {
       throw new IllegalStateException("should be impossible");
     }
-    Boolean outcome = KeyValueStoreUtils.getBoolean(appName, anonAddList.get(0));
+    Boolean outcome = KeyValueStoreUtils.getBoolean(anonAddList.get(0));
     return outcome;
   }
 
   /**
    * Commonly useful wrapper for getRawDisplayName
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @return
    * @throws ServicesAvailabilityException
    */
-  public String getLocalizedDisplayName(CommonApplication ctxt, String appName, DbHandle db, String tableId) throws
+  public String getLocalizedDisplayName(String userSelectedDefaultLocale,
+      UserDbInterface dbInterface, String appName, DbHandle db, String tableId) throws
       ServicesAvailabilityException {
 
-    String rawDisplayName = getRawDisplayName(ctxt, appName, db, tableId);
+    String rawDisplayName = getRawDisplayName(dbInterface, appName, db, tableId);
     String displayName = null;
     if ( rawDisplayName != null ) {
-      displayName = LocalizationUtils.getLocalizedDisplayName(rawDisplayName);
+      displayName = LocalizationUtils.getLocalizedDisplayName(appName, tableId,
+          userSelectedDefaultLocale, rawDisplayName);
     }
     if ( displayName == null ) {
       displayName = NameUtil.constructSimpleDisplayName(tableId);
@@ -217,17 +222,17 @@ public class TableUtil {
    * Obtain the displayName construction for the table from the database.
    * Supply a useful default value if the databse does not contain one.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @return
    * @throws ServicesAvailabilityException
    */
-  public String getRawDisplayName(CommonApplication ctxt, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
+  public String getRawDisplayName(UserDbInterface dbInterface, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
 
     List<KeyValueStoreEntry> displayNameList =
-            ctxt.getDatabase().getTableMetadata(appName, db, tableId,
+            dbInterface.getTableMetadata(appName, db, tableId,
                     KeyValueStoreConstants.PARTITION_TABLE, KeyValueStoreConstants.ASPECT_DEFAULT,
                 KeyValueStoreConstants.TABLE_DISPLAY_NAME, null).getEntries();
     if (displayNameList.size() != 1) {
@@ -243,37 +248,37 @@ public class TableUtil {
   /**
    * Sets the table's raw displayName.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @param rawDisplayName
    * @throws ServicesAvailabilityException
    */
-  public void setRawDisplayName( CommonApplication ctxt, String appName, DbHandle db, String tableId, String rawDisplayName) throws ServicesAvailabilityException {
+  public void setRawDisplayName( UserDbInterface dbInterface, String appName, DbHandle db, String tableId, String rawDisplayName) throws ServicesAvailabilityException {
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             KeyValueStoreConstants.TABLE_DISPLAY_NAME,
             ElementDataType.object, rawDisplayName);
-    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
+    dbInterface.replaceTableMetadata(appName, db, e);
   }
 
   /**
    * Set the raw display name and return the value that was stored.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param tableId
    * @param rawDisplayName
    * @return
    * @throws ServicesAvailabilityException
    */
-  public String atomicSetRawDisplayName( CommonApplication ctxt, String appName, String tableId, String rawDisplayName) throws ServicesAvailabilityException {
+  public String atomicSetRawDisplayName( UserDbInterface dbInterface, String appName, String tableId, String rawDisplayName) throws ServicesAvailabilityException {
     DbHandle db = null;
     try {
-      db = ctxt.getDatabase().openDatabase(appName);
+      db = dbInterface.openDatabase(appName);
 
-      setRawDisplayName(ctxt, appName, db, tableId, rawDisplayName);
+      setRawDisplayName(dbInterface, appName, db, tableId, rawDisplayName);
       if ( rawDisplayName == null || rawDisplayName.length() == 0 ) {
         rawDisplayName = NameUtil.normalizeDisplayName(NameUtil.constructSimpleDisplayName(tableId));
       }
@@ -284,7 +289,7 @@ public class TableUtil {
     } finally {
       if ( db != null ) {
         try {
-          ctxt.getDatabase().closeDatabase(appName, db);
+          dbInterface.closeDatabase(appName, db);
         } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
@@ -296,17 +301,17 @@ public class TableUtil {
   /**
    * Get the default view type for this table.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @return the specified default view type or SPREADSHEET_VIEW if none defined.
    * @throws ServicesAvailabilityException 
    */
-  public TableViewType getDefaultViewType( CommonApplication ctxt, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
+  public TableViewType getDefaultViewType( UserDbInterface dbInterface, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
 
     List<KeyValueStoreEntry> kvsList =
-            ctxt.getDatabase().getTableMetadata(appName, db, tableId,
+            dbInterface.getTableMetadata(appName, db, tableId,
                     KeyValueStoreConstants.PARTITION_TABLE,
                     KeyValueStoreConstants.ASPECT_DEFAULT,
                 LocalKeyValueStoreConstants.Tables.TABLE_DEFAULT_VIEW_TYPE, null).getEntries();
@@ -328,43 +333,43 @@ public class TableUtil {
   /**
    * Sets the table's default view type
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @param viewType
    * @throws ServicesAvailabilityException
    */
-  public void setDefaultViewType( CommonApplication ctxt, String appName, DbHandle db, String tableId, TableViewType viewType) throws ServicesAvailabilityException {
+  public void setDefaultViewType( UserDbInterface dbInterface, String appName, DbHandle db, String tableId, TableViewType viewType) throws ServicesAvailabilityException {
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             LocalKeyValueStoreConstants.Tables.TABLE_DEFAULT_VIEW_TYPE,
             ElementDataType.string, viewType.name());
-    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
+    dbInterface.replaceTableMetadata(appName, db, e);
   }
 
   /**
    * Wrapper to handle database interactions to setDefaultViewType
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param tableId
    * @param viewType
    * @throws ServicesAvailabilityException
    */
-  public void atomicSetDefaultViewType( CommonApplication ctxt, String appName, String tableId, TableViewType viewType) throws ServicesAvailabilityException {
+  public void atomicSetDefaultViewType( UserDbInterface dbInterface, String appName, String tableId, TableViewType viewType) throws ServicesAvailabilityException {
     DbHandle db = null;
     try {
-      db = ctxt.getDatabase().openDatabase(appName);
+      db = dbInterface.openDatabase(appName);
 
-      setDefaultViewType(ctxt, appName, db, tableId, viewType);
+      setDefaultViewType(dbInterface, appName, db, tableId, viewType);
     } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
-          ctxt.getDatabase().closeDatabase(appName, db);
+          dbInterface.closeDatabase(appName, db);
         } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
@@ -376,69 +381,69 @@ public class TableUtil {
   /**
    * Get the filename for the detail view of this table.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @return null if none defined.
    * @throws ServicesAvailabilityException 
    */
-  public String getDetailViewFilename( CommonApplication ctxt, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
+  public String getDetailViewFilename( UserDbInterface dbInterface, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
 
     // TODO: this should probably use the detailView name as the aspect
     List<KeyValueStoreEntry> kvsList =
-            ctxt.getDatabase().getTableMetadata(appName, db, tableId,
+            dbInterface.getTableMetadata(appName, db, tableId,
                 KeyValueStoreConstants.PARTITION_TABLE, KeyValueStoreConstants.ASPECT_DEFAULT,
                 LocalKeyValueStoreConstants.Tables.KEY_DETAIL_VIEW_FILE_NAME, null).getEntries();
     if (kvsList.size() != 1) {
       return null;
     }
-    String rawValue = KeyValueStoreUtils.getString(appName, kvsList.get(0));
+    String rawValue = KeyValueStoreUtils.getString(kvsList.get(0));
     return rawValue;
   }
 
   /**
    * Sets the filename for the detail view of this table.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @param detailViewRelativePath
    * @throws ServicesAvailabilityException 
    */
-  public void setDetailViewFilename( CommonApplication ctxt, String appName, DbHandle db, String tableId, String detailViewRelativePath) throws ServicesAvailabilityException {
+  public void setDetailViewFilename( UserDbInterface dbInterface, String appName, DbHandle db, String tableId, String detailViewRelativePath) throws ServicesAvailabilityException {
 
     // TODO: this should probably use the detailView name as the aspect
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             LocalKeyValueStoreConstants.Tables.KEY_DETAIL_VIEW_FILE_NAME,
             ElementDataType.configpath, detailViewRelativePath);
-    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
+    dbInterface.replaceTableMetadata(appName, db, e);
   }
 
   /**
    * Wrapper to handle database interactions to setDetailViewFilename
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param tableId
    * @param detailViewRelativePath
    * @throws ServicesAvailabilityException
    */
-  public void atomicSetDetailViewFilename( CommonApplication ctxt, String appName, String tableId, String detailViewRelativePath) throws ServicesAvailabilityException {
+  public void atomicSetDetailViewFilename( UserDbInterface dbInterface, String appName, String tableId, String detailViewRelativePath) throws ServicesAvailabilityException {
     DbHandle db = null;
     try {
-      db = ctxt.getDatabase().openDatabase(appName);
+      db = dbInterface.openDatabase(appName);
 
-      setDetailViewFilename(ctxt, appName, db, tableId, detailViewRelativePath);
+      setDetailViewFilename(dbInterface, appName, db, tableId, detailViewRelativePath);
     } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
-          ctxt.getDatabase().closeDatabase(appName, db);
+          dbInterface.closeDatabase(appName, db);
         } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
@@ -450,69 +455,69 @@ public class TableUtil {
   /**
    * Get the filename for the detail view of this table.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @return null if none defined.
    * @throws ServicesAvailabilityException 
    */
-  public String getListViewFilename( CommonApplication ctxt, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
+  public String getListViewFilename(UserDbInterface dbInterface, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
 
     // TODO: this should probably use the listView name as the aspect
-    List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
+    List<KeyValueStoreEntry> kvsList = dbInterface
         .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             LocalKeyValueStoreConstants.Tables.KEY_LIST_VIEW_FILE_NAME, null).getEntries();
     if (kvsList.size() != 1) {
       return null;
     }
-    String rawValue = KeyValueStoreUtils.getString(appName, kvsList.get(0));
+    String rawValue = KeyValueStoreUtils.getString(kvsList.get(0));
     return rawValue;
   }
 
   /**
    * Sets the filename for the detail view of this table.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @param listViewRelativePath
    * @throws ServicesAvailabilityException 
    */
-  public void setListViewFilename( CommonApplication ctxt, String appName, DbHandle db, String tableId, String listViewRelativePath) throws ServicesAvailabilityException {
+  public void setListViewFilename( UserDbInterface dbInterface, String appName, DbHandle db, String tableId, String listViewRelativePath) throws ServicesAvailabilityException {
 
     // TODO: this should probably use the listView name as the aspect
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             LocalKeyValueStoreConstants.Tables.KEY_LIST_VIEW_FILE_NAME,
             ElementDataType.configpath, listViewRelativePath);
-    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
+    dbInterface.replaceTableMetadata(appName, db, e);
   }
 
   /**
    * Wrapper to handle database interactions to setListViewFilename
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param tableId
    * @param listViewRelativePath
    * @throws ServicesAvailabilityException
    */
-  public void atomicSetListViewFilename( CommonApplication ctxt, String appName, String tableId, String listViewRelativePath) throws ServicesAvailabilityException {
+  public void atomicSetListViewFilename( UserDbInterface dbInterface, String appName, String tableId, String listViewRelativePath) throws ServicesAvailabilityException {
     DbHandle db = null;
     try {
-      db = ctxt.getDatabase().openDatabase(appName);
+      db = dbInterface.openDatabase(appName);
 
-      setListViewFilename(ctxt, appName, db, tableId, listViewRelativePath);
+      setListViewFilename(dbInterface, appName, db, tableId, listViewRelativePath);
     } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
-          ctxt.getDatabase().closeDatabase(appName, db);
+          dbInterface.closeDatabase(appName, db);
         } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
@@ -524,67 +529,67 @@ public class TableUtil {
   /**
    * Get the filename for the detail view of this table.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @return null if none defined.
    * @throws ServicesAvailabilityException 
    */
-  public String getMapListViewFilename( CommonApplication ctxt, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
+  public String getMapListViewFilename(  UserDbInterface dbInterface, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
     // TODO: this should probably use a mapView name as the aspect
-    List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
+    List<KeyValueStoreEntry> kvsList = dbInterface
         .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             LocalKeyValueStoreConstants.Tables.KEY_MAP_LIST_VIEW_FILE_NAME, null).getEntries();
     if (kvsList.size() != 1) {
       return null;
     }
-    String rawValue = KeyValueStoreUtils.getString(appName, kvsList.get(0));
+    String rawValue = KeyValueStoreUtils.getString(kvsList.get(0));
     return rawValue;
   }
 
   /**
    * Sets the filename for the detail view of this table.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @param mapListViewRelativePath
    * @throws ServicesAvailabilityException 
    */
-  public void setMapListViewFilename( CommonApplication ctxt, String appName, DbHandle db, String tableId, String mapListViewRelativePath) throws ServicesAvailabilityException {
+  public void setMapListViewFilename(  UserDbInterface dbInterface, String appName, DbHandle db, String tableId, String mapListViewRelativePath) throws ServicesAvailabilityException {
     // TODO: this should probably use a mapView name as the aspect
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             LocalKeyValueStoreConstants.Tables.KEY_MAP_LIST_VIEW_FILE_NAME,
             ElementDataType.configpath, mapListViewRelativePath);
-    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
+    dbInterface.replaceTableMetadata(appName, db, e);
   }
 
   /**
    * Wrapper to handle the database interactions for setMapListViewFilename()
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param tableId
    * @param mapListViewRelativePath
    * @throws ServicesAvailabilityException
    */
-  public void atomicSetMapListViewFilename( CommonApplication ctxt, String appName, String tableId, String mapListViewRelativePath) throws ServicesAvailabilityException {
+  public void atomicSetMapListViewFilename(  UserDbInterface dbInterface, String appName, String tableId, String mapListViewRelativePath) throws ServicesAvailabilityException {
     DbHandle db = null;
     try {
-      db = ctxt.getDatabase().openDatabase(appName);
+      db = dbInterface.openDatabase(appName);
 
-      setMapListViewFilename(ctxt, appName, db, tableId, mapListViewRelativePath);
+      setMapListViewFilename(dbInterface, appName, db, tableId, mapListViewRelativePath);
     } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
-          ctxt.getDatabase().closeDatabase(appName, db);
+          dbInterface.closeDatabase(appName, db);
         } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
@@ -593,10 +598,10 @@ public class TableUtil {
     }
   }
 
-  public MapViewColorRuleInfo getMapListViewColorRuleInfo(CommonApplication ctxt, String appName,
+  public MapViewColorRuleInfo getMapListViewColorRuleInfo( UserDbInterface dbInterface, String appName,
       DbHandle db, String tableId) throws ServicesAvailabilityException {
     // TODO: this should probably use the mapView name as the aspect
-    List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
+    List<KeyValueStoreEntry> kvsList = dbInterface
         .getTableMetadata(appName, db, tableId, LocalKeyValueStoreConstants.Map.PARTITION,
             KeyValueStoreConstants.ASPECT_DEFAULT, null, null).getEntries();
     // Grab the key value store helper from the map fragment.
@@ -604,9 +609,9 @@ public class TableUtil {
     String colorColumnElementKey = null;
     for (KeyValueStoreEntry entry : kvsList) {
       if ( entry.key.equals(LocalKeyValueStoreConstants.Map.KEY_COLOR_RULE_TYPE) ) {
-        colorType = KeyValueStoreUtils.getString(appName, entry);
+        colorType = KeyValueStoreUtils.getString(entry);
       } else if ( entry.key.equals(LocalKeyValueStoreConstants.Map.KEY_COLOR_RULE_COLUMN) ) {
-        colorColumnElementKey = KeyValueStoreUtils.getString(appName, entry);
+        colorColumnElementKey = KeyValueStoreUtils.getString(entry);
       }
     }
 
@@ -620,7 +625,7 @@ public class TableUtil {
   }
 
 
-  public void setMapListViewColorRuleInfo( CommonApplication ctxt, String appName, DbHandle db, String tableId, MapViewColorRuleInfo info) throws ServicesAvailabilityException {
+  public void setMapListViewColorRuleInfo(  UserDbInterface dbInterface, String appName, DbHandle db, String tableId, MapViewColorRuleInfo info) throws ServicesAvailabilityException {
     // TODO: this should probably use the mapView name as the aspect
     KeyValueStoreEntry entryColorElementKey = KeyValueStoreUtils.buildEntry(tableId,
             LocalKeyValueStoreConstants.Map.PARTITION,
@@ -634,19 +639,19 @@ public class TableUtil {
             LocalKeyValueStoreConstants.Map.KEY_COLOR_RULE_TYPE,
             ElementDataType.string, (info == null) ? null : info.colorType);
 
-      ctxt.getDatabase().replaceTableMetadata(appName, db, entryColorElementKey);
-      ctxt.getDatabase().replaceTableMetadata(appName, db, entryColorRuleType);
+    dbInterface.replaceTableMetadata(appName, db, entryColorElementKey);
+    dbInterface.replaceTableMetadata(appName, db, entryColorRuleType);
   }
 
-  public String getMapListViewLatitudeElementKey( CommonApplication ctxt, String appName, DbHandle db, String tableId, OrderedColumns orderedDefns) throws ServicesAvailabilityException {
+  public String getMapListViewLatitudeElementKey(  UserDbInterface dbInterface, String appName, DbHandle db, String tableId, OrderedColumns orderedDefns) throws ServicesAvailabilityException {
     // TODO: this should probably use a mapView name as the aspect
-    List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
+    List<KeyValueStoreEntry> kvsList = dbInterface
         .getTableMetadata(appName, db, tableId, LocalKeyValueStoreConstants.Map.PARTITION,
             KeyValueStoreConstants.ASPECT_DEFAULT, LocalKeyValueStoreConstants.Map.KEY_MAP_LAT_COL,
             null).getEntries();
     String rawValue = null;
     if ( kvsList.size() == 1 ) {
-      rawValue = KeyValueStoreUtils.getString(appName, kvsList.get(0));
+      rawValue = KeyValueStoreUtils.getString(kvsList.get(0));
     }
     if ( rawValue == null ) {
       // Go through each of the columns and check to see if there are
@@ -663,15 +668,15 @@ public class TableUtil {
     return rawValue;
   }
 
-  public String getMapListViewLongitudeElementKey( CommonApplication ctxt, String appName, DbHandle db, String tableId, OrderedColumns orderedDefns) throws ServicesAvailabilityException {
+  public String getMapListViewLongitudeElementKey(  UserDbInterface dbInterface, String appName, DbHandle db, String tableId, OrderedColumns orderedDefns) throws ServicesAvailabilityException {
     // TODO: this should probably use a mapView name as the aspect
-    List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
+    List<KeyValueStoreEntry> kvsList = dbInterface
         .getTableMetadata(appName, db, tableId, LocalKeyValueStoreConstants.Map.PARTITION,
             KeyValueStoreConstants.ASPECT_DEFAULT, LocalKeyValueStoreConstants.Map.KEY_MAP_LONG_COL,
             null).getEntries();
     String rawValue = null;
     if ( kvsList.size() == 1 ) {
-      rawValue = KeyValueStoreUtils.getString(appName, kvsList.get(0));
+      rawValue = KeyValueStoreUtils.getString(kvsList.get(0));
     }
     if ( rawValue == null ) {
       // Go through each of the columns and check to see if there are
@@ -691,65 +696,65 @@ public class TableUtil {
   /**
    * Get the elementKey of the sort-by column
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @return null if none defined.
    * @throws ServicesAvailabilityException 
    */
-  public String getSortColumn( CommonApplication ctxt, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
-    List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
+  public String getSortColumn( UserDbInterface dbInterface, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
+    List<KeyValueStoreEntry> kvsList = dbInterface
         .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT, KeyValueStoreConstants.TABLE_SORT_COL, null)
         .getEntries();
     if ( kvsList.size() != 1 ) {
       return null;
     }
-    String rawValue = KeyValueStoreUtils.getString(appName, kvsList.get(0));
+    String rawValue = KeyValueStoreUtils.getString(kvsList.get(0));
     return rawValue;
   }
 
   /**
    * Sets the table's sort column.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @param elementKey
    * @throws ServicesAvailabilityException 
    */
-  public void setSortColumn( CommonApplication ctxt, String appName, DbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
+  public void setSortColumn( UserDbInterface dbInterface, String appName, DbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             KeyValueStoreConstants.TABLE_SORT_COL,
             ElementDataType.string, elementKey);
-    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
+    dbInterface.replaceTableMetadata(appName, db, e);
   }
 
   /**
    * Wrapper to handle database interactions for setSortColumn()
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param tableId
    * @param elementKey
    * @throws ServicesAvailabilityException
    */
-  public void atomicSetSortColumn( CommonApplication ctxt, String appName, String tableId, String elementKey) throws ServicesAvailabilityException {
+  public void atomicSetSortColumn( UserDbInterface dbInterface, String appName, String tableId, String elementKey) throws ServicesAvailabilityException {
     DbHandle db = null;
     try {
-      db = ctxt.getDatabase().openDatabase(appName);
+      db = dbInterface.openDatabase(appName);
 
-      setSortColumn(ctxt, appName, db, tableId, elementKey);
+      setSortColumn(dbInterface, appName, db, tableId, elementKey);
     } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
-          ctxt.getDatabase().closeDatabase(appName, db);
+          dbInterface.closeDatabase(appName, db);
         } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
@@ -761,22 +766,22 @@ public class TableUtil {
   /**
    * Return the sort order of the display (ASC or DESC)
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @return ASC if none specified.
    * @throws ServicesAvailabilityException 
    */
-  public String getSortOrder( CommonApplication ctxt, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
-    List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
+  public String getSortOrder( UserDbInterface dbInterface, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
+    List<KeyValueStoreEntry> kvsList = dbInterface
         .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT, KeyValueStoreConstants.TABLE_SORT_ORDER, null)
         .getEntries();
     if (kvsList.size() != 1) {
       return null;
     }
-    String rawValue = KeyValueStoreUtils.getString(appName, kvsList.get(0));
+    String rawValue = KeyValueStoreUtils.getString(kvsList.get(0));
     if ( rawValue == null ) {
       return DEFAULT_KEY_SORT_ORDER;
     }
@@ -786,43 +791,43 @@ public class TableUtil {
   /**
    * Set the sort order of the display (ASC or DESC)
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @param sortOrder
    * @throws ServicesAvailabilityException 
    */
-  public void setSortOrder( CommonApplication ctxt, String appName, DbHandle db, String tableId, String sortOrder) throws ServicesAvailabilityException {
+  public void setSortOrder( UserDbInterface dbInterface, String appName, DbHandle db, String tableId, String sortOrder) throws ServicesAvailabilityException {
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             KeyValueStoreConstants.TABLE_SORT_ORDER,
             ElementDataType.string, sortOrder);
-    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
+    dbInterface.replaceTableMetadata(appName, db, e);
   }
 
   /**
    * Wrapper to handle database interactions for setSortOrder()
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param tableId
    * @param sortOrder
    * @throws ServicesAvailabilityException
    */
-  public void atomicSetSortOrder( CommonApplication ctxt, String appName, String tableId, String sortOrder) throws ServicesAvailabilityException {
+  public void atomicSetSortOrder( UserDbInterface dbInterface, String appName, String tableId, String sortOrder) throws ServicesAvailabilityException {
     DbHandle db = null;
     try {
-      db = ctxt.getDatabase().openDatabase(appName);
+      db = dbInterface.openDatabase(appName);
 
-      setSortOrder(ctxt, appName, db, tableId, sortOrder);
+      setSortOrder(dbInterface, appName, db, tableId, sortOrder);
     } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
-          ctxt.getDatabase().closeDatabase(appName, db);
+          dbInterface.closeDatabase(appName, db);
         } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
@@ -834,65 +839,67 @@ public class TableUtil {
   /**
    * Return the element key of the indexed (frozen) column.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @return null if none
    * @throws ServicesAvailabilityException 
    */
-  public String getIndexColumn( CommonApplication ctxt, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
-    List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
+  public String getIndexColumn( UserDbInterface dbInterface, String appName, DbHandle
+      db, String
+      tableId) throws ServicesAvailabilityException {
+    List<KeyValueStoreEntry> kvsList = dbInterface
         .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT, KeyValueStoreConstants.TABLE_INDEX_COL, null)
         .getEntries();
     if (kvsList.size() != 1) {
       return null;
     }
-    String rawValue = KeyValueStoreUtils.getString(appName, kvsList.get(0));
+    String rawValue = KeyValueStoreUtils.getString(kvsList.get(0));
     return rawValue;
   }
 
   /**
    * Set the elementKey of the indexed (frozen) column.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @param elementKey
    * @throws ServicesAvailabilityException 
    */
-  public void setIndexColumn( CommonApplication ctxt, String appName, DbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
+  public void setIndexColumn( UserDbInterface dbInterface, String appName, DbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             KeyValueStoreConstants.TABLE_INDEX_COL,
             ElementDataType.string, elementKey);
-    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
+    dbInterface.replaceTableMetadata(appName, db, e);
   }
 
   /**
    * Wrapper to handle database interactions for setIndexColumn()
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param tableId
    * @param elementKey
    * @throws ServicesAvailabilityException
    */
-  public void atomicSetIndexColumn( CommonApplication ctxt, String appName, String tableId, String elementKey) throws ServicesAvailabilityException {
+  public void atomicSetIndexColumn( UserDbInterface dbInterface, String appName, String tableId, String elementKey) throws ServicesAvailabilityException {
     DbHandle db = null;
     try {
-      db = ctxt.getDatabase().openDatabase(appName);
+      db = dbInterface.openDatabase(appName);
 
-      setIndexColumn(ctxt, appName, db, tableId, elementKey);
+      setIndexColumn(dbInterface, appName, db, tableId, elementKey);
     } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
-          ctxt.getDatabase().closeDatabase(appName, db);
+          dbInterface.closeDatabase(appName, db);
         } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
@@ -901,14 +908,18 @@ public class TableUtil {
     }
   }
 
-  public int getSpreadsheetViewFontSize( CommonApplication ctxt, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
-    List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
+  public int getSpreadsheetViewFontSize( Context ctxt, UserDbInterface dbInterface, String appName,
+      DbHandle
+      db, String
+      tableId) throws
+      ServicesAvailabilityException {
+    List<KeyValueStoreEntry> kvsList = dbInterface
         .getTableMetadata(appName, db, tableId, LocalKeyValueStoreConstants.Spreadsheet.PARTITION,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             LocalKeyValueStoreConstants.Spreadsheet.KEY_FONT_SIZE, null).getEntries();
     Integer fontSize = null;
     if ( kvsList.size() == 1 ) {
-      fontSize = KeyValueStoreUtils.getInteger(appName, kvsList.get(0));
+      fontSize = KeyValueStoreUtils.getInteger(kvsList.get(0));
     }
 
     if ( fontSize == null ) {
@@ -922,44 +933,44 @@ public class TableUtil {
   /**
    * Set the font size to be used on the spreadsheet view.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @param fontSize
    * @throws ServicesAvailabilityException
    */
-  public void setSpreadsheetViewFontSize( CommonApplication ctxt, String appName, DbHandle db, String tableId, Integer fontSize) throws ServicesAvailabilityException {
+  public void setSpreadsheetViewFontSize( UserDbInterface dbInterface, String appName, DbHandle db, String tableId, Integer fontSize) throws ServicesAvailabilityException {
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId,
             LocalKeyValueStoreConstants.Spreadsheet.PARTITION,
             KeyValueStoreConstants.ASPECT_DEFAULT,
             LocalKeyValueStoreConstants.Spreadsheet.KEY_FONT_SIZE,
             ElementDataType.integer, Integer.toString(fontSize));
-    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
+    dbInterface.replaceTableMetadata(appName, db, e);
   }
 
   /**
    * Wrapper to handle database interactions for setSpreadsheetViewFontSize()
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param tableId
    * @param fontSize
    * @throws ServicesAvailabilityException
    */
-  public void atomicSetSpreadsheetViewFontSize( CommonApplication ctxt, String appName, String tableId, Integer fontSize) throws ServicesAvailabilityException {
+  public void atomicSetSpreadsheetViewFontSize( UserDbInterface dbInterface, String appName, String tableId, Integer fontSize) throws ServicesAvailabilityException {
     DbHandle db = null;
     try {
-      db = ctxt.getDatabase().openDatabase(appName);
+      db = dbInterface.openDatabase(appName);
 
-      setSpreadsheetViewFontSize(ctxt, appName, db, tableId, fontSize);
+      setSpreadsheetViewFontSize(dbInterface, appName, db, tableId, fontSize);
     } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
-          ctxt.getDatabase().closeDatabase(appName, db);
+          dbInterface.closeDatabase(appName, db);
         } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
@@ -971,15 +982,15 @@ public class TableUtil {
   /**
    * Get the group-by columns, in order
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @return empty list if none
    * @throws ServicesAvailabilityException 
    */
-  public ArrayList<String> getGroupByColumns( CommonApplication ctxt, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
-    List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
+  public ArrayList<String> getGroupByColumns( UserDbInterface dbInterface, String appName, DbHandle db, String tableId) throws ServicesAvailabilityException {
+    List<KeyValueStoreEntry> kvsList = dbInterface
         .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT, KeyValueStoreConstants.TABLE_GROUP_BY_COLS, null)
         .getEntries();
@@ -996,14 +1007,14 @@ public class TableUtil {
   /**
    * Set the group-by columns.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @param elementKeys
    * @throws ServicesAvailabilityException 
    */
-  public void setGroupByColumns( CommonApplication ctxt, String appName, DbHandle db, String tableId, ArrayList<String> elementKeys) throws ServicesAvailabilityException {
+  public void setGroupByColumns( UserDbInterface dbInterface, String appName, DbHandle db, String tableId, ArrayList<String> elementKeys) throws ServicesAvailabilityException {
     String list = null;
     try {
       list = ODKFileUtils.mapper.writeValueAsString(elementKeys);
@@ -1015,7 +1026,7 @@ public class TableUtil {
             KeyValueStoreConstants.ASPECT_DEFAULT,
             KeyValueStoreConstants.TABLE_GROUP_BY_COLS,
             ElementDataType.array, list);
-    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
+    dbInterface.replaceTableMetadata(appName, db, e);
   }
 
   /**
@@ -1023,28 +1034,28 @@ public class TableUtil {
    * end of the groupBy columns array. If it is already in the array, it is removed and
    * appended to the end.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param tableId
    * @param elementKey
    * @throws ServicesAvailabilityException
    */
-  public void atomicAddGroupByColumn( CommonApplication ctxt, String appName, String tableId, String elementKey) throws ServicesAvailabilityException {
+  public void atomicAddGroupByColumn( UserDbInterface dbInterface, String appName, String tableId, String elementKey) throws ServicesAvailabilityException {
     DbHandle db = null;
     try {
-      db = ctxt.getDatabase().openDatabase(appName);
+      db = dbInterface.openDatabase(appName);
 
-      ArrayList<String> elementKeys = getGroupByColumns(ctxt, appName, db, tableId);
+      ArrayList<String> elementKeys = getGroupByColumns(dbInterface, appName, db, tableId);
       elementKeys.remove(elementKey);
       elementKeys.add(elementKey);
-      setGroupByColumns(ctxt, appName, db, tableId, elementKeys);
+      setGroupByColumns(dbInterface, appName, db, tableId, elementKeys);
     } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
-          ctxt.getDatabase().closeDatabase(appName, db);
+          dbInterface.closeDatabase(appName, db);
         } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
@@ -1057,27 +1068,27 @@ public class TableUtil {
    * Wrapper for handling database interactions for removing the indicated column from
    * the groupBy columns list.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param tableId
    * @param elementKey
    * @throws ServicesAvailabilityException
    */
-  public void atomicRemoveGroupByColumn( CommonApplication ctxt, String appName, String tableId, String elementKey) throws ServicesAvailabilityException {
+  public void atomicRemoveGroupByColumn( UserDbInterface dbInterface, String appName, String tableId, String elementKey) throws ServicesAvailabilityException {
     DbHandle db = null;
     try {
-      db = ctxt.getDatabase().openDatabase(appName);
+      db = dbInterface.openDatabase(appName);
 
-      ArrayList<String> elementKeys = getGroupByColumns(ctxt, appName, db, tableId);
+      ArrayList<String> elementKeys = getGroupByColumns(dbInterface, appName, db, tableId);
       elementKeys.remove(elementKey);
-      setGroupByColumns(ctxt, appName, db, tableId, elementKeys);
+      setGroupByColumns(dbInterface, appName, db, tableId, elementKeys);
     } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
-          ctxt.getDatabase().closeDatabase(appName, db);
+          dbInterface.closeDatabase(appName, db);
         } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
@@ -1089,15 +1100,15 @@ public class TableUtil {
   /**
    * Get the order of display of the columns in the spreadsheet view
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @return empty list of none specified. Otherwise the elementKeys in the order of display.
    * @throws ServicesAvailabilityException 
    */
-  public ArrayList<String> getColumnOrder( CommonApplication ctxt, String appName, DbHandle db, String tableId, OrderedColumns columns) throws ServicesAvailabilityException {
-    List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
+  public ArrayList<String> getColumnOrder( UserDbInterface dbInterface, String appName, DbHandle db, String tableId, OrderedColumns columns) throws ServicesAvailabilityException {
+    List<KeyValueStoreEntry> kvsList = dbInterface
         .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_TABLE,
             KeyValueStoreConstants.ASPECT_DEFAULT, KeyValueStoreConstants.TABLE_COL_ORDER, null)
         .getEntries();
@@ -1115,14 +1126,14 @@ public class TableUtil {
   /**
    * Set the order of display of the columns in the spreadsheet view.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @param elementKeys
    * @throws ServicesAvailabilityException 
    */
-  public void setColumnOrder( CommonApplication ctxt, String appName, DbHandle db, String tableId, ArrayList<String> elementKeys) throws ServicesAvailabilityException {
+  public void setColumnOrder( UserDbInterface dbInterface, String appName, DbHandle db, String tableId, ArrayList<String> elementKeys) throws ServicesAvailabilityException {
     String list = null;
     try {
       list = ODKFileUtils.mapper.writeValueAsString(elementKeys);
@@ -1134,22 +1145,22 @@ public class TableUtil {
             KeyValueStoreConstants.ASPECT_DEFAULT,
             KeyValueStoreConstants.TABLE_COL_ORDER,
             ElementDataType.array, list);
-    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
+    dbInterface.replaceTableMetadata(appName, db, e);
   }
 
-  public void atomicSetColumnOrder( CommonApplication ctxt, String appName, String tableId, ArrayList<String> elementKeys) throws ServicesAvailabilityException {
+  public void atomicSetColumnOrder( UserDbInterface dbInterface, String appName, String tableId, ArrayList<String> elementKeys) throws ServicesAvailabilityException {
     DbHandle db = null;
     try {
-      db = ctxt.getDatabase().openDatabase(appName);
+      db = dbInterface.openDatabase(appName);
 
-      setColumnOrder(ctxt, appName, db, tableId, elementKeys);
+      setColumnOrder(dbInterface, appName, db, tableId, elementKeys);
     } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
-          ctxt.getDatabase().closeDatabase(appName, db);
+          dbInterface.closeDatabase(appName, db);
         } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
@@ -1160,23 +1171,27 @@ public class TableUtil {
 
   /**
    *
-   * @param ctxt
+   * @param userSelectedDefaultLocale
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
    * @return
    * @throws ServicesAvailabilityException
    */
-  public TableColumns getTableColumns( CommonApplication ctxt, String appName, DbHandle db, String tableId ) throws ServicesAvailabilityException {
-    String[] adminColumns = ctxt.getDatabase().getAdminColumns();
+  public TableColumns getTableColumns(String userSelectedDefaultLocale,
+      UserDbInterface dbInterface,
+      String appName, DbHandle db, String tableId ) throws ServicesAvailabilityException {
+
+    String[] adminColumns = dbInterface.getAdminColumns();
     HashMap<String,String> colDisplayNames = new HashMap<String,String>();
-    OrderedColumns orderedDefns = ctxt.getDatabase()
+    OrderedColumns orderedDefns = dbInterface
         .getUserDefinedColumns(appName, db, tableId);
     for (ColumnDefinition cd : orderedDefns.getColumnDefinitions()) {
       if (cd.isUnitOfRetention()) {
         String localizedDisplayName;
-        localizedDisplayName = ColumnUtil.get().getLocalizedDisplayName(ctxt,
-            appName, db, tableId, cd.getElementKey());
+        localizedDisplayName = ColumnUtil.get().getLocalizedDisplayName(userSelectedDefaultLocale,
+            dbInterface, appName, db, tableId, cd.getElementKey());
 
         colDisplayNames.put(cd.getElementKey(), localizedDisplayName);
       }

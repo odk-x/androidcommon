@@ -15,16 +15,12 @@
  */
 package org.opendatakit.data;
 
+import org.opendatakit.utilities.ODKFileUtils;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.opendatakit.utilities.ODKFileUtils;
-
-import com.fasterxml.jackson.core.JsonGenerationException;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 
 /**
  * This class represents a column that is joined to by another column, in a
@@ -72,7 +68,7 @@ public class JoinColumn {
    */
   private String elementKey;
 
-  public static ArrayList<JoinColumn> fromSerialization(String str) throws JsonParseException, JsonMappingException, IOException {
+  public static ArrayList<JoinColumn> fromSerialization(String str) throws IOException {
     if ( str == null || DEFAULT_NOT_SET_VALUE.equals(str) ) {
       return null;
     }
@@ -101,7 +97,7 @@ public class JoinColumn {
     return jcs;
   }
 
-  public static String toSerialization(ArrayList<JoinColumn> joins) throws JsonGenerationException, JsonMappingException, IOException {
+  public static String toSerialization(ArrayList<JoinColumn> joins) throws IOException {
     if ( joins == null ) {
       return DEFAULT_NOT_SET_VALUE;
     }
