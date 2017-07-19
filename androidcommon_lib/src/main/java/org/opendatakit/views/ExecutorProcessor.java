@@ -18,6 +18,7 @@ import android.content.ContentValues;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
+import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.database.data.ColumnDefinition;
 import org.opendatakit.database.data.OrderedColumns;
 import org.opendatakit.database.data.TableDefinitionEntry;
@@ -361,7 +362,7 @@ public abstract class ExecutorProcessor implements Runnable {
   }
 
   private void populateKeyValueStoreList(Map<String, Object> metadata,
-      List<KeyValueStoreEntry> entries) {
+      List<KeyValueStoreEntry> entries) throws ServicesAvailabilityException {
     // keyValueStoreList
     if (entries != null) {
       // It is unclear how to most easily represent the KVS for access.
@@ -417,6 +418,13 @@ public abstract class ExecutorProcessor implements Runnable {
         anEntry.put("aspect", entry.aspect);
         anEntry.put("key", entry.key);
         anEntry.put("type", entry.type);
+
+        // and resolve the choice values
+        // this may explode the size of the KVS going back to the JS layer.
+        if ( entry.partition.equals(KeyValueStoreConstants.PARTITION_COLUMN) &&
+             entry.key.equals(KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST) ) {
+          value = dbInterface.getChoiceList(context.getAppName(), dbHandle, entry.value);
+        }
         anEntry.put("value", value);
 
         kvsArray.add(anEntry);
