@@ -1,6 +1,5 @@
 package org.opendatakit.webkitserver.utilities;
 
-import android.content.ComponentName;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -109,8 +108,6 @@ public class DoActionUtils {
          String actionKey = "action";
          String categoriesKey = "category";
          String flagsKey = "flags";
-         String componentPackageKey = "componentPackage";
-         String componentActivityKey = "componentActivity";
 
          JSONObject valueMap = null;
          if (intentObject != null) {
@@ -174,11 +171,6 @@ public class DoActionUtils {
             if (intentObject.has(flagsKey)) {
                int flags = intentObject.getInt(flagsKey);
                i.addFlags(flags);
-            }
-            if (intentObject.has(componentPackageKey) && intentObject.has(componentActivityKey)) {
-               String componentPackage = intentObject.getString(componentPackageKey);
-               String componentActivity = intentObject.getString(componentActivityKey);
-               i.setComponent(new ComponentName(componentPackage, componentActivity));
             }
          }
 

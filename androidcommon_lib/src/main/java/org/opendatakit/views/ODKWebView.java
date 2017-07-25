@@ -29,10 +29,11 @@ import android.webkit.WebView;
 import org.opendatakit.activities.IAppAwareActivity;
 import org.opendatakit.activities.IOdkCommonActivity;
 import org.opendatakit.activities.IOdkDataActivity;
-import org.opendatakit.logging.WebLogger;
-import org.opendatakit.logging.WebLoggerIf;
+import org.opendatakit.application.CommonApplication;
 import org.opendatakit.properties.CommonToolProperties;
 import org.opendatakit.utilities.ODKFileUtils;
+import org.opendatakit.logging.WebLogger;
+import org.opendatakit.logging.WebLoggerIf;
 
 import java.util.LinkedList;
 
@@ -208,6 +209,7 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
     ws.setJavaScriptEnabled(true);
 
     // disable to try to solve touch/mouse/swipe issues
+    ws.setBuiltInZoomControls(true);
     ws.setSupportZoom(true);
     ws.setUseWideViewPort(false);
 
@@ -320,12 +322,6 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
         idxQuestion = url.indexOf('?');
         if ( idxQuestion == url.length()-1 ) {
           url = url.substring(0, idxQuestion);
-        }
-        if (url.charAt(url.length() - 1) == '/') {
-          url = url.substring(0, url.length() - 1);
-        }
-        if (intendedPageToLoad.charAt(intendedPageToLoad.length() - 1) == '/') {
-          intendedPageToLoad = intendedPageToLoad.substring(0, intendedPageToLoad.length() - 1);
         }
 
         // finally, test the two URLs

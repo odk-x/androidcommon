@@ -258,7 +258,7 @@ public class OdkCommonIf {
    *                will be converted into the Bundle
    *                of extras in the result intent.
    */
- @android.webkit.JavascriptInterface public void closeWindow(String result, String resultIntentExtrasAsJSONstring) {
+  public void closeWindow(String result, String resultIntentExtrasAsJSONstring) {
     if (isInactive())
       return;
     weakControl.get().closeWindow(result, resultIntentExtrasAsJSONstring);;
