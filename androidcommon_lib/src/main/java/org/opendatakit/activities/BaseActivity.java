@@ -20,19 +20,15 @@ import org.opendatakit.database.service.UserDbInterface;
 
 public class BaseActivity extends AbsBaseActivity {
   public UserDbInterface getDbInt() {
-    return getCommonApplication().getDatabase();
+    Application app = getApplication();
+    if (app instanceof CommonApplication) {
+      return ((CommonApplication) app).getDatabase();
+    }
+    throw new IllegalStateException("Bad app");
   }
 
   public UserDbInterface getDatabase() {
     return getDbInt();
-  }
-
-  public CommonApplication getCommonApplication() {
-    Application app = getApplication();
-    if (app instanceof CommonApplication) {
-      return (CommonApplication) app;
-    }
-    throw new IllegalStateException("Bad app");
   }
 
   @Override
