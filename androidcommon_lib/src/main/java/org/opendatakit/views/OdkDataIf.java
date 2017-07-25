@@ -293,13 +293,10 @@ public class OdkDataIf {
    *                      that can process the response
    */
   @android.webkit.JavascriptInterface public void arbitraryQuery(String tableId, String sqlCommand,
-      String sqlBindParamsJSON, String limit, String offset, String callbackJSON) {
+      String sqlBindParamsJSON, Integer limit, Integer offset, String callbackJSON) {
     if (isInactive())
       return;
-    Integer integerLimit = limit != null ? Integer.valueOf(limit) : null;
-    Integer integerOffset = offset != null ? Integer.valueOf(offset) : null;
-
-    weakData.get().arbitraryQuery(tableId, sqlCommand, sqlBindParamsJSON, integerLimit, integerOffset, callbackJSON);
+    weakData.get().arbitraryQuery(tableId, sqlCommand, sqlBindParamsJSON, limit, offset, callbackJSON);
   }
 
   /**
