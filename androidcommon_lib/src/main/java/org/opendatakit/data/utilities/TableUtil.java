@@ -143,7 +143,7 @@ public class TableUtil {
     if ( lockedList.size() != 1 ) {
       throw new IllegalStateException("should be impossible");
     }
-    Boolean outcome = KeyValueStoreUtils.getBoolean(lockedList.get(0));
+    Boolean outcome = KeyValueStoreUtils.getBoolean(appName, lockedList.get(0));
     return outcome;
   }
 
@@ -188,7 +188,7 @@ public class TableUtil {
     if ( anonAddList.size() != 1 ) {
       throw new IllegalStateException("should be impossible");
     }
-    Boolean outcome = KeyValueStoreUtils.getBoolean(anonAddList.get(0));
+    Boolean outcome = KeyValueStoreUtils.getBoolean(appName, anonAddList.get(0));
     return outcome;
   }
 
@@ -398,7 +398,7 @@ public class TableUtil {
     if (kvsList.size() != 1) {
       return null;
     }
-    String rawValue = KeyValueStoreUtils.getString(kvsList.get(0));
+    String rawValue = KeyValueStoreUtils.getString(appName, kvsList.get(0));
     return rawValue;
   }
 
@@ -472,7 +472,7 @@ public class TableUtil {
     if (kvsList.size() != 1) {
       return null;
     }
-    String rawValue = KeyValueStoreUtils.getString(kvsList.get(0));
+    String rawValue = KeyValueStoreUtils.getString(appName, kvsList.get(0));
     return rawValue;
   }
 
@@ -545,7 +545,7 @@ public class TableUtil {
     if (kvsList.size() != 1) {
       return null;
     }
-    String rawValue = KeyValueStoreUtils.getString(kvsList.get(0));
+    String rawValue = KeyValueStoreUtils.getString(appName, kvsList.get(0));
     return rawValue;
   }
 
@@ -609,9 +609,9 @@ public class TableUtil {
     String colorColumnElementKey = null;
     for (KeyValueStoreEntry entry : kvsList) {
       if ( entry.key.equals(LocalKeyValueStoreConstants.Map.KEY_COLOR_RULE_TYPE) ) {
-        colorType = KeyValueStoreUtils.getString(entry);
+        colorType = KeyValueStoreUtils.getString(appName, entry);
       } else if ( entry.key.equals(LocalKeyValueStoreConstants.Map.KEY_COLOR_RULE_COLUMN) ) {
-        colorColumnElementKey = KeyValueStoreUtils.getString(entry);
+        colorColumnElementKey = KeyValueStoreUtils.getString(appName, entry);
       }
     }
 
@@ -651,7 +651,7 @@ public class TableUtil {
             null).getEntries();
     String rawValue = null;
     if ( kvsList.size() == 1 ) {
-      rawValue = KeyValueStoreUtils.getString(kvsList.get(0));
+      rawValue = KeyValueStoreUtils.getString(appName, kvsList.get(0));
     }
     if ( rawValue == null ) {
       // Go through each of the columns and check to see if there are
@@ -676,7 +676,7 @@ public class TableUtil {
             null).getEntries();
     String rawValue = null;
     if ( kvsList.size() == 1 ) {
-      rawValue = KeyValueStoreUtils.getString(kvsList.get(0));
+      rawValue = KeyValueStoreUtils.getString(appName, kvsList.get(0));
     }
     if ( rawValue == null ) {
       // Go through each of the columns and check to see if there are
@@ -711,7 +711,7 @@ public class TableUtil {
     if ( kvsList.size() != 1 ) {
       return null;
     }
-    String rawValue = KeyValueStoreUtils.getString(kvsList.get(0));
+    String rawValue = KeyValueStoreUtils.getString(appName, kvsList.get(0));
     return rawValue;
   }
 
@@ -781,7 +781,7 @@ public class TableUtil {
     if (kvsList.size() != 1) {
       return null;
     }
-    String rawValue = KeyValueStoreUtils.getString(kvsList.get(0));
+    String rawValue = KeyValueStoreUtils.getString(appName, kvsList.get(0));
     if ( rawValue == null ) {
       return DEFAULT_KEY_SORT_ORDER;
     }
@@ -856,7 +856,7 @@ public class TableUtil {
     if (kvsList.size() != 1) {
       return null;
     }
-    String rawValue = KeyValueStoreUtils.getString(kvsList.get(0));
+    String rawValue = KeyValueStoreUtils.getString(appName, kvsList.get(0));
     return rawValue;
   }
 
@@ -919,7 +919,7 @@ public class TableUtil {
             LocalKeyValueStoreConstants.Spreadsheet.KEY_FONT_SIZE, null).getEntries();
     Integer fontSize = null;
     if ( kvsList.size() == 1 ) {
-      fontSize = KeyValueStoreUtils.getInteger(kvsList.get(0));
+      fontSize = KeyValueStoreUtils.getInteger(appName, kvsList.get(0));
     }
 
     if ( fontSize == null ) {

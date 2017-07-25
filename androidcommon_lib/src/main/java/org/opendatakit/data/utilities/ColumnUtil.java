@@ -110,7 +110,7 @@ public class ColumnUtil {
       // default to the column elementKey
       return NameUtil.normalizeDisplayName(NameUtil.constructSimpleDisplayName(elementKey));
     }
-    String jsonDisplayName = KeyValueStoreUtils.getObject(displayNameList.get(0));
+    String jsonDisplayName = KeyValueStoreUtils.getObject(appName, displayNameList.get(0));
     if ( jsonDisplayName == null ) {
       jsonDisplayName = NameUtil.normalizeDisplayName(NameUtil.constructSimpleDisplayName(elementKey));
     }
@@ -129,7 +129,7 @@ public class ColumnUtil {
     /*
      * Getting the choiceListId
      */
-    String choiceListId = KeyValueStoreUtils.getString(choicesListList.get(0));
+    String choiceListId = KeyValueStoreUtils.getString(appName, choicesListList.get(0));
     if (choiceListId == null || choiceListId.trim().length() == 0) {
       return new ArrayList<Map<String,Object>>();
     }
@@ -199,7 +199,7 @@ public class ColumnUtil {
 
     ArrayList<JoinColumn> joins = null;
     try {
-      joins = JoinColumn.fromSerialization(KeyValueStoreUtils.getObject(joinsList.get(0)));
+      joins = JoinColumn.fromSerialization(KeyValueStoreUtils.getObject(appName, joinsList.get(0)));
     } catch (JsonParseException e) {
       e.printStackTrace();
     } catch (JsonMappingException e) {
@@ -218,7 +218,7 @@ public class ColumnUtil {
     if (kvsList.size() != 1) {
       return LocalKeyValueStoreConstants.Spreadsheet.DEFAULT_COL_WIDTH;
     }
-    Integer value = KeyValueStoreUtils.getInteger(kvsList.get(0));
+    Integer value = KeyValueStoreUtils.getInteger(appName, kvsList.get(0));
     if (value == null || value <= 0) {
       return LocalKeyValueStoreConstants.Spreadsheet.DEFAULT_COL_WIDTH;
     }
