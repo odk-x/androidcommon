@@ -323,12 +323,6 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
         if ( idxQuestion == url.length()-1 ) {
           url = url.substring(0, idxQuestion);
         }
-        if (url.charAt(url.length() - 1) == '/') {
-          url = url.substring(0, url.length() - 1);
-        }
-        if (intendedPageToLoad.charAt(intendedPageToLoad.length() - 1) == '/') {
-          intendedPageToLoad = intendedPageToLoad.substring(0, intendedPageToLoad.length() - 1);
-        }
 
         // finally, test the two URLs
         if ( url.equals(intendedPageToLoad) ) {
