@@ -14,13 +14,11 @@
 
 package org.opendatakit.activities;
 
-import android.app.Application;
-import android.preference.PreferenceActivity;
 import org.opendatakit.application.CommonApplication;
-import org.opendatakit.database.service.UserDbInterface;
 
-public abstract class BasePreferenceActivity extends PreferenceActivity
-    implements IAppAwareActivity {
+import android.preference.PreferenceActivity;
+
+public abstract class BasePreferenceActivity extends PreferenceActivity implements IAppAwareActivity {
 
   @Override
   protected void onResume() {
@@ -38,28 +36,6 @@ public abstract class BasePreferenceActivity extends PreferenceActivity
   protected void onDestroy() {
     ((CommonApplication) getApplication()).onActivityDestroy(this);
     super.onDestroy();
-  }
-
-  /**
-   * Direct copy paste of {@link BaseActivity#getDatabase()} ()}
-   *
-   * @return the database interface
-   */
-  public UserDbInterface getDatabase() {
-    return getCommonApplication().getDatabase();
-  }
-
-  /**
-   * Direct copy paste of {@link BaseActivity#getCommonApplication()}
-   *
-   * @return the common application
-   */
-  public CommonApplication getCommonApplication() {
-    Application app = getApplication();
-    if (app instanceof CommonApplication) {
-      return (CommonApplication) app;
-    }
-    throw new IllegalStateException("Bad app");
   }
 
 }
