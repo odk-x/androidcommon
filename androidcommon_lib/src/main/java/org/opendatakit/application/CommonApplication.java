@@ -29,107 +29,31 @@ import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
 import android.webkit.WebView;
-
 import org.opendatakit.consts.IntentConsts;
+import org.opendatakit.consts.WebkitServerConsts;
+import org.opendatakit.database.service.AidlDbInterface;
+import org.opendatakit.database.service.InternalUserDbInterfaceAidlWrapperImpl;
+import org.opendatakit.database.service.UserDbInterface;
+import org.opendatakit.database.service.UserDbInterfaceImpl;
 import org.opendatakit.listener.DatabaseConnectionListener;
 import org.opendatakit.listener.InitializationListener;
 import org.opendatakit.properties.CommonToolProperties;
 import org.opendatakit.properties.PropertiesSingleton;
 import org.opendatakit.task.InitializationTask;
-import org.opendatakit.utilities.ODKFileUtils;
+import org.opendatakit.utilities.LocalizationUtils;
 import org.opendatakit.views.ODKWebView;
-import org.opendatakit.database.DatabaseConstants;
-import org.opendatakit.database.service.UserDbInterface;
-import org.opendatakit.database.service.AidlDbInterface;
-import org.opendatakit.consts.WebkitServerConsts;
 import org.opendatakit.webkitserver.service.WebkitServerInterface;
 
 import java.util.ArrayList;
 
-public abstract class CommonApplication extends AppAwareApplication implements
+public abstract class CommonApplication extends ToolAwareApplication implements
     InitializationListener {
 
-  private static final String t = "CommonApplication";
+  // Used for logging
+  private static final String TAG = CommonApplication.class.getSimpleName();
   
   public static final String PERMISSION_WEBSERVER = "org.opendatakit.webkitserver.RUN_WEBSERVER";
   public static final String PERMISSION_DATABASE = "org.opendatakit.database.RUN_DATABASE";
-
-  // Support for mocking the remote interfaces that are actually accessed
-  // vs. the WebKit service, which is merely started.
-  private static boolean isMocked = false;
-  
-  // Hack to determine whether or not to cascade to the initialize task
-  private static boolean disableInitializeCascade = true;
-  
-  // Hack for handling mock interfaces...
-  private static UserDbInterface mockDatabaseService = null;
-  private static WebkitServerInterface mockWebkitServerService = null;
-  
-  public static void setMocked() {
-    isMocked = true;
-  }
-  
-  public static boolean isMocked() {
-    return isMocked;
-  }
-  
-  public static boolean isDisableInitializeCascade() {
-    return disableInitializeCascade;
-  }
-  
-  public static void setEnableInitializeCascade() {
-    disableInitializeCascade = false;
-  }
-  
-  public static void setDisableInitializeCascade() {
-    disableInitializeCascade = true;
-  }
-  
-  public static void setMockDatabase(UserDbInterface mock) {
-    CommonApplication.mockDatabaseService = mock;
-  }
-
-  public static void setMockWebkitServer(WebkitServerInterface mock) {
-    CommonApplication.mockWebkitServerService = mock;
-  }
-
-  public static void mockServiceConnected(CommonApplication app, String name, IBinder service) {
-    ComponentName className = null;
-    if (name.equals(WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS)) {
-      className = new ComponentName(WebkitServerConsts.WEBKITSERVER_SERVICE_PACKAGE,
-          WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS);
-    }
-
-    if (name.equals(IntentConsts.Database.DATABASE_SERVICE_CLASS)) {
-      className = new ComponentName(IntentConsts.Database.DATABASE_SERVICE_PACKAGE,
-              IntentConsts.Database.DATABASE_SERVICE_CLASS);
-    }
-    
-    if ( className == null ) {
-      throw new IllegalStateException("unrecognized mockService");
-    }
-
-    app.mBackgroundServices.doServiceConnected(app, className, service);
-  }
-
-  public static void mockServiceDisconnected(CommonApplication app, String name) {
-    ComponentName className = null;
-    if (name.equals(WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS)) {
-      className = new ComponentName(WebkitServerConsts.WEBKITSERVER_SERVICE_PACKAGE,
-          WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS);
-    }
-
-    if (name.equals(IntentConsts.Database.DATABASE_SERVICE_CLASS)) {
-      className = new ComponentName(IntentConsts.Database.DATABASE_SERVICE_PACKAGE,
-              IntentConsts.Database.DATABASE_SERVICE_CLASS);
-    }
-    
-    if ( className == null ) {
-      throw new IllegalStateException("unrecognized mockService");
-    }
-
-    app.mBackgroundServices.doServiceDisconnected(app, className);
-  }
 
   /**
    * Task instances that are preserved until the application dies.
@@ -141,7 +65,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
     InitializationTask mInitializationTask = null;
 
     BackgroundTasks() {
-    };
+    }
   }
 
   /**
@@ -159,10 +83,10 @@ public abstract class CommonApplication extends AppAwareApplication implements
     private boolean isDestroying = false;
 
     BackgroundServices() {
-    };
+    }
 
     synchronized void clearDestroyingFlag() {
-      Log.i(t, "isDestroying reset to false");
+      Log.i(TAG, "isDestroying reset to false");
       isDestroying = false;
     }
 
@@ -183,7 +107,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
 
       synchronized (this) {
         if ( !isDestroying ) {
-          Log.i(t, "bindToService -- processing...");
+          Log.i(TAG, "bindToService -- processing...");
           if ( useWebServer && webkitfilesService == null && webkitfilesServiceConnection == null ) {
             webkitfilesServiceConnection = webkitServerBinder = new ServiceConnection() {
 
@@ -208,39 +132,37 @@ public abstract class CommonApplication extends AppAwareApplication implements
             };
           }
         } else {
-          Log.i(t, "bindToService -- ignored -- isDestroying is true!");
+          Log.i(TAG, "bindToService -- ignored -- isDestroying is true!");
         }
       }
 
       if ( webkitServerBinder != null ) {
-        Log.i(t, "Attempting bind to WebkitServer service");
+        Log.i(TAG, "Attempting bind to WebkitServer service");
         Intent bind_intent = new Intent();
         bind_intent.setClassName(WebkitServerConsts.WEBKITSERVER_SERVICE_PACKAGE,
             WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS);
         application.bindService(
             bind_intent,
             webkitServerBinder,
-            Context.BIND_AUTO_CREATE
-                | ((Build.VERSION.SDK_INT >= 14) ? Context.BIND_ADJUST_WITH_ACTIVITY : 0));
+            Context.BIND_AUTO_CREATE);
       }
 
       if ( databaseBinder != null ) {
-        Log.i(t, "Attempting bind to Database service");
+        Log.i(TAG, "Attempting bind to Database service");
         Intent bind_intent = new Intent();
         bind_intent.setClassName(IntentConsts.Database.DATABASE_SERVICE_PACKAGE,
                 IntentConsts.Database.DATABASE_SERVICE_CLASS);
         application.bindService(
             bind_intent,
             databaseBinder,
-            Context.BIND_AUTO_CREATE
-                | ((Build.VERSION.SDK_INT >= 14) ? Context.BIND_ADJUST_WITH_ACTIVITY : 0));
+            Context.BIND_AUTO_CREATE);
       }
     }
 
     private void doServiceConnected(CommonApplication application, ComponentName className,
         IBinder service) {
       if (className.getClassName().equals(WebkitServerConsts.WEBKITSERVER_SERVICE_CLASS)) {
-        Log.i(t, "Bound to WebServer service");
+        Log.i(TAG, "Bound to WebServer service");
         synchronized (this) {
           try {
             webkitfilesService = (service == null) ? null : WebkitServerInterface.Stub.asInterface(service);
@@ -251,10 +173,12 @@ public abstract class CommonApplication extends AppAwareApplication implements
       }
 
       if (className.getClassName().equals(IntentConsts.Database.DATABASE_SERVICE_CLASS)) {
-        Log.i(t, "Bound to Database service");
+        Log.i(TAG, "Bound to Database service");
         synchronized (this) {
           try {
-            databaseService = (service == null) ? null : new UserDbInterface(AidlDbInterface.Stub.asInterface(service));
+            databaseService = (service == null) ? null : new UserDbInterfaceImpl(
+                new InternalUserDbInterfaceAidlWrapperImpl(
+                  AidlDbInterface.Stub.asInterface(service)));
           } catch (Exception e) {
             databaseService = null;
           }
@@ -270,9 +194,9 @@ public abstract class CommonApplication extends AppAwareApplication implements
         ServiceConnection tmpWeb = null;
         synchronized (this) {
           if (isDestroying) {
-            Log.i(t, "Unbound from WebServer service (intentionally)");
+            Log.i(TAG, "Unbound from WebServer service (intentionally)");
           } else {
-            Log.w(t, "Unbound from WebServer service (unexpected)");
+            Log.w(TAG, "Unbound from WebServer service (unexpected)");
           }
           webkitfilesService = null;
           tmpWeb = webkitfilesServiceConnection;
@@ -293,9 +217,9 @@ public abstract class CommonApplication extends AppAwareApplication implements
         ServiceConnection tmpDb = null;
         synchronized (this) {
           if (isDestroying) {
-            Log.i(t, "Unbound from Database service (intentionally)");
+            Log.i(TAG, "Unbound from Database service (intentionally)");
           } else {
-            Log.w(t, "Unbound from Database service (unexpected)");
+            Log.w(TAG, "Unbound from Database service (unexpected)");
           }
           databaseService = null;
           tmpDb = databaseServiceConnection;
@@ -319,41 +243,8 @@ public abstract class CommonApplication extends AppAwareApplication implements
       application.bindToService();
     }
 
-    private void unbindWebkitServerWrapper(CommonApplication application) {
-      ServiceConnection tmpWeb = null;
-      synchronized(this) {
-        tmpWeb = webkitfilesServiceConnection;
-        webkitfilesServiceConnection = null;
-      }
-      try {
-        if ( tmpWeb != null ) {
-          application.unbindService(tmpWeb);
-        }
-      } catch ( Exception e ) {
-        // ignore
-        e.printStackTrace();
-      }
-    }
-
-    private void unbindDatabaseWrapper(CommonApplication application) {
-      ServiceConnection tmpDb = null;
-      synchronized (this) {
-        tmpDb = databaseServiceConnection;
-        databaseServiceConnection = null;
-      }
-      try {
-        if ( tmpDb != null ) {
-          application.unbindService(tmpDb);
-          application.triggerDatabaseEvent(false);
-        }
-      } catch ( Exception e ) {
-        // ignore
-        e.printStackTrace();
-      }
-    }
-
     private void shutdownServices(CommonApplication application) {
-      Log.i(t, "shutdownServices - Releasing WebServer and database service");
+      Log.i(TAG, "shutdownServices - Releasing WebServer and database service");
       ServiceConnection tmpWeb = null;
       ServiceConnection tmpDb = null;
       synchronized (this) {
@@ -388,20 +279,6 @@ public abstract class CommonApplication extends AppAwareApplication implements
     }
   }
 
-  /**
-   * Creates required directories on the SDCard (or other external storage)
-   *
-   * @return true if there are tables present
-   * @throws RuntimeException
-   *           if there is no SDCard or the directory exists as a non directory
-   */
-  public static void createODKDirs(String appName) throws RuntimeException {
-
-    ODKFileUtils.verifyExternalStorageAvailability();
-
-    ODKFileUtils.assertDirectoryStructure(appName);
-  }
-
   // handed across orientation changes
   private final BackgroundTasks mBackgroundTasks = new BackgroundTasks(); 
 
@@ -431,14 +308,14 @@ public abstract class CommonApplication extends AppAwareApplication implements
   @Override
   public void onConfigurationChanged(Configuration newConfig) {
     super.onConfigurationChanged(newConfig);
-    Log.i(t, "onConfigurationChanged");
+    Log.i(TAG, "onConfigurationChanged");
   }
 
   @Override
   public void onTerminate() {
     cleanShutdown();
     super.onTerminate();
-    Log.i(t, "onTerminate");
+    Log.i(TAG, "onTerminate");
   }
 
   public abstract int getConfigZipResourceId();
@@ -448,11 +325,6 @@ public abstract class CommonApplication extends AppAwareApplication implements
   public abstract int getWebKitResourceId();
   
   public boolean shouldRunInitializationTask(String appName) {
-    if ( isMocked() ) {
-      if ( isDisableInitializeCascade() ) {
-        return false;
-      }
-    }
     PropertiesSingleton props = CommonToolProperties.get(this, appName);
     return props.shouldRunInitializationTask(this.getToolName());
   }
@@ -460,11 +332,7 @@ public abstract class CommonApplication extends AppAwareApplication implements
   public void clearRunInitializationTask(String appName) {
     PropertiesSingleton props = CommonToolProperties.get(this, appName);
     props.clearRunInitializationTask(this.getToolName());
-  }
-
-  public void setRunInitializationTask(String appName) {
-    PropertiesSingleton props = CommonToolProperties.get(this, appName);
-    props.setRunInitializationTask(this.getToolName());
+    LocalizationUtils.clearTranslations();
   }
 
   private Activity activeActivity = null;
@@ -503,11 +371,11 @@ public abstract class CommonApplication extends AppAwareApplication implements
   private void cleanShutdown() {
     try {
       shuttingDown = true;
-      Log.i(t, "cleanShutdown (initiating)");
+      Log.i(TAG, "cleanShutdown (initiating)");
       shutdownServices();
     } finally {
       shuttingDown = false;
-      Log.i(t, "cleanShutdown (resetting shuttingDown to false)");
+      Log.i(TAG, "cleanShutdown (resetting shuttingDown to false)");
     }
   }
   
@@ -543,40 +411,29 @@ public abstract class CommonApplication extends AppAwareApplication implements
   }
   
   private void bindToService() {
-    if ( isMocked ) {
-      // we directly control all the service binding interactions if we are mocked
-      return;
-    }
     if (!shuttingDown) {
       PackageManager pm = getPackageManager();
       boolean useWebServer = (pm.checkPermission(PERMISSION_WEBSERVER, getPackageName()) == PackageManager.PERMISSION_GRANTED);
       boolean useDatabase = (pm.checkPermission(PERMISSION_DATABASE, getPackageName()) == PackageManager.PERMISSION_GRANTED);
 
-      Log.i(t, "bindToService -- useWebServer " + Boolean.toString(useWebServer)
+      Log.i(TAG, "bindToService -- useWebServer " + Boolean.toString(useWebServer)
           + " useDatabase " + Boolean.toString(useDatabase) );
       mBackgroundServices.bindToService(this, useWebServer, useDatabase);
     }
   }
 
   public UserDbInterface getDatabase() {
-    if ( isMocked ) {
-      return mockDatabaseService;
-    } else {
       return mBackgroundServices.getDatabase();
-    }
   }
   
   private WebkitServerInterface getWebkitServer() {
-    if ( isMocked ) {
-      return mockWebkitServerService;
-    } else {
       return mBackgroundServices.getWebkitServer();
-    }
+
   }
   
   public void configureView() {
     if ( activeActivity != null ) {
-      Log.i(t, "configureView - possibly updating service information within ODKWebView");
+      Log.i(TAG, "configureView - possibly updating service information within ODKWebView");
       if ( getWebKitResourceId() != -1 ) {
         View v = activeActivity.findViewById(getWebKitResourceId());
         if (v != null && v instanceof ODKWebView) {

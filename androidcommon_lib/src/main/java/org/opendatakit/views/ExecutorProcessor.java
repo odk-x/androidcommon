@@ -16,7 +16,6 @@ package org.opendatakit.views;
 
 import android.content.ContentValues;
 
-import android.database.sqlite.SQLiteException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.database.data.ColumnDefinition;
@@ -36,6 +35,7 @@ import org.opendatakit.database.service.DbHandle;
 import org.opendatakit.database.data.Row;
 import org.opendatakit.database.data.BaseTable;
 import org.opendatakit.database.queries.ResumableQuery;
+import org.sqlite.database.sqlite.SQLiteException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -66,8 +66,11 @@ public abstract class ExecutorProcessor implements Runnable {
     adminColumns.add(DataTableColumns.ROW_ETAG);
     adminColumns.add(DataTableColumns.SYNC_STATE); // not exportable
     adminColumns.add(DataTableColumns.CONFLICT_TYPE); // not exportable
-    adminColumns.add(DataTableColumns.FILTER_TYPE);
-    adminColumns.add(DataTableColumns.FILTER_VALUE);
+    adminColumns.add(DataTableColumns.DEFAULT_ACCESS);
+    adminColumns.add(DataTableColumns.ROW_OWNER);
+    adminColumns.add(DataTableColumns.GROUP_READ_ONLY);
+    adminColumns.add(DataTableColumns.GROUP_MODIFY);
+    adminColumns.add(DataTableColumns.GROUP_PRIVILEGED);
     adminColumns.add(DataTableColumns.FORM_ID);
     adminColumns.add(DataTableColumns.LOCALE);
     adminColumns.add(DataTableColumns.SAVEPOINT_TYPE);
@@ -105,7 +108,7 @@ public abstract class ExecutorProcessor implements Runnable {
       // we have a request and a viable database interface...
       dbHandle = dbInterface.openDatabase(context.getAppName());
       if (dbHandle == null) {
-        context.reportError(request.callbackJSON, null,
+        context.reportError(request.callbackJSON, request.callerID, null,
             IllegalStateException.class.getName() + ": Unable to open database connection");
         context.popRequest(true);
         return;
@@ -120,6 +123,9 @@ public abstract class ExecutorProcessor implements Runnable {
         break;
       case GET_ROLES_LIST:
         getRolesList();
+        break;
+      case GET_DEFAULT_GROUP:
+        getDefaultGroup();
         break;
       case GET_USERS_LIST:
         getUsersList();
@@ -199,7 +205,7 @@ public abstract class ExecutorProcessor implements Runnable {
       WebLogger.getLogger(context.getAppName()).w(TAG, "error while releasing database conneciton");
     } finally {
       context.removeActiveConnection(transId);
-      context.reportError(request.callbackJSON, null, errorMessage);
+      context.reportError(request.callbackJSON, request.callerID, null, errorMessage);
       context.popRequest(true);
     }
   }
@@ -234,9 +240,9 @@ public abstract class ExecutorProcessor implements Runnable {
     } finally {
       context.removeActiveConnection(transId);
       if (successful) {
-        context.reportSuccess(request.callbackJSON, null, data, metadata);
+        context.reportSuccess(request.callbackJSON, request.callerID, null, data, metadata);
       } else {
-        context.reportError(request.callbackJSON, null, exceptionString);
+        context.reportError(request.callbackJSON, request.callerID, null, exceptionString);
       }
       context.popRequest(true);
     }
@@ -265,8 +271,11 @@ public abstract class ExecutorProcessor implements Runnable {
         if ( !key.equals(DataTableColumns.FORM_ID) &&
              !key.equals(DataTableColumns.LOCALE) &&
              !key.equals(DataTableColumns.SAVEPOINT_CREATOR) &&
-             !key.equals(DataTableColumns.FILTER_TYPE) &&
-             !key.equals(DataTableColumns.FILTER_VALUE) ) {
+             !key.equals(DataTableColumns.DEFAULT_ACCESS) &&
+             !key.equals(DataTableColumns.ROW_OWNER) &&
+             !key.equals(DataTableColumns.GROUP_READ_ONLY) &&
+             !key.equals(DataTableColumns.GROUP_MODIFY) &&
+             !key.equals(DataTableColumns.GROUP_PRIVILEGED)) {
           ColumnDefinition cd = columns.find(key);
           if (!cd.isUnitOfRetention()) {
             throw new IllegalStateException("key is not a database column name: " + key);
@@ -308,6 +317,11 @@ public abstract class ExecutorProcessor implements Runnable {
   private void getRolesList() throws ServicesAvailabilityException {
     String rolesList = dbInterface.getRolesList(context.getAppName());
     reportRolesListSuccessAndCleanUp(rolesList);
+  }
+
+  private void getDefaultGroup() throws ServicesAvailabilityException {
+    String defaultGroup = dbInterface.getDefaultGroup(context.getAppName());
+    reportDefaultGroupSuccessAndCleanUp(defaultGroup);
   }
 
   private void getUsersList() throws ServicesAvailabilityException {
@@ -516,6 +530,17 @@ public abstract class ExecutorProcessor implements Runnable {
     reportSuccessAndCleanUp(null, metadata);
   }
 
+  private void reportDefaultGroupSuccessAndCleanUp(String defaultGroup) throws
+      ServicesAvailabilityException {
+
+    Map<String, Object> metadata = new HashMap<String, Object>();
+    if ( defaultGroup != null && defaultGroup.length() != 0 ) {
+      metadata.put("defaultGroup", defaultGroup);
+    }
+
+    reportSuccessAndCleanUp(null, metadata);
+  }
+
   private void reportUsersListSuccessAndCleanUp(String usersList) throws
       ServicesAvailabilityException {
 
@@ -650,11 +675,11 @@ public abstract class ExecutorProcessor implements Runnable {
 
     // extend the metadata with whatever else this app needs....
     // e.g., row and column color maps
-    extendQueryMetadata(dbHandle, entries, userTable, metadata);
+    extendQueryMetadata(dbInterface, dbHandle, entries, userTable, metadata);
     reportSuccessAndCleanUp(data, metadata);
   }
 
-  protected abstract void extendQueryMetadata(DbHandle dbHandle,
+  protected abstract void extendQueryMetadata(UserDbInterface dbInterface, DbHandle dbHandle,
       List<KeyValueStoreEntry> entries, UserTable userTable, Map<String, Object> metadata);
 
   private void getRows() throws ServicesAvailabilityException, ActionNotAuthorizedException {
@@ -753,12 +778,15 @@ public abstract class ExecutorProcessor implements Runnable {
     }
 
     ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
-    String filterType = cvValues.getAsString(DataTableColumns.FILTER_TYPE);
-    String filterValue = cvValues.getAsString(DataTableColumns.FILTER_VALUE);
+    String defaultAccess = cvValues.getAsString(DataTableColumns.DEFAULT_ACCESS);
+    String owner = cvValues.getAsString(DataTableColumns.ROW_OWNER);
+    String groupReadOnly = cvValues.getAsString(DataTableColumns.GROUP_READ_ONLY);
+    String groupModify = cvValues.getAsString(DataTableColumns.GROUP_MODIFY);
+    String groupPrivileged = cvValues.getAsString(DataTableColumns.GROUP_PRIVILEGED);
 
     UserTable t = dbInterface
         .changeRowFilterWithId(context.getAppName(), dbHandle, request.tableId,
-            columns, filterType, filterValue, request.rowId);
+            columns, defaultAccess, owner, groupReadOnly, groupModify, groupPrivileged, request.rowId);
 
     if ( t == null ) {
       reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to changeAccessFilterRow for " +

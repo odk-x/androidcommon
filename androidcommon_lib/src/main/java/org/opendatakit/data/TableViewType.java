@@ -24,5 +24,5 @@ package org.opendatakit.data;
 public enum TableViewType {
   SPREADSHEET,
   LIST,
-  MAP;
+  MAP
 }

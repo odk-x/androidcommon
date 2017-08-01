@@ -32,11 +32,11 @@ import android.os.Bundle;
  */
 public class ConfirmationDialogFragment extends DialogFragment {
 
-  public static interface ConfirmConfirmationDialog {
-    public void okConfirmationDialog();
+  public interface ConfirmConfirmationDialog {
+    void okConfirmationDialog();
 
-    public void cancelConfirmationDialog();
-  };
+    void cancelConfirmationDialog();
+  }
 
   public static ConfirmationDialogFragment newInstance(int fragmentId, String title,
       String message, String okButton, String cancelButton) {

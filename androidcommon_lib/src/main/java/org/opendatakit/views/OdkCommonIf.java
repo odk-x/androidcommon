@@ -77,6 +77,25 @@ public class OdkCommonIf {
   }
 
   /**
+   * @param tableId required.
+   * @param formId  may be null. If null, screenPath and elementKeyToStringifiedValue must be null
+   * @param instanceId may be null.
+   * @param screenPath may be null.
+   * @param jsonMap may be null or empty. JSON stringify of a map of elementKey -to-
+   *                                      value for that elementKey. Used to
+   *                                      initialized field values and session variables.
+   * @return URI for this survey and its arguments.
+   */
+  @android.webkit.JavascriptInterface public String constructSurveyUri(String tableId,
+      String formId, String instanceId, String screenPath,
+      String jsonMap) {
+    if (isInactive())
+      return null;
+    return weakControl.get().constructSurveyUri(tableId,
+        formId, instanceId, screenPath, jsonMap);
+  }
+
+  /**
    * Log messages using WebLogger.
    *
    * @param level         - levels are A, D, E, I, S, V, W
@@ -152,39 +171,49 @@ public class OdkCommonIf {
   /**
    * Execute an action (intent call).
    *
-   * @param dispatchString Opaque string -- typically identifies prompt and user action
+   * @param dispatchStructAsJSONstring Opaque string -- typically identifies prompt and user action
+   *                                   If this is null, then the Javascript layer is not notified
+   *                                   of the result of this action. It just transparently happens
+   *                                   and the webkit might reload as a result of the activity
+   *                                   swapping out.
    * @param action         The intent. e.g.,
    *                       org.opendatakit.survey.activities.MediaCaptureImageActivity
-   * @param jsonMap        JSON.stringify of Map of the following structure:
-   *                       {
-   *                       "uri" : intent.setData(value)
-   *                       "data" : intent.setData(value)  (preferred over "uri")
-   *                       "package" : intent.setPackage(value)
-   *                       "type" : intent.setType(value)
-   *                       "extras" : { key-value map describing extras bundle }
-   *                       }
-   *                       <p/>
-   *                       Within the extras, if a value is of the form:
-   *                       opendatakit-macro(name)
-   *                       then substitute this with the result of getProperty(name)
-   *                       <p/>
-   *                       If the action begins with "org.opendatakit." then we also
-   *                       add an "appName" property into the intent extras if it was
-   *                       not specified.
+   * @param intentMap        JSON.stringify of Map of the following structure:
+   *                   {
+   *                         "uri" : intent.setData(value)
+   *                         "data" : intent.setData(value)  (preferred over "uri")
+   *                         "package" : intent.setPackage(value)
+   *                         "type" : intent.setType(value)
+   *                         "action" : intent.setAction(value)
+   *                         "category" : either a single string or a list of strings for intent.addCategory(item)
+   *                         "flags" : the integer code for the values to store
+   *                         "extras" : { key-value map describing extras bundle }
+   *                   }
+   *</p><p>
+   *                  Within the extras, if a value is of the form:
+   *                     opendatakit-macro(name)
+   *                  then substitute this with the result of getProperty(name)
+   *</p><p>
+   *                  If the action begins with "org.opendatakit." then we also
+   *                  add an "appName" property into the intent extras if it was
+   *                  not specified.
+   *</p>
+   *
    * @return one of:
    * "IGNORE"                -- there is already a pending action
-   * "JSONException: " + ex.toString()
+   * "JSONException"         -- problem with intentMap
    * "OK"                    -- request issued
    * "Application not found" -- could not find app to handle intent
    * <p/>
    * If the request has been issued, the javascript will be notified of the availability
    * of a result via the
    */
-  @android.webkit.JavascriptInterface public String doAction(String dispatchString, String action,
-      String jsonMap) {
-    if (isInactive())
+  @android.webkit.JavascriptInterface public String doAction(String dispatchStructAsJSONstring,
+      String action, String intentMap) {
+    if (isInactive()) {
       return "IGNORE";
-    return weakControl.get().doAction(dispatchString, action, jsonMap);
+    }
+    return weakControl.get().doAction(dispatchStructAsJSONstring, action, intentMap);
   }
 
   /**
@@ -222,4 +251,16 @@ public class OdkCommonIf {
     weakControl.get().removeFirstQueuedAction();
   }
 
+  /**
+   * Closes this window and returns with the given result code and result bundle
+   * @param result a string version of integer 0 is RESULT_CANCELED, -1 is RESULT_OK
+   * @param resultIntentExtrasAsJSONstring a JSON.stringify() of a key-value map that
+   *                will be converted into the Bundle
+   *                of extras in the result intent.
+   */
+ @android.webkit.JavascriptInterface public void closeWindow(String result, String resultIntentExtrasAsJSONstring) {
+    if (isInactive())
+      return;
+    weakControl.get().closeWindow(result, resultIntentExtrasAsJSONstring);;
+  }
 }

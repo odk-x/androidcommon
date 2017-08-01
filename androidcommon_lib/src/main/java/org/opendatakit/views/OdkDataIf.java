@@ -198,7 +198,7 @@ public class OdkDataIf {
   }
 
   /**
-   * Get all the roles assigned to this user by the server.
+   * Get all the roles and groups assigned to this user by the server.
    *
    * @param callbackJSON The JSON object used by the JS layer to recover the callback function
    *                                that can process the response
@@ -207,6 +207,18 @@ public class OdkDataIf {
     if (isInactive())
       return;
     weakData.get().getRoles(callbackJSON);
+  }
+
+  /**
+   * Get the default group of the current user as assigned to this user by the server.
+   *
+   * @param callbackJSON The JSON object used by the JS layer to recover the callback function
+   *                                that can process the response
+   */
+  @android.webkit.JavascriptInterface public void getDefaultGroup(String callbackJSON) {
+    if (isInactive())
+      return;
+    weakData.get().getDefaultGroup(callbackJSON);
   }
 
   /**
@@ -238,7 +250,8 @@ public class OdkDataIf {
    *
    * @param tableId                 The table being queried. This is a user-defined table.
    * @param whereClause             The where clause for the query
-   * @param sqlBindParams           The array of bind parameter values (including any in the having clause)
+   * @param sqlBindParamsJSON JSON.stringify of array of bind parameter values (including any in
+   *                          the having clause)
    * @param groupBy                 The array of columns to group by
    * @param having                  The having clause
    * @param orderByElementKey       The column to order by
@@ -250,7 +263,7 @@ public class OdkDataIf {
    *                                that can process the response
    */
   @android.webkit.JavascriptInterface public void query(String tableId, String whereClause,
-      String[] sqlBindParams, String[] groupBy, String having, String orderByElementKey,
+      String sqlBindParamsJSON, String[] groupBy, String having, String orderByElementKey,
       String orderByDirection, String limit, String offset, boolean includeKeyValueStoreMap,
       String callbackJSON)
       {
@@ -260,7 +273,7 @@ public class OdkDataIf {
     Integer integerLimit = (limit != null ? Integer.valueOf(limit) : null);
     Integer integerOffset = (offset != null ? Integer.valueOf(offset) : null);
 
-    weakData.get().query(tableId, whereClause, sqlBindParams, groupBy, having, orderByElementKey,
+    weakData.get().query(tableId, whereClause, sqlBindParamsJSON, groupBy, having, orderByElementKey,
         orderByDirection, integerLimit, integerOffset, includeKeyValueStoreMap, callbackJSON);
   }
 
@@ -272,17 +285,21 @@ public class OdkDataIf {
    *                      type interpretations for that column will be applied to the result
    *                      column (e.g., integer, number, array, object conversions).
    * @param sqlCommand    The Select statement to issue. It can reference any table in the database, including system tables.
-   * @param sqlBindParams The array of bind parameter values (including any in the having clause)
+   * @param sqlBindParamsJSON JSON.stringify of array of bind parameter values (including any in
+   *                          the having clause)
    * @param limit   The maximum number of rows to return (null for unlimited)
    * @param offset  The offset into the result set for the first row to return (null ok)
    * @param callbackJSON  The JSON object used by the JS layer to recover the callback function
    *                      that can process the response
    */
   @android.webkit.JavascriptInterface public void arbitraryQuery(String tableId, String sqlCommand,
-      String[] sqlBindParams, Integer limit, Integer offset, String callbackJSON) {
+      String sqlBindParamsJSON, String limit, String offset, String callbackJSON) {
     if (isInactive())
       return;
-    weakData.get().arbitraryQuery(tableId, sqlCommand, sqlBindParams, limit, offset, callbackJSON);
+    Integer integerLimit = limit != null ? Integer.valueOf(limit) : null;
+    Integer integerOffset = offset != null ? Integer.valueOf(offset) : null;
+
+    weakData.get().arbitraryQuery(tableId, sqlCommand, sqlBindParamsJSON, integerLimit, integerOffset, callbackJSON);
   }
 
   /**
@@ -338,17 +355,19 @@ public class OdkDataIf {
    * Update a row in the table with the given filter type and value.
    *
    * @param tableId         The table being updated
-   * @param filterType      cannot be null. One of DEFAULT, MODIFY, READ_ONLY, HIDDEN
-   * @param filterValue     can be null. userid of owner of the row.
+   * @param defaultAccess      cannot be null. One of DEFAULT, MODIFY, READ_ONLY, HIDDEN
+   * @param owner     can be null. userid of owner of the row.
    * @param rowId           The rowId of the row being changed.
    * @param callbackJSON    The JSON object used by the JS layer to recover the callback function
    *                        that can process the response
    */
   @android.webkit.JavascriptInterface public void changeAccessFilterOfRow(String tableId,
-      String filterType, String filterValue, String rowId, String callbackJSON) {
+      String defaultAccess, String owner, String groupReadOnly, String groupModify, String groupPrivileged,
+      String rowId, String callbackJSON) {
     if (isInactive())
       return;
-    weakData.get().changeAccessFilterOfRow(tableId, filterType, filterValue, rowId, callbackJSON);
+    weakData.get().changeAccessFilterOfRow(tableId, defaultAccess, owner, groupReadOnly, groupModify,
+            groupPrivileged, rowId, callbackJSON);
   }
 
   /**

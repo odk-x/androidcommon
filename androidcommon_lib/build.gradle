@@ -27,6 +27,7 @@ android {
         targetSdkVersion(targetVersion)
         versionCode(releaseVersionCode)
         versionName(versionCodeName)
+        testInstrumentationRunner(instrumentationRunner)
     }
 
 	    // set by command line arguments
@@ -110,9 +111,8 @@ dependencies {
                       classifier: snapshotRelease, version: latestVersion, ext: 'aar')
     }
 
-    compile 'com.google.android.gms:play-services:' + gpsVersion
-    compile 'com.android.support:support-annotations:23.1.0'
-
     // Testing dependencies
     testCompile 'junit:junit:4.12'
+    androidTestCompile 'com.android.support.test:runner:0.5'
+
 }

@@ -14,73 +14,91 @@
 
 package org.opendatakit.webkitserver.utilities;
 
-import android.test.AndroidTestCase;
-import org.opendatakit.webkitserver.utilities.UrlUtils;
+import android.support.test.runner.AndroidJUnit4;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
-public class UrlUtilsTest extends AndroidTestCase {
-  
+import static org.junit.Assert.assertEquals;
+
+@RunWith(AndroidJUnit4.class)
+public class UrlUtilsTest {
+
+  @Test
   public void testNoHashOrParameters() {
     String fileName = "this/test/file/path/.html";
     this.assertRetrieveFileNameHelper(fileName, fileName);
   }
-  
+
+  @Test
   public void testEmptyString() {
     this.assertRetrieveFileNameHelper("", ""); 
   }
-  
+
+  @Test
   public void testOnlyHash() {
     String segment = "test/file#foo";
     this.assertRetrieveFileNameHelper("test/file", segment);
   }
-  
+
+  @Test
   public void testOnlyQueryParams() {
     String segment = "pretty/little/liar?foo&bar=3";
     this.assertRetrieveFileNameHelper("pretty/little/liar", segment);
   }
-  
+
+  @Test
   public void testHashAndQueryParams() {
     String segment = "test/test/test.html#foo?bar=3&baz=55";
     this.assertRetrieveFileNameHelper("test/test/test.html", segment);
   }
-  
+
+  @Test
   public void testGetIndexOfParamsNoParams() {
     String segment = "test/test/test.html";
     this.assertGetIndexHelper(segment, -1);
   }
-  
+
+  @Test
   public void testGetIndexOfParamsHash() {
     String segment = "test/test.html#foo";
     int expected = 14;
     this.assertGetIndexHelper(segment, expected);
   }
-  
+
+  @Test
   public void testGetIndexOfQueryHash() {
     String segment = "this/is/a/file/that/i/like.html?foo=bar";
     int expected = 31;
     this.assertGetIndexHelper(segment, expected);
   }
-  
+
+  @Test
   public void testGetIndexOfBoth() {
     String segment = "foo/bar.html#foo?bar=baz";
     int expected = 12;
     this.assertGetIndexHelper(segment, expected);
   }
-  
+
+  @Test
   public void testGetParamsNone() {
     String segment = "this/test/file/path/.html";
     this.assertGetParamsHelper(segment, "");
   }
-  
+
+  @Test
   public void testGetParamsHash() {
     String segment = "test/file#foo";
     this.assertGetParamsHelper(segment, "#foo");
   }
-  
+
+  @Test
   public void testGetParamsQuery() {
     String segment = "pretty/little/liar?foo&bar=3";
     this.assertGetParamsHelper(segment, "?foo&bar=3");
   }
-  
+
+  @Test
   public void testGetParamsBoth() {
     String segment = "test/test/test.html#foo?bar=3&baz=55";
     this.assertGetParamsHelper(segment, "#foo?bar=3&baz=55");

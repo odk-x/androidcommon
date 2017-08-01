@@ -23,11 +23,11 @@ import java.util.List;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.ElementType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
-import org.opendatakit.application.CommonApplication;
 import org.opendatakit.data.utilities.ColorRuleUtil;
 import org.opendatakit.database.LocalKeyValueStoreConstants;
 import org.opendatakit.database.data.ColumnDefinition;
 import org.opendatakit.database.data.OrderedColumns;
+import org.opendatakit.database.service.UserDbInterface;
 import org.opendatakit.database.utilities.KeyValueStoreUtils;
 import org.opendatakit.exception.ServicesAvailabilityException;
 import org.opendatakit.logging.WebLogger;
@@ -65,14 +65,13 @@ public class ColorRuleGroup {
 
   static {
     mapper = new ObjectMapper();
-    mapper.setVisibilityChecker(mapper.getVisibilityChecker().withFieldVisibility(Visibility.ANY));
-    mapper
-        .setVisibilityChecker(mapper.getVisibilityChecker().withCreatorVisibility(Visibility.ANY));
+    mapper.setVisibility(mapper.getVisibilityChecker().withFieldVisibility(Visibility.ANY));
+    mapper.setVisibility(mapper.getVisibilityChecker().withCreatorVisibility(Visibility.ANY));
     typeFactory = mapper.getTypeFactory();
   }
 
   public enum Type {
-    COLUMN, TABLE, STATUS_COLUMN;
+    COLUMN, TABLE, STATUS_COLUMN
   }
 
   // private final KeyValueStoreHelper kvsh;
@@ -90,7 +89,7 @@ public class ColorRuleGroup {
   /**
    * Construct the rule group for the given column.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
@@ -99,7 +98,7 @@ public class ColorRuleGroup {
    * @param adminColumns
    * @throws ServicesAvailabilityException
    */
-  private ColorRuleGroup(CommonApplication ctxt, String appName, DbHandle db, String tableId, String elementKey,
+  private ColorRuleGroup(UserDbInterface dbInterface, String appName, DbHandle db, String tableId, String elementKey,
       Type type, String[] adminColumns) throws ServicesAvailabilityException {
     this.mType = type;
     this.mAppName = appName;
@@ -110,18 +109,18 @@ public class ColorRuleGroup {
     List<KeyValueStoreEntry> entries = null;
     switch (mType) {
     case COLUMN:
-      entries = ctxt.getDatabase().getTableMetadata(appName, db, mTableId,
+      entries = dbInterface.getTableMetadata(appName, db, mTableId,
           LocalKeyValueStoreConstants.ColumnColorRules.PARTITION, elementKey,
           LocalKeyValueStoreConstants.ColumnColorRules.KEY_COLOR_RULES_COLUMN, null).getEntries();
       break;
     case TABLE:
-      entries = ctxt.getDatabase().getTableMetadata(appName, db, mTableId,
+      entries = dbInterface.getTableMetadata(appName, db, mTableId,
           LocalKeyValueStoreConstants.TableColorRules.PARTITION,
           KeyValueStoreConstants.ASPECT_DEFAULT,
           LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_ROW, null).getEntries();
       break;
     case STATUS_COLUMN:
-      entries = ctxt.getDatabase().getTableMetadata(appName, db, mTableId,
+      entries = dbInterface.getTableMetadata(appName, db, mTableId,
           LocalKeyValueStoreConstants.TableColorRules.PARTITION,
           KeyValueStoreConstants.ASPECT_DEFAULT,
           LocalKeyValueStoreConstants.TableColorRules.KEY_COLOR_RULES_STATUS_COLUMN, null)
@@ -139,7 +138,7 @@ public class ColorRuleGroup {
         this.ruleList = new ArrayList<ColorRule>();
       }
     } else {
-      jsonRulesString = KeyValueStoreUtils.getObject(appName, entries.get(0));
+      jsonRulesString = KeyValueStoreUtils.getObject(entries.get(0));
       this.ruleList = parseJsonString(jsonRulesString);
     }
   }
@@ -148,19 +147,19 @@ public class ColorRuleGroup {
     return this.mAdminColumns;
   }
 
-  public static ColorRuleGroup getColumnColorRuleGroup(CommonApplication ctxt, String appName, DbHandle db,
+  public static ColorRuleGroup getColumnColorRuleGroup(UserDbInterface dbInterface, String appName, DbHandle db,
       String tableId, String elementKey, String[] adminColumns) throws ServicesAvailabilityException {
-    return new ColorRuleGroup(ctxt, appName, db, tableId, elementKey, Type.COLUMN, adminColumns);
+    return new ColorRuleGroup(dbInterface, appName, db, tableId, elementKey, Type.COLUMN, adminColumns);
   }
 
-  public static ColorRuleGroup getTableColorRuleGroup(CommonApplication ctxt, String appName, DbHandle db,
+  public static ColorRuleGroup getTableColorRuleGroup(UserDbInterface dbInterface, String appName, DbHandle db,
       String tableId, String[] adminColumns) throws ServicesAvailabilityException {
-    return new ColorRuleGroup(ctxt, appName, db, tableId, null, Type.TABLE, adminColumns);
+    return new ColorRuleGroup(dbInterface, appName, db, tableId, null, Type.TABLE, adminColumns);
   }
 
-  public static ColorRuleGroup getStatusColumnRuleGroup(CommonApplication ctxt, String appName, DbHandle db,
+  public static ColorRuleGroup getStatusColumnRuleGroup(UserDbInterface dbInterface, String appName, DbHandle db,
       String tableId, String[] adminColumns) throws ServicesAvailabilityException {
-    return new ColorRuleGroup(ctxt, appName, db, tableId, null, Type.STATUS_COLUMN, adminColumns);
+    return new ColorRuleGroup(dbInterface, appName, db, tableId, null, Type.STATUS_COLUMN, adminColumns);
   }
 
   /**
@@ -227,16 +226,17 @@ public class ColorRuleGroup {
    * no rules, so will not pollute the key value store unless something has been
    * added.
    *
+   * @param dbInterface
    * @throws ServicesAvailabilityException
    */
-  public void saveRuleList(CommonApplication ctxt) throws ServicesAvailabilityException {
+  public void saveRuleList(UserDbInterface dbInterface) throws ServicesAvailabilityException {
     if ( mDefault ) {
       // nothing to save
       return;
     }
     DbHandle db = null;
     try {
-      db = ctxt.getDatabase().openDatabase(mAppName);
+      db = dbInterface.openDatabase(mAppName);
       // initialize the KVS helpers...
 
       // set it to this default just in case something goes wrong and it is
@@ -267,7 +267,7 @@ public class ColorRuleGroup {
               ElementDataType.array, ruleListJson);
           break;
         }
-        ctxt.getDatabase().replaceTableMetadata(mAppName, db, entry);
+        dbInterface.replaceTableMetadata(mAppName, db, entry);
       } catch (JsonGenerationException e) {
         WebLogger.getLogger(mAppName).e(TAG, "problem parsing list of color rules");
         WebLogger.getLogger(mAppName).printStackTrace(e);
@@ -280,7 +280,7 @@ public class ColorRuleGroup {
       }
     } finally {
       if (db != null) {
-        ctxt.getDatabase().closeDatabase(mAppName, db);
+        dbInterface.closeDatabase(mAppName, db);
       }
     }
   }

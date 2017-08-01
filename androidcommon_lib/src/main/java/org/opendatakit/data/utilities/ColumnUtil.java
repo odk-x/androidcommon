@@ -15,17 +15,20 @@
  */
 package org.opendatakit.data.utilities;
 
-import java.io.IOException;
-import java.util.*;
-
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.type.CollectionType;
+
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
-import org.opendatakit.application.CommonApplication;
+import org.opendatakit.data.JoinColumn;
 import org.opendatakit.database.LocalKeyValueStoreConstants;
 import org.opendatakit.database.data.ColumnDefinition;
-import org.opendatakit.data.JoinColumn;
+import org.opendatakit.database.data.KeyValueStoreEntry;
 import org.opendatakit.database.data.OrderedColumns;
+import org.opendatakit.database.service.DbHandle;
+import org.opendatakit.database.service.UserDbInterface;
 import org.opendatakit.database.utilities.KeyValueStoreUtils;
 import org.opendatakit.exception.ServicesAvailabilityException;
 import org.opendatakit.logging.WebLogger;
@@ -34,12 +37,12 @@ import org.opendatakit.utilities.NameUtil;
 import org.opendatakit.utilities.ODKFileUtils;
 import org.opendatakit.utilities.StaticStateManipulator;
 import org.opendatakit.utilities.StaticStateManipulator.IStaticFieldManipulator;
-import org.opendatakit.database.data.KeyValueStoreEntry;
-import org.opendatakit.database.service.DbHandle;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class ColumnUtil {
   
@@ -47,7 +50,7 @@ public class ColumnUtil {
  
   static {
     // register a state-reset manipulator for 'columnUtil' field.
-    StaticStateManipulator.get().register(50, new IStaticFieldManipulator() {
+    StaticStateManipulator.get().register(new IStaticFieldManipulator() {
 
       @Override
       public void reset() {
@@ -86,34 +89,37 @@ public class ColumnUtil {
     return hackPath;
   }
 
-  public String getLocalizedDisplayName(CommonApplication ctxt, String appName, DbHandle db, String tableId, String elementKey) throws
+  public String getLocalizedDisplayName(String userSelectedDefaultLocale, UserDbInterface
+      dbInterface, String appName,
+      DbHandle db, String tableId, String elementKey) throws
       ServicesAvailabilityException {
 
-    String jsonDisplayName = getRawDisplayName(ctxt, appName, db, tableId, elementKey);
-    String displayName = LocalizationUtils.getLocalizedDisplayName(jsonDisplayName);
+    String jsonDisplayName = getRawDisplayName(dbInterface, appName, db, tableId, elementKey);
+    String displayName = LocalizationUtils.getLocalizedDisplayName(appName, tableId,
+        userSelectedDefaultLocale, jsonDisplayName);
     return displayName;
   }
 
-  public String getRawDisplayName(CommonApplication ctxt, String appName, DbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
+  public String getRawDisplayName(UserDbInterface dbInterface, String appName, DbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
 
     List<KeyValueStoreEntry> displayNameList =
-            ctxt.getDatabase().getTableMetadata(appName, db, tableId,
+        dbInterface.getTableMetadata(appName, db, tableId,
                     KeyValueStoreConstants.PARTITION_COLUMN, elementKey, KeyValueStoreConstants
                     .COLUMN_DISPLAY_NAME, null).getEntries();
     if ( displayNameList.size() != 1 ) {
       // default to the column elementKey
       return NameUtil.normalizeDisplayName(NameUtil.constructSimpleDisplayName(elementKey));
     }
-    String jsonDisplayName = KeyValueStoreUtils.getObject(appName, displayNameList.get(0));
+    String jsonDisplayName = KeyValueStoreUtils.getObject(displayNameList.get(0));
     if ( jsonDisplayName == null ) {
       jsonDisplayName = NameUtil.normalizeDisplayName(NameUtil.constructSimpleDisplayName(elementKey));
     }
     return jsonDisplayName;
   }
 
-  public ArrayList<Map<String,Object>> getDisplayChoicesList(CommonApplication ctxt, String appName, DbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
+  public ArrayList<Map<String,Object>> getDisplayChoicesList(UserDbInterface dbInterface, String appName, DbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
 
-    List<KeyValueStoreEntry> choicesListList = ctxt.getDatabase()
+    List<KeyValueStoreEntry> choicesListList = dbInterface
         .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_COLUMN,
             elementKey, KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST, null).getEntries();
     if (choicesListList.size() != 1) {
@@ -123,14 +129,14 @@ public class ColumnUtil {
     /*
      * Getting the choiceListId
      */
-    String choiceListId = KeyValueStoreUtils.getString(appName, choicesListList.get(0));
+    String choiceListId = KeyValueStoreUtils.getString(choicesListList.get(0));
     if (choiceListId == null || choiceListId.trim().length() == 0) {
       return new ArrayList<Map<String,Object>>();
     }
     /*
      * Use that to get the choiceListJSON
      */
-    String choiceListJSON = ctxt.getDatabase().getChoiceList(appName, db, choiceListId);
+    String choiceListJSON = dbInterface.getChoiceList(appName, db, choiceListId);
     if (choiceListJSON == null || choiceListJSON.trim().length() == 0) {
       return new ArrayList<Map<String,Object>>();
     }
@@ -167,7 +173,7 @@ public class ColumnUtil {
     return jsonDisplayChoices;
   }
 
-  public void setDisplayChoicesList( CommonApplication ctxt, String appName, DbHandle db, String tableId, ColumnDefinition cd, ArrayList<Map<String,Object>> choices) throws ServicesAvailabilityException {
+  public void setDisplayChoicesList(UserDbInterface dbInterface, String appName, DbHandle db, String tableId, ColumnDefinition cd, ArrayList<Map<String,Object>> choices) throws ServicesAvailabilityException {
     String choiceListJSON = null;
     try {
       choiceListJSON = ODKFileUtils.mapper.writeValueAsString(choices);
@@ -175,16 +181,16 @@ public class ColumnUtil {
       e1.printStackTrace();
       throw new IllegalArgumentException("Unexpected displayChoices conversion failure!");
     }
-    String choiceListId = ctxt.getDatabase().setChoiceList(appName, db, choiceListJSON);
+    String choiceListId = dbInterface.setChoiceList(appName, db, choiceListJSON);
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId,
         KeyValueStoreConstants.PARTITION_COLUMN, cd.getElementKey(),
         KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST, ElementDataType.string, choiceListId);
-    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
+    dbInterface.replaceTableMetadata(appName, db, e);
   }
   
-  public ArrayList<JoinColumn> getJoins(CommonApplication ctxt, String appName, DbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
+  public ArrayList<JoinColumn> getJoins(UserDbInterface dbInterface, String appName, DbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
 
-    List<KeyValueStoreEntry> joinsList = ctxt.getDatabase()
+    List<KeyValueStoreEntry> joinsList = dbInterface
         .getTableMetadata(appName, db, tableId, KeyValueStoreConstants.PARTITION_COLUMN,
             elementKey, KeyValueStoreConstants.COLUMN_JOINS, null).getEntries();
     if (joinsList.size() != 1) {
@@ -193,7 +199,7 @@ public class ColumnUtil {
 
     ArrayList<JoinColumn> joins = null;
     try {
-      joins = JoinColumn.fromSerialization(KeyValueStoreUtils.getObject(appName, joinsList.get(0)));
+      joins = JoinColumn.fromSerialization(KeyValueStoreUtils.getObject(joinsList.get(0)));
     } catch (JsonParseException e) {
       e.printStackTrace();
     } catch (JsonMappingException e) {
@@ -204,15 +210,15 @@ public class ColumnUtil {
     return (joins == null) ? new ArrayList<JoinColumn>() : joins;
   }
 
-  public int getColumnWidth( CommonApplication ctxt, String appName, DbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
-    List<KeyValueStoreEntry> kvsList = ctxt.getDatabase()
+  public int getColumnWidth(UserDbInterface dbInterface, String appName, DbHandle db, String tableId, String elementKey) throws ServicesAvailabilityException {
+    List<KeyValueStoreEntry> kvsList = dbInterface
         .getTableMetadata(appName, db, tableId, LocalKeyValueStoreConstants.Spreadsheet.PARTITION,
             elementKey, LocalKeyValueStoreConstants.Spreadsheet.KEY_COLUMN_WIDTH, null)
         .getEntries();
     if (kvsList.size() != 1) {
       return LocalKeyValueStoreConstants.Spreadsheet.DEFAULT_COL_WIDTH;
     }
-    Integer value = KeyValueStoreUtils.getInteger(appName, kvsList.get(0));
+    Integer value = KeyValueStoreUtils.getInteger(kvsList.get(0));
     if (value == null || value <= 0) {
       return LocalKeyValueStoreConstants.Spreadsheet.DEFAULT_COL_WIDTH;
     }
@@ -225,7 +231,7 @@ public class ColumnUtil {
   /**
    * Set the width of the given column.
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param db
    * @param tableId
@@ -233,37 +239,37 @@ public class ColumnUtil {
    * @param width
    * @throws ServicesAvailabilityException
    */
-  public void setColumnWidth( CommonApplication ctxt, String appName, DbHandle db, String tableId, String elementKey, Integer width) throws ServicesAvailabilityException {
+  public void setColumnWidth(UserDbInterface dbInterface, String appName, DbHandle db, String tableId, String elementKey, Integer width) throws ServicesAvailabilityException {
     KeyValueStoreEntry e = KeyValueStoreUtils.buildEntry(tableId,
             LocalKeyValueStoreConstants.Spreadsheet.PARTITION,
             elementKey,
             LocalKeyValueStoreConstants.Spreadsheet.KEY_COLUMN_WIDTH,
             ElementDataType.integer, (width == null) ? null : Integer.toString(width));
-    ctxt.getDatabase().replaceTableMetadata(appName, db, e);
+    dbInterface.replaceTableMetadata(appName, db, e);
   }
 
   /**
    * Wrapper to handle database interactions for setIndexColumn()
    *
-   * @param ctxt
+   * @param dbInterface
    * @param appName
    * @param tableId
    * @param elementKey
    * @throws ServicesAvailabilityException
    */
-  public void atomicSetColumnWidth( CommonApplication ctxt, String appName, String tableId, String elementKey, Integer width) throws ServicesAvailabilityException {
+  public void atomicSetColumnWidth(UserDbInterface dbInterface, String appName, String tableId, String elementKey, Integer width) throws ServicesAvailabilityException {
     DbHandle db = null;
     try {
-      db = ctxt.getDatabase().openDatabase(appName);
+      db = dbInterface.openDatabase(appName);
 
-      setColumnWidth(ctxt, appName, db, tableId, elementKey, width);
+      setColumnWidth(dbInterface, appName, db, tableId, elementKey, width);
     } catch (ServicesAvailabilityException e) {
       WebLogger.getLogger(appName).printStackTrace(e);
       throw e;
     } finally {
       if ( db != null ) {
         try {
-          ctxt.getDatabase().closeDatabase(appName, db);
+          dbInterface.closeDatabase(appName, db);
         } catch (ServicesAvailabilityException e) {
           WebLogger.getLogger(appName).printStackTrace(e);
           throw e;
@@ -272,14 +278,14 @@ public class ColumnUtil {
     }
   }
 
-  public Map<String, Integer> getColumnWidths( CommonApplication ctxt, String appName, DbHandle db, String tableId, OrderedColumns columns) throws ServicesAvailabilityException {
+  public Map<String, Integer> getColumnWidths(UserDbInterface dbInterface, String appName, DbHandle db, String tableId, OrderedColumns columns) throws ServicesAvailabilityException {
     List<KeyValueStoreEntry> kvsList =
-            ctxt.getDatabase().getTableMetadata(appName, db, tableId,
+        dbInterface.getTableMetadata(appName, db, tableId,
                 LocalKeyValueStoreConstants.Spreadsheet.PARTITION, null,
                 LocalKeyValueStoreConstants.Spreadsheet.KEY_COLUMN_WIDTH, null).getEntries();
     Map<String, Integer> colWidths = new HashMap<String, Integer>();
     for (KeyValueStoreEntry entry : kvsList) {
-      Integer value = KeyValueStoreUtils.getInteger(appName, entry);
+      Integer value = KeyValueStoreUtils.getInteger(entry);
       if (value == null || value <= 0) {
         value = LocalKeyValueStoreConstants.Spreadsheet.DEFAULT_COL_WIDTH;
       }
