@@ -36,7 +36,7 @@ public abstract class BaseActivity extends Activity implements DatabaseConnectio
   @Override
   protected void onDestroy() {
     ((CommonApplication) getApplication()).onActivityDestroy(this);
-    super.onDestroy();
+    super.onDestroy()
   }
 
 }
