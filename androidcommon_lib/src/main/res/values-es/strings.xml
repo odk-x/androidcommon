@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ODK Common</string>
+    <string name="app_userLabel">OpenDataKit</string>
+
+    <string name="enter_new_password">Llame de paso</string>
+    <string name="verify_new_password">Llame de paso de nuevo</string>
+    <string name="password">Llame de paso</string>
+    <string name="username">Nombre de usuario</string>
+
+
+    <string name="importing_file">Importando archivo (%1$d de %2$d): %3$s\n(%4$s)</string>
+    <string name="bad_config_properties_file">Archivo config.properties no válido</string>
+    <string name="defining_tableid_success">Leído tabula %1$s con éxito</string>
+    <string name="defining_tableid_failure">Error al leer definición de tabula %1$s</string>
+
+
+    <string name="no_items_display">Sin resultos.</string>
+
+    <string name="activity_not_found">No se puede encontrar un actividad que puede tomar: %s</string>
+
+    <string name="dependency_missing">Hace faulta:</string>
+    <string name="dependencies_missing">Hace faulta:</string>
+    <string name="oi_missing">Por favor instala usted OI File Manager antes de continuar.</string>
+    <string name="services_missing">Por favor instala usted ODK Services antes de continuar.</string>
+    <string name="oi_and_services_missing">Por favor instala usted ODK Services y OI File Manager antes de continuar.</string>
+</resources>
