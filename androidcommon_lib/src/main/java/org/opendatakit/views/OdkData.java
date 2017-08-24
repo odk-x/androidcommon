@@ -17,6 +17,7 @@ package org.opendatakit.views;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import org.opendatakit.activities.IOdkDataActivity;
+import org.opendatakit.consts.IntentConsts;
 import org.opendatakit.database.queries.BindArgs;
 import org.opendatakit.logging.WebLogger;
 import org.opendatakit.provider.DataTableColumns;
@@ -44,11 +45,11 @@ public class OdkData {
     /**
      * for conflict resolution screens
      */
-    public static final String TABLE_ID = "tableId";
+    public static final String TABLE_ID = IntentConsts.INTENT_KEY_TABLE_ID;
     /**
      * common for all activities
      */
-    public static final String APP_NAME = "appName";
+    public static final String APP_NAME = IntentConsts.INTENT_KEY_APP_NAME;
     /**
      * Tells what time of view it should be
      * displaying.
@@ -72,7 +73,7 @@ public class OdkData {
      */
     public static final String SQL_WHERE = "sqlWhereClause";
     /**
-     * An array of strings for restricting the rows displayed in the table.
+     * A JSON serialization of an array of objects for restricting the rows displayed in the table.
      */
     public static final String SQL_SELECTION_ARGS = "sqlSelectionArgs";
     /**
