@@ -185,7 +185,11 @@ public abstract class ExecutorProcessor implements Runnable {
     } catch (SQLiteException e) {
       reportErrorAndCleanUp(SQLiteException.class.getName() +
           ": " + e.getMessage());
+    } catch (IllegalStateException e) {
+      WebLogger.getLogger(context.getAppName()).printStackTrace(e);
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": " + e.getMessage());
     } catch (Throwable t) {
+      WebLogger.getLogger(context.getAppName()).printStackTrace(t);
       reportErrorAndCleanUp(IllegalStateException.class.getName() +
           ": ExecutorProcessor unexpected exception " + t.toString());
     }
@@ -198,10 +202,12 @@ public abstract class ExecutorProcessor implements Runnable {
    */
   private void reportErrorAndCleanUp(String errorMessage) {
     try {
-      dbInterface.closeDatabase(context.getAppName(), dbHandle);
-    } catch (Exception e) {
+      if ( dbHandle != null ) {
+        dbInterface.closeDatabase(context.getAppName(), dbHandle);
+      }
+    } catch (Throwable t) {
       // ignore this -- favor first reported error
-      WebLogger.getLogger(context.getAppName()).printStackTrace(e);
+      WebLogger.getLogger(context.getAppName()).printStackTrace(t);
       WebLogger.getLogger(context.getAppName()).w(TAG, "error while releasing database conneciton");
     } finally {
       context.removeActiveConnection(transId);

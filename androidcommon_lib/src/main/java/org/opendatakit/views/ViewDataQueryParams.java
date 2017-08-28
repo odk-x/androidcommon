@@ -23,14 +23,14 @@ import org.opendatakit.database.queries.BindArgs;
  */
 
 public class ViewDataQueryParams implements Parcelable {
-   public String tableId;
-   public String rowId;
-   public String whereClause;
-   public BindArgs selectionArgs;
-   public String[] groupBy;
-   public String having;
-   public String orderByElemKey;
-   public String orderByDir;
+   public final String tableId;
+   public final String rowId;
+   public final String whereClause;
+   public final BindArgs selectionArgs;
+   public final String[] groupBy;
+   public final String having;
+   public final String orderByElemKey;
+   public final String orderByDir;
 
    public ViewDataQueryParams(String tableId, String rowId, String whereClause, BindArgs
        selectionArgs, String[] groupBy, String having, String orderByElemKey, String orderByDir) {

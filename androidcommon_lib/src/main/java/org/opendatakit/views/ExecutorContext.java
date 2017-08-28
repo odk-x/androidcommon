@@ -93,9 +93,10 @@ public class ExecutorContext implements DatabaseConnectionListener {
     }
 
     public static synchronized ExecutorContext getContext(IOdkDataActivity fragment) {
-      if ( currentContext != null && (currentContext.activity == fragment)) {
+      if ( currentContext != null && (currentContext.activity == fragment) && currentContext.isAlive()) {
         return currentContext;
       } else {
+        // the constructor will update currentContext...
         return new ExecutorContext(fragment);
       }
     }
