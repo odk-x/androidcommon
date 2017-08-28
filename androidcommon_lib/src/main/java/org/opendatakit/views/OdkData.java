@@ -141,7 +141,7 @@ public class OdkData {
    * @return null if there is no result, otherwise the responseJSON of the last action
    */
   public String getResponseJSON() {
-    return mActivity.getResponseJSON();
+    return mActivity.getResponseJSON(getFragmentID());
   }
 
   /**
@@ -176,11 +176,13 @@ public class OdkData {
 
   private String getFragmentID() {
     IOdkWebView webView = mWebView.get();
-     if (webView == null) {
-        return null;
-     }
+    if (webView == null) {
+      // should not occur unless we are tearing down the view
+      WebLogger.getLogger(mActivity.getAppName()).w(TAG, "null webView");
+      return null;
+    }
 
-     return webView.getContainerFragmentID();
+    return webView.getContainerFragmentID();
   }
 
   /**

@@ -15,6 +15,7 @@
 package org.opendatakit.views;
 
 import org.opendatakit.database.queries.BindArgs;
+import org.opendatakit.logging.WebLogger;
 
 /**
  * @author mitchellsundt@gmail.com
@@ -84,6 +85,7 @@ public class ExecutorRequest {
         this.deleteAllCheckpoints = false;
         this.commitTransaction = false;
         this.callerID = null;
+        WebLogger.getContextLogger().d("ExecutorRequest", "updateExecutorContext");
     }
 
     /**
