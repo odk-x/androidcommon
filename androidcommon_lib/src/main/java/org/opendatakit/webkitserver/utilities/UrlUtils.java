@@ -19,37 +19,49 @@ import java.net.URISyntaxException;
 
 import org.opendatakit.consts.WebkitServerConsts;
 
-import android.content.Context;
 import android.net.Uri;
 
+/**
+ * Utilities class for urls
+ */
 public class UrlUtils {
 
-  private static final String SCHEME_HTTP = "http";
-
-  public static Uri getWebViewContentUri(Context c) {
-    return Uri.parse(SCHEME_HTTP + "://" + WebkitServerConsts.HOSTNAME + ":"
-        + Integer.toString(WebkitServerConsts.PORT) + "/");
-  }
-  
   /**
-   * Return the file name from a URI segment. The URI segment is expected to
-   * be a valid segment as might follow a hostname. This method returns the
-   * file name from that segment without hash or query parameters.
+   * Do not instantiate this
+   */
+  private UrlUtils() {
+  }
+
+  /**
+   * Get the most basic web view path. The appName should be applied to this
+   * in order to reference content under ODKFileUtils.getAppFolder(appName)
+   *
+   * @return
+   */
+  public static Uri getWebViewContentUri() {
+    return Uri.parse(WebkitServerConsts.SCHEME + "://" + WebkitServerConsts.HOSTNAME +
+                    ":" + Integer.toString(WebkitServerConsts.PORT) + "/");
+  }
+
+  /**
+   * Return the uri path portion of a uriFragment that might include query or hash
+   * parts. The uriFragment is expected to be a valid string as might follow a hostname.
+   * This method returns the path portion without hash or query parameters.
    * <p>
    * For example, <code>my/file/path.html#foo=2</code> would return
    * <code>my/file/path.html</code>.
    * <p>
    * Similarly, <code>a/different/file.html?foo=bar</code> would return
    * <code>a/different/file.html</code>.
-   * @param segment
+   * @param uriFragment
    * @return
    */
-  public static String getFileNameFromUriSegment(String segment) {
-    int parameterIndex = getIndexOfParameters(segment);
+  public static String getPathFromUriFragment(String uriFragment) {
+    int parameterIndex = getIndexOfParameters(uriFragment);
     if (parameterIndex == -1) {
-      return segment;
+      return uriFragment;
     } else {
-      return segment.substring(0, parameterIndex);
+      return uriFragment.substring(0, parameterIndex);
     }
   }
   
@@ -87,107 +99,62 @@ public class UrlUtils {
   }
   
   /**
-   * Return the parameters from a URL segment. For example,
+   * Return the parameters from a uriFragment. For example,
    * <code>my/file/path.html#foo</code> would return "#foo".
    * Similarly, <code>a/different/file.html?foo=bar</code> would
    * return "?foo=bar".
    * <p>
    * Returns "" if there are no parameters.
-   * @param segment
+   * @param uriFragment
    * @return
    */
-  public static String getParametersFromSegment(String segment) {
-    int parameterIndex = getIndexOfParameters(segment);
+  public static String getParametersFromUriFragment(String uriFragment) {
+    int parameterIndex = getIndexOfParameters(uriFragment);
     
     String notPresentFlag = "";
     
     if (parameterIndex == -1) {
       return notPresentFlag;
     } else {
-      return segment.substring(parameterIndex);
+      return uriFragment.substring(parameterIndex);
     }
     
   }
 
   /**
-   * Handles properly encoding a path segment of a URL for use over the wire.
-   * Converts arbitrary characters into those appropriate for a segment in a
-   * URL path.
-   *
-   * @param segment
-   * @return encodedSegment
-   */
-  public static String encodeSegment(String segment) {
-    // the segment can have URI-inappropriate characters. Encode it first...
-    String encodedSegment = Uri.encode(segment, null);
-//    try {
-//      encodedSegment = UriUtils.encodePathSegment(segment, CharEncoding.US_ASCII);
-//    } catch (UnsupportedEncodingException e) {
-//      e.printStackTrace();
-//      throw new IllegalStateException("Should be able to encode with ASCII");
-//    }
-    return encodedSegment;
-  }
-
-  /**
    * The constructed URI may be invalid if it references a file that is in a
-   * legacy directory or an inaccessible directory.
+   * legacy directory or an inaccessible directory. Assumes the uriFragment is
+   * a valid uri fragment that might include query or hash parameters.
+   *
+   * Strips off the query and/or hash parameter, constructs the full uri for this appName
+   * and residual path portion, then appends the supplied query and/or hash parameter.
    *
    * Typical usage:
    *
    * File file;
    *
-   * getAsWebViewUri(this, appName, ODKFileUtils.asUriFragment(appName, file));
+   * getAsWebViewUri(appName, ODKFileUtils.asUriFragment(appName, file));
    *
-   * @param context
    * @param appName
    * @param uriFragment
    * @return
    */
-  public static String getAsWebViewUri(Context context, String appName, String uriFragment) {
-    Uri u = UrlUtils.getWebViewContentUri(context);
-    // we need to escape the segments.
-    u = Uri.withAppendedPath(u, encodeSegment(appName));
+  public static String getAsWebViewUri(String appName, String uriFragment) {
+    int parameterIndex = getIndexOfParameters(uriFragment);
 
-    String pathPart;
-    String queryPart;
-    String hashPart;
-    int idxQ = uriFragment.indexOf("?");
-    int idxH = uriFragment.indexOf("#");
-    if ( idxQ != -1 ) {
-      if ( idxH != -1 ) {
-        if ( idxH < idxQ ) {
-          pathPart = uriFragment.substring(0,idxH);
-          queryPart = "";
-          hashPart = uriFragment.substring(idxH);
-        } else {
-          pathPart = uriFragment.substring(0,idxQ);
-          queryPart = uriFragment.substring(idxQ, idxH);
-          hashPart = uriFragment.substring(idxH);
-        }
-      } else {
-        pathPart = uriFragment.substring(0,idxQ);
-        queryPart = uriFragment.substring(idxQ);
-        hashPart = "";
-      }
-    } else if ( idxH != -1 ) {
-      pathPart = uriFragment.substring(0,idxH);
-      queryPart = "";
-      hashPart = uriFragment.substring(idxH);
-    } else {
-      pathPart = uriFragment;
-      queryPart = "";
-      hashPart = "";
+    String pathPart = uriFragment;
+    String parameters = "";
+
+    if (parameterIndex != -1) {
+      pathPart = uriFragment.substring(0, parameterIndex);
+      parameters = uriFragment.substring(parameterIndex);
     }
 
-    String[] segments = pathPart.split("/");
-    for (String s : segments) {
-      u = Uri.withAppendedPath(u, encodeSegment(s));
-    }
-    // unclear what escaping is needed on query and hash parts...
-    return u.toString() + queryPart + hashPart;
+    Uri u = getWebViewContentUri();
+    String fullPath = u.buildUpon().appendPath(appName).appendEncodedPath(pathPart).toString();
+    // assume query and hash parts are properly escaped...
+    return fullPath + parameters;
   }
-
 
   public static boolean isValidUrl(String url) {
 
