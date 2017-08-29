@@ -1,6 +1,7 @@
 package org.opendatakit.activities;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.DialogInterface;
@@ -9,7 +10,6 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v13.app.ActivityCompat;
-import android.support.v13.app.FragmentCompat;
 import android.widget.Toast;
 
 import org.opendatakit.androidcommon.R;
@@ -18,7 +18,7 @@ import org.opendatakit.consts.RequestCodeConsts;
 import org.opendatakit.utilities.RuntimePermissionUtils;
 
 
-public abstract class BaseLauncherActivity extends BaseActivity implements FragmentCompat.OnRequestPermissionsResultCallback {
+public abstract class BaseLauncherActivity extends BaseActivity implements ActivityCompat.OnRequestPermissionsResultCallback {
   protected static final int REQUIRED_PERMISSIONS_REQ_CODE = 0;
 
   protected static final String[] REQUIRED_PERMISSIONS = new String[] {
@@ -34,7 +34,11 @@ public abstract class BaseLauncherActivity extends BaseActivity implements Fragm
 
     this.savedInstanceState = savedInstanceState;
 
-    if (!RuntimePermissionUtils.checkPackageAllPermission(
+    // 1. check if Services has the right permissions
+    //      if not, launch Services
+    // 2. check if this app has the right permissions
+
+    if (!RuntimePermissionUtils.checkPackageAnyPermission(
         this, IntentConsts.Services.PACKAGE_NAME, REQUIRED_PERMISSIONS)) {
       Intent launchIntent = new Intent();
       launchIntent.setComponent(
@@ -43,13 +47,13 @@ public abstract class BaseLauncherActivity extends BaseActivity implements Fragm
       launchIntent.putExtra(IntentConsts.INTENT_KEY_PERMISSION_ONLY, true);
 
       startActivityForResult(launchIntent, RequestCodeConsts.RequestCodes.LAUNCH_MAIN_ACTIVITY);
-    }
-
-    if (!RuntimePermissionUtils.checkSelfAnyPermission(this, REQUIRED_PERMISSIONS)) {
-      ActivityCompat.requestPermissions(
-          this, REQUIRED_PERMISSIONS, REQUIRED_PERMISSIONS_REQ_CODE);
     } else {
-      onCreateWithPermission(savedInstanceState);
+      if (!RuntimePermissionUtils.checkSelfAnyPermission(this, REQUIRED_PERMISSIONS)) {
+        ActivityCompat.requestPermissions(
+            this, REQUIRED_PERMISSIONS, REQUIRED_PERMISSIONS_REQ_CODE);
+      } else {
+        onCreateWithPermission(savedInstanceState);
+      }
     }
   }
 
@@ -90,16 +94,22 @@ public abstract class BaseLauncherActivity extends BaseActivity implements Fragm
   }
 
   @Override
-  protected void onResume() {
-    // this is in onResume instead of onActivityResult because onResume is triggered first
-    if (!RuntimePermissionUtils.checkPackageAllPermission(
-        this, IntentConsts.Services.PACKAGE_NAME, REQUIRED_PERMISSIONS)) {
-      Toast
-          .makeText(this, R.string.required_permission_perm_denied_services, Toast.LENGTH_LONG)
-          .show();
-      finish();
+  protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    super.onActivityResult(requestCode, resultCode, data);
+
+    if(requestCode != RequestCodeConsts.RequestCodes.LAUNCH_MAIN_ACTIVITY) {
+      return;
     }
 
-    super.onResume();
+    if (resultCode != Activity.RESULT_OK) {
+      System.exit(0); // cannot properly shutdown without Services having proper permissions
+    }
+
+    if (!RuntimePermissionUtils.checkSelfAnyPermission(this, REQUIRED_PERMISSIONS)) {
+      ActivityCompat.requestPermissions(
+          this, REQUIRED_PERMISSIONS, REQUIRED_PERMISSIONS_REQ_CODE);
+    } else {
+      onCreateWithPermission(savedInstanceState);
+    }
   }
 }
