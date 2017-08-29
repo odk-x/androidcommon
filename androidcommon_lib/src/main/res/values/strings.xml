@@ -28,5 +28,6 @@
 
     <string name="required_permission_rationale">This app needs external storage access to interact with other ODK apps</string>
     <string name="required_permission_perm_denied">This app cannot function without write access to external storage</string>
+    <string name="required_permission_perm_denied_services">Services cannot function without write access to external storage</string>
 
 </resources>
