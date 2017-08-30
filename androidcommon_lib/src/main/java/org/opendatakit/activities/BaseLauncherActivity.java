@@ -38,7 +38,7 @@ public abstract class BaseLauncherActivity extends BaseActivity implements Activ
     //      if not, launch Services
     // 2. check if this app has the right permissions
 
-    if (!RuntimePermissionUtils.checkPackageAnyPermission(
+    if (!RuntimePermissionUtils.checkPackageAllPermission(
         this, IntentConsts.Services.PACKAGE_NAME, REQUIRED_PERMISSIONS)) {
       Intent launchIntent = new Intent();
       launchIntent.setComponent(
@@ -48,7 +48,7 @@ public abstract class BaseLauncherActivity extends BaseActivity implements Activ
 
       startActivityForResult(launchIntent, RequestCodeConsts.RequestCodes.LAUNCH_MAIN_ACTIVITY);
     } else {
-      if (!RuntimePermissionUtils.checkSelfAnyPermission(this, REQUIRED_PERMISSIONS)) {
+      if (!RuntimePermissionUtils.checkSelfAllPermission(this, REQUIRED_PERMISSIONS)) {
         ActivityCompat.requestPermissions(
             this, REQUIRED_PERMISSIONS, REQUIRED_PERMISSIONS_REQ_CODE);
       } else {
@@ -105,7 +105,7 @@ public abstract class BaseLauncherActivity extends BaseActivity implements Activ
       System.exit(0); // cannot properly shutdown without Services having proper permissions
     }
 
-    if (!RuntimePermissionUtils.checkSelfAnyPermission(this, REQUIRED_PERMISSIONS)) {
+    if (!RuntimePermissionUtils.checkSelfAllPermission(this, REQUIRED_PERMISSIONS)) {
       ActivityCompat.requestPermissions(
           this, REQUIRED_PERMISSIONS, REQUIRED_PERMISSIONS_REQ_CODE);
     } else {
