@@ -15,6 +15,7 @@ import android.widget.Toast;
 import org.opendatakit.androidcommon.R;
 import org.opendatakit.consts.IntentConsts;
 import org.opendatakit.consts.RequestCodeConsts;
+import org.opendatakit.dependencies.DependencyChecker;
 import org.opendatakit.utilities.RuntimePermissionUtils;
 
 
@@ -33,6 +34,10 @@ public abstract class BaseLauncherActivity extends BaseActivity implements Activ
     super.onCreate(savedInstanceState);
 
     this.savedInstanceState = savedInstanceState;
+
+    if (!DependencyChecker.checkDependencies(this)) {
+      return;
+    }
 
     // 1. check if Services has the right permissions
     //      if not, launch Services
