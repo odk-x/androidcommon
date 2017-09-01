@@ -3,3 +3,6 @@ local.properties
 .gradle
 .idea
 *.iml
+androidcommon_lib/google-services.json
+androidcommon_lib/fabric.properties
+odkanalytics/
