@@ -33,15 +33,17 @@ public interface IOdkDataActivity {
    * an optional parameter to identify which view should be signalled.
    *
    * @param responseJSON
+   * @param fragmentID
    */
-  void signalResponseAvailable(String responseJSON, String viewID);
+  void signalResponseAvailable(String responseJSON, String fragmentID);
 
   /**
    * Access the queued responseJSON
    *
+   * @param fragmentID
    * @return responseJSON or null if there is none available
    */
-  String getResponseJSON();
+  String getResponseJSON(String fragmentID);
 
   /**
    * Return a new ExecutorProcessor that will be able to process data off the
