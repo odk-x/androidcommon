@@ -155,7 +155,11 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
   }
 
   @Override
-  @SuppressLint("NewApi")
+  public void onResume() {
+    super.onResume();
+  }
+
+  @Override
   public void onPause() {
     super.onPause();
     this.resetLoadPageStatus(loadPageUrl, getContainerFragmentID());
