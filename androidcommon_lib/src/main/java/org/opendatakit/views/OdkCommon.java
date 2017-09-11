@@ -36,6 +36,7 @@ import org.opendatakit.provider.FormsProviderUtils;
 import org.opendatakit.utilities.ODKFileUtils;
 import org.opendatakit.logging.WebLogger;
 import org.opendatakit.webkitserver.utilities.SerializationUtils;
+import org.opendatakit.webkitserver.utilities.UrlUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -246,7 +247,7 @@ public class OdkCommon {
    */
   public String getBaseUrl() {
     logDebug("getBaseUrl()");
-    return ODKFileUtils.getRelativeSystemPath();
+    return getBaseContentUri();
   }
 
   /**

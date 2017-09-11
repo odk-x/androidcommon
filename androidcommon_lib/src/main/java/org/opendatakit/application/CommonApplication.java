@@ -185,8 +185,6 @@ public abstract class CommonApplication extends ToolAwareApplication implements
         }
         application.triggerDatabaseEvent(false);
       }
-
-      application.configureView();
     }
 
     private void doServiceDisconnected(CommonApplication application, ComponentName className) {
@@ -237,8 +235,6 @@ public abstract class CommonApplication extends ToolAwareApplication implements
         application.triggerDatabaseEvent(false);
       }
 
-      application.configureView();
-
       // the bindToService() method decides whether to connect or not...
       application.bindToService();
     }
@@ -274,7 +270,6 @@ public abstract class CommonApplication extends ToolAwareApplication implements
         e.printStackTrace();
       }
       // release interfaces held by the view
-      application.configureView();
       application.triggerDatabaseEvent(false);
     }
   }
@@ -321,9 +316,7 @@ public abstract class CommonApplication extends ToolAwareApplication implements
   public abstract int getConfigZipResourceId();
   
   public abstract int getSystemZipResourceId();
-  
-  public abstract int getWebKitResourceId();
-  
+
   public boolean shouldRunInitializationTask(String appName) {
     PropertiesSingleton props = CommonToolProperties.get(this, appName);
     return props.shouldRunInitializationTask(this.getToolName());
@@ -397,8 +390,6 @@ public abstract class CommonApplication extends ToolAwareApplication implements
     // be sure the services are connected...
     mBackgroundServices.clearDestroyingFlag();
 
-    configureView();
-
     // failsafe -- ensure that the services are active...
     bindToService();
   }
@@ -429,25 +420,6 @@ public abstract class CommonApplication extends ToolAwareApplication implements
   private WebkitServerInterface getWebkitServer() {
       return mBackgroundServices.getWebkitServer();
 
-  }
-  
-  public void configureView() {
-    if ( activeActivity != null ) {
-      Log.i(TAG, "configureView - possibly updating service information within ODKWebView");
-      if ( getWebKitResourceId() != -1 ) {
-        View v = activeActivity.findViewById(getWebKitResourceId());
-        if (v != null && v instanceof ODKWebView) {
-          ODKWebView wv = (ODKWebView) v;
-          if (mBackgroundServices.isDestroyingFlag()) {
-            wv.serviceChange(false);
-          } else {
-            WebkitServerInterface webkitServerIf = getWebkitServer();
-            UserDbInterface dbIf = getDatabase();
-            wv.serviceChange(webkitServerIf != null && dbIf != null);
-          }
-        }
-      }
-    }
   }
 
   // /////////////////////////////////////////////////////////////////////////

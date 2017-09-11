@@ -54,20 +54,34 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
 
   private static final String t = "ODKWebView";
   private static final String BASE_STATE = "BASE_STATE";
-  private static final String JAVASCRIPT_REQUESTS_WAITING_FOR_PAGE_LOAD = "JAVASCRIPT_REQUESTS_WAITING_FOR_PAGE_LOAD";
 
   protected WebLoggerIf log;
   private OdkCommon odkCommon;
   private OdkData odkData;
-  private boolean isInactive = false;
   private String loadPageUrl = null;
   private String containerFragmentID = null;
+  /**
+   * isInactive == true -- when this View is being destroyed
+   * shouldForceLoadDuringReload == true -- if true, always call loadUrl(loadPageUrl).
+   *                      this should be set to true onCreate() and after onPause()
+   *                      or when the database becomes unavailable so that the page will
+   *                      load when the database becomes available (generally, during
+   *                      the Activity.postResume() phase).
+   * isLoadPageFrameworkFinished == false -- this will be set to true once the framework
+   *                      has completely loaded.
+   *
+   * The general state flow is:
+   *     on create               -> (false, true, false)
+   *     on pause                -> (false, true, false)
+   *     on database unavailable -> (false, true, false)
+   *     (false, true, false) -> on database available -> (false, false, false) invoke loadUrl(url)
+   *     (false, false, false) -> on framework loaded  -> (false, false, true)
+   *
+   *     on destroy -> (true, *, *)
+   */
+  private boolean isInactive = false;
+  private boolean shouldForceLoadDuringReload = true;
   private boolean isLoadPageFrameworkFinished = false;
-  private boolean isLoadPageFinished = false;
-  private boolean isJavascriptFlushActive = false;
-  private boolean isFirstPageLoad = true;
-  private boolean shouldForceLoadDuringReload = false;
-  private final LinkedList<String> javascriptRequestsWaitingForPageLoad = new LinkedList<String>();
 
   /**
    * @return if the webpage has a framework that will call back to notify that it has loaded,
@@ -126,15 +140,6 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
     if ( baseState != null ) {
       savedState.putParcelable(BASE_STATE, baseState);
     }
-    if ( javascriptRequestsWaitingForPageLoad.size() == 0 ) {
-      return savedState;
-    }
-    String[] waitQueue = new String[javascriptRequestsWaitingForPageLoad.size()];
-    int i = 0;
-    for ( String s : javascriptRequestsWaitingForPageLoad ) {
-      waitQueue[i++] = s;
-    }
-    savedState.putStringArray(JAVASCRIPT_REQUESTS_WAITING_FOR_PAGE_LOAD, waitQueue);
     return savedState;
   }
 
@@ -142,25 +147,22 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
   protected void onRestoreInstanceState (Parcelable state) {
     log.i(t, "[" + this.hashCode() + "] onRestoreInstanceState()");
     Bundle savedState = (Bundle) state;
-    if ( savedState.containsKey(JAVASCRIPT_REQUESTS_WAITING_FOR_PAGE_LOAD)) {
-      String[] waitQueue = savedState.getStringArray(JAVASCRIPT_REQUESTS_WAITING_FOR_PAGE_LOAD);
-      for ( String s : waitQueue ) {
-        javascriptRequestsWaitingForPageLoad.add(s);
-      }
-    }
-    isFirstPageLoad = true;
 
     if ( savedState.containsKey(BASE_STATE) ) {
       Parcelable baseState = savedState.getParcelable(BASE_STATE);
       super.onRestoreInstanceState(baseState);
     }
-    loadPage();
   }
 
   @Override
-  @SuppressLint("NewApi")
+  public void onResume() {
+    super.onResume();
+  }
+
+  @Override
   public void onPause() {
     super.onPause();
+    this.resetLoadPageStatus(loadPageUrl, getContainerFragmentID());
   }
 
   @SuppressLint("NewApi")
@@ -254,23 +256,32 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
    * odkCommon.getFirstQueuedAction() to retrieve the action.
    * If the returned value is a string, it is a Url change
    * request. if it is a struct, it is a doAction result.
+   * If the page has not yet loaded, we suppress this
+   * notification.
    */
   public void signalQueuedActionAvailable() {
     // NOTE: this is asynchronous
     log.i(t, "[" + this.hashCode() + "] signalQueuedActionAvailable()");
-    loadJavascriptUrl("javascript:window.odkCommon.signalQueuedActionAvailable()");
+    loadJavascriptUrl("javascript:window.odkCommon.signalQueuedActionAvailable()", true);
   }
 
+  /**
+   * Signals that a databse response is available.
+   * This should be processed before the framework is fully loaded
+   * since part of loading the framework will be fetching data from
+   * the database.
+   */
   public void signalResponseAvailable() {
     // NOTE: this is asynchronous
     log.i(t, "[" + this.hashCode() + "] signalResponseAvailable()");
-    loadJavascriptUrl("javascript:odkData.responseAvailable();");
+    loadJavascriptUrl("javascript:odkData.responseAvailable();", false);
   }
 
   // called to invoke a javascript method inside the webView
-  private synchronized void loadJavascriptUrl(final String javascriptUrl) {
+  private synchronized void loadJavascriptUrl(final String javascriptUrl,
+                                              boolean suppressIfFrameworkIsNotLoaded) {
     if ( isInactive() ) return; // no-op
-    if (isLoadPageFinished || isJavascriptFlushActive) {
+    if (isLoadPageFrameworkFinished || !suppressIfFrameworkIsNotLoaded ) {
       log.i(t, "[" + this.hashCode() + "] loadJavascriptUrl: IMMEDIATE: " + javascriptUrl);
 
       // Ensure that this is run on the UI thread
@@ -283,10 +294,6 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
       } else {
         loadUrl(javascriptUrl);
       }
-
-    } else {
-      log.i(t, "[" + this.hashCode() + "] loadJavascriptUrl: QUEUING: " + javascriptUrl);
-      javascriptRequestsWaitingForPageLoad.add(javascriptUrl);
     }
   }
 
@@ -351,50 +358,51 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
 
   public synchronized void frameworkHasLoaded() {
     isLoadPageFrameworkFinished = true;
-    if (!isLoadPageFinished && !isJavascriptFlushActive) {
-      log.i(t, "[" + this.hashCode() + "] loadPageFinished: BEGINNING FLUSH");
-      isJavascriptFlushActive = true;
-      while (isJavascriptFlushActive && !javascriptRequestsWaitingForPageLoad.isEmpty()) {
-        String s = javascriptRequestsWaitingForPageLoad.removeFirst();
-        log.i(t, "[" + this.hashCode() + "] loadPageFinished: DISPATCHING javascriptUrl: " + s);
-        loadJavascriptUrl(s);
-      }
-      isLoadPageFinished = true;
-      isJavascriptFlushActive = false;
-      isFirstPageLoad = false;
-    } else {
-      log.i(t, "[" + this.hashCode() + "] loadPageFinished: IGNORING completion event");
-    }
   }
 
   protected synchronized void resetLoadPageStatus(String baseUrl, String containerFragmentID) {
+    if ( isInactive() ) return; // no-op
+    shouldForceLoadDuringReload = true;
     isLoadPageFrameworkFinished = false;
-    isLoadPageFinished = false;
     loadPageUrl = baseUrl;
     this.containerFragmentID = containerFragmentID;
-    isJavascriptFlushActive = false;
-    shouldForceLoadDuringReload = false;
-
-    // do not purge the list of actions if this is the first page load.
-    // keep them queued until they can be issued.
-    if ( !isFirstPageLoad ) {
-      while (!javascriptRequestsWaitingForPageLoad.isEmpty()) {
-        String s = javascriptRequestsWaitingForPageLoad.removeFirst();
-        log.i(t, "resetLoadPageStatus: DISCARDING javascriptUrl: " + s);
-      }
-    }
   }
 
   protected synchronized void loadPageOnUiThread(final String url, final String containerFragmentID,
                                                  boolean reload) {
      String typeOfLoad = reload ? "reloadPage" : "loadPage";
 
+     if ( isInactive() ) {
+        log.w(t, typeOfLoad + ": ignored -- webkit is inactive!");
+        return;
+     }
+
      if (url != null) {
 
-        if (!reload || (shouldForceLoadDuringReload() || hasPageFrameworkFinishedLoading() ||
-            !url.equals(getLoadPageUrl())))
+        if (!reload ||
+            shouldForceLoadDuringReload() ||
+            !url.equals(getLoadPageUrl()))
            {
+              // NOTE:
+              // there is a potential race condition if there
+              // is a page loading that hasn't yet had its framework
+              // load and we are *forcing* a reload or loading a different
+              // url. No easy way to guard against that since preventing a
+              // reload if the prior load did not complete would prevent a reset
+              // of the UI. And allowing the reload can cause a premature
+              // transition into the framework-has-loaded status. In general,
+              // we expect webkits to load a single URL and spawn new webkits
+              // when launching different URLs, so this race condition is
+              // largely prevented via our usage model: 1-url <=> 1-webkit
+              // and only reload or load that URL once.
+              //
+              // reset to a clean need-to-reload state
               resetLoadPageStatus(url, containerFragmentID);
+              // and signal that a load is commencing for url
+              // if a subsequent load for url is issued, it will
+              // be ignored until this one has completed or until
+              // a load is forced by the caller (reload == false).
+              shouldForceLoadDuringReload = false;
 
               log.i(t, typeOfLoad + ": load: " + url);
 
@@ -413,7 +421,7 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
            }
 
      } else {
-        log.w(t, typeOfLoad + ": cannot load anything url is null!");
+        log.w(t, typeOfLoad + ": cannot load anything -- url is null!");
      }
 
   }
