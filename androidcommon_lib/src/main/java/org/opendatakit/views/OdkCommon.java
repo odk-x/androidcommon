@@ -74,7 +74,8 @@ public class OdkCommon {
   }
 
   public boolean isInactive() {
-    return (mWebView.get() == null || mWebView.get().isInactive());
+    ODKWebView view = mWebView.get();
+    return (view == null || view.isInactive());
   }
 
   private void logDebug(String loggingString) {
@@ -284,6 +285,14 @@ public class OdkCommon {
   public String getSessionVariable(String elementPath) {
     logDebug("getSessionVariable("+elementPath+")");
     return mActivity.getSessionVariable(elementPath);
+  }
+
+  public void frameworkHasLoaded() {
+    logDebug("frameworkHasLoaded()");
+    ODKWebView view = mWebView.get();
+    if ( view != null ) {
+     view.frameworkHasLoaded();
+    }
   }
 
   /**
