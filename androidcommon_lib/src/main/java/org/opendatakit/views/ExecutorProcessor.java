@@ -926,6 +926,15 @@ public abstract class ExecutorProcessor implements Runnable {
       context.putOrderedColumns(request.tableId, columns);
     }
 
+    if ( request.stringifiedJSON != null ) {
+      ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
+      if (!cvValues.keySet().isEmpty()) {
+        dbInterface
+            .insertCheckpointRowWithId(context.getAppName(), dbHandle, request.tableId, columns,
+                cvValues, request.rowId);
+      }
+    }
+
     UserTable t = dbInterface
         .saveAsIncompleteMostRecentCheckpointRowWithId(context.getAppName(), dbHandle,
             request.tableId, columns, request.rowId);
@@ -951,6 +960,15 @@ public abstract class ExecutorProcessor implements Runnable {
     if (columns == null) {
       columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
       context.putOrderedColumns(request.tableId, columns);
+    }
+
+    if ( request.stringifiedJSON != null ) {
+      ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
+      if (!cvValues.keySet().isEmpty()) {
+        dbInterface
+            .insertCheckpointRowWithId(context.getAppName(), dbHandle, request.tableId, columns,
+                cvValues, request.rowId);
+      }
     }
 
     UserTable t = dbInterface
