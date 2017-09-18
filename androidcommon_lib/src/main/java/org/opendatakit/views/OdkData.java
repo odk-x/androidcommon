@@ -93,6 +93,11 @@ public class OdkData {
      * The order by direction (ASC or DESC)
      */
     public static final String SQL_ORDER_BY_DIRECTION = "sqlOrderByDirection";
+    /**
+     * The metaDataRev of the metadata for the tableId that the Javascript 
+     * side has. This may be null.
+     */
+    public static final String META_DATA_REV = "metaDataRev";
   }
 
   private WeakReference<IOdkWebView> mWebView;
