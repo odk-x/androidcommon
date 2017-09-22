@@ -263,10 +263,10 @@ public abstract class ExecutorProcessor implements Runnable {
       return cvValues;
     }
     try {
-      HashMap map = ODKFileUtils.mapper.readValue(stringifiedJSON, HashMap.class);
+      TypeReference<HashMap<String,Object>> type = new TypeReference<HashMap<String,Object>>() {};
+      HashMap<String,Object> map = ODKFileUtils.mapper.readValue(stringifiedJSON, type);
       // populate cvValues from the map...
-      for (Object okey : map.keySet()) {
-        String key = (String) okey;
+      for (String key : map.keySet()) {
         // the only 3 metadata fields that the user should update are formId, locale, and creator
         // and administrators or super-users can modify the filter type and filter value
         if ( !key.equals(DataTableColumns.FORM_ID) &&
