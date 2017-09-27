@@ -178,7 +178,7 @@ public class OdkData {
 
       request = new ExecutorRequest(query.getTableId(), query.getSqlCommand(),
               query.getSqlBindArgs(), query.getSqlLimit(), query.getSqlOffset(),
-              query.getMetaDataRev(), callbackJSON, getFragmentID());
+              null, callbackJSON, getFragmentID());
     } else if (queryParams instanceof SingleRowQuery &&
         ((SingleRowQuery) queryParams).getRowId() != null &&
         !((SingleRowQuery) queryParams).getRowId().isEmpty()) {
