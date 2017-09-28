@@ -188,14 +188,25 @@ public class OdkData {
 
       BindArgs bindArgs = new BindArgs(new Object[] { query.getRowId() });
       request = new ExecutorRequest(query.getTableId(), DataTableColumns.ID + "=?", bindArgs,
-              null, null, new String[] {DataTableColumns.SAVEPOINT_TIMESTAMP},
-              new String[] {descOrder}, limit, offset, true, null, callbackJSON, getFragmentID());
+          null, null, DataTableColumns.SAVEPOINT_TIMESTAMP, descOrder, limit, offset, true,
+          null, callbackJSON, getFragmentID());
     } else if (queryParams instanceof SimpleQuery || queryParams instanceof SingleRowQuery) {
       SimpleQuery query = (SimpleQuery) queryParams;
 
+      // TODO: FIX THIS! This is a workaround for the fact that orderbyCol and orderByDir are string
+      // arrays in the database layer and single strings in the javascript layer. I'm reusing the
+      // query objects from the database layer. The changes need to be plumbed up so that everybody
+      // always uses string arrays for orderby* fields all th way up to the Javascript.
+      String[] queryOrderByCol = query.getOrderByColNames();
+      String[] queryOrderByDir = query.getOrderByDirections();
+      String orderByCol = (queryOrderByCol == null || queryOrderByCol.length == 0) ?
+          null : queryOrderByCol[0];
+      String orderByDir = (queryOrderByDir == null || queryOrderByDir.length == 0) ?
+          null : queryOrderByDir[0];
+
       request = new ExecutorRequest(query.getTableId(), query.getWhereClause(),
               query.getSqlBindArgs(), query.getGroupByArgs(), query.getHavingClause(),
-              query.getOrderByColNames(), query.getOrderByDirections(), limit, offset, true, null,
+              orderByCol, orderByDir, limit, offset, true, null,
               callbackJSON, getFragmentID());
     } else {
       // Invalid state
@@ -290,9 +301,8 @@ public class OdkData {
     logDebug("query: " + tableId + " whereClause: " + whereClause);
     BindArgs bindArgs = new BindArgs(sqlBindParamsJSON);
     ExecutorRequest request = new ExecutorRequest(tableId, whereClause, bindArgs, groupBy, having,
-            (orderByElementKey == null ? null : new String[] {orderByElementKey}),
-            (orderByDirection == null ? null : new String[] {orderByDirection}),
-            limit, offset, includeKeyValueStoreMap, metaDataRev, callbackJSON, getFragmentID());
+        orderByElementKey, orderByDirection, limit, offset, includeKeyValueStoreMap, metaDataRev,
+        callbackJSON, getFragmentID());
 
     queueRequest(request);
   }

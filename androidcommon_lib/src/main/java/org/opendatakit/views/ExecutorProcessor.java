@@ -602,8 +602,12 @@ public abstract class ExecutorProcessor implements Runnable {
     }
     UserTable t = dbInterface
         .simpleQuery(context.getAppName(), dbHandle, request.tableId, columns, request.whereClause,
-            request.sqlBindParams, request.groupBy, request.having, request.orderByElementKey,
-                request.orderByDirection , request.limit, request.offset);
+                        request.sqlBindParams, request.groupBy, request.having,
+                        (request.orderByElementKey == null) ?
+                                emptyArray :
+                                new String[] { request.orderByElementKey }, (request.orderByDirection == null) ?
+                                emptyArray :
+                                new String[] { request.orderByDirection }, request.limit, request.offset);
 
     if (t == null) {
       reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to query " + request.tableId);

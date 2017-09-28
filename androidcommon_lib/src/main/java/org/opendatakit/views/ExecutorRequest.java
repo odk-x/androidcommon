@@ -41,8 +41,8 @@ public class ExecutorRequest {
     public final String whereClause;
     public final String[] groupBy;
     public final String having;
-    public final String[] orderByElementKey;
-    public final String[] orderByDirection;
+    public final String orderByElementKey;
+    public final String orderByDirection;
     public final Integer limit;
     public final Integer offset;
     public final boolean includeFullMetadata;
@@ -153,7 +153,7 @@ public class ExecutorRequest {
      *                     that can process the response
      */
     public ExecutorRequest(String tableId, String whereClause, BindArgs sqlBindParams,
-                           String[] groupBy, String having, String[] orderByElementKey, String[] orderByDirection,
+                           String[] groupBy, String having, String orderByElementKey, String orderByDirection,
                            Integer limit, Integer offset, boolean includeFullMetadata,
                            String metaDataRev, String callbackJSON, String callerID) {
         this.executorRequestType = ExecutorRequestType.USER_TABLE_QUERY;
