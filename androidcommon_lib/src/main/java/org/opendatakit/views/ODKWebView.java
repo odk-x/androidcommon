@@ -34,8 +34,6 @@ import org.opendatakit.logging.WebLoggerIf;
 import org.opendatakit.properties.CommonToolProperties;
 import org.opendatakit.utilities.ODKFileUtils;
 
-import java.util.LinkedList;
-
 /**
  * NOTE: assumes that the Context implements IOdkSurveyActivity.
  *
@@ -379,7 +377,7 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
 
      if (url != null) {
 
-        if (!reload ||
+        if (reload ||
             shouldForceLoadDuringReload() ||
             !url.equals(getLoadPageUrl()))
            {
