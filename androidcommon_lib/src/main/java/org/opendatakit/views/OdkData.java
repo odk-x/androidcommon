@@ -106,6 +106,15 @@ public class OdkData {
      * The sql command if using an arbitrary query
      */
     public static final String SQL_COMMAND = "sqlCommand";
+    /**
+     * The type of query stored in this intent
+     */
+    public static final String QUERY_TYPE = "queryType";
+  }
+
+  public static final class QueryTypes {
+    public static final String SIMPLE_QUERY = "SimpleQuery";
+    public static final String ARBITRARY_QUERY = "ArbitraryQuery";
   }
 
   private WeakReference<IOdkWebView> mWebView;
