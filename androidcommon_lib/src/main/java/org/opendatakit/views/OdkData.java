@@ -18,7 +18,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import org.opendatakit.activities.IOdkDataActivity;
 import org.opendatakit.consts.IntentConsts;
+import org.opendatakit.database.queries.ArbitraryQuery;
 import org.opendatakit.database.queries.BindArgs;
+import org.opendatakit.database.queries.ResumableQuery;
+import org.opendatakit.database.queries.SimpleQuery;
+import org.opendatakit.database.queries.SingleRowQuery;
 import org.opendatakit.logging.WebLogger;
 import org.opendatakit.provider.DataTableColumns;
 import org.opendatakit.utilities.ODKFileUtils;
@@ -94,10 +98,23 @@ public class OdkData {
      */
     public static final String SQL_ORDER_BY_DIRECTION = "sqlOrderByDirection";
     /**
-     * The metaDataRev of the metadata for the tableId that the Javascript 
+     * The metaDataRev of the metadata for the tableId that the Javascript
      * side has. This may be null.
      */
     public static final String META_DATA_REV = "metaDataRev";
+    /**
+     * The sql command if using an arbitrary query
+     */
+    public static final String SQL_COMMAND = "sqlCommand";
+    /**
+     * The type of query stored in this intent
+     */
+    public static final String QUERY_TYPE = "queryType";
+  }
+
+  public static final class QueryTypes {
+    public static final String SIMPLE_QUERY = "SimpleQuery";
+    public static final String ARBITRARY_QUERY = "ArbitraryQuery";
   }
 
   private WeakReference<IOdkWebView> mWebView;
@@ -158,23 +175,51 @@ public class OdkData {
   public void getViewData(String callbackJSON, Integer limit, Integer offset) {
     logDebug("getViewData");
 
-    ViewDataQueryParams queryParams = this.mActivity.getViewQueryParams(getFragmentID());
+    ResumableQuery queryParams = this.mActivity.getViewQuery(getFragmentID());
 
     if (queryParams == null) {
       return;
     }
 
     ExecutorRequest request;
-    if (queryParams.isSingleRowQuery()) {
-      BindArgs bindArgs = new BindArgs(new Object[] { queryParams.rowId });
-      request = new ExecutorRequest(queryParams.tableId, DataTableColumns.ID + "=?", bindArgs,
+    if (queryParams instanceof ArbitraryQuery) {
+      ArbitraryQuery query = (ArbitraryQuery) queryParams;
+
+      request = new ExecutorRequest(query.getTableId(), query.getSqlCommand(),
+              query.getSqlBindArgs(), query.getSqlLimit(), query.getSqlOffset(),
+              null, callbackJSON, getFragmentID());
+    } else if (queryParams instanceof SingleRowQuery &&
+        ((SingleRowQuery) queryParams).getRowId() != null &&
+        !((SingleRowQuery) queryParams).getRowId().isEmpty()) {
+      // If we are a single row query but haven't set row id, this is actually a simplequery and
+      // will get handled in the else if
+      SingleRowQuery query = (SingleRowQuery) queryParams;
+
+      BindArgs bindArgs = new BindArgs(new Object[] { query.getRowId() });
+      request = new ExecutorRequest(query.getTableId(), DataTableColumns.ID + "=?", bindArgs,
           null, null, DataTableColumns.SAVEPOINT_TIMESTAMP, descOrder, limit, offset, true,
           null, callbackJSON, getFragmentID());
+    } else if (queryParams instanceof SimpleQuery || queryParams instanceof SingleRowQuery) {
+      SimpleQuery query = (SimpleQuery) queryParams;
+
+      // TODO: FIX THIS! This is a workaround for the fact that orderbyCol and orderByDir are string
+      // arrays in the database layer and single strings in the javascript layer. I'm reusing the
+      // query objects from the database layer. The changes need to be plumbed up so that everybody
+      // always uses string arrays for orderby* fields all th way up to the Javascript.
+      String[] queryOrderByCol = query.getOrderByColNames();
+      String[] queryOrderByDir = query.getOrderByDirections();
+      String orderByCol = (queryOrderByCol == null || queryOrderByCol.length == 0) ?
+          null : queryOrderByCol[0];
+      String orderByDir = (queryOrderByDir == null || queryOrderByDir.length == 0) ?
+          null : queryOrderByDir[0];
+
+      request = new ExecutorRequest(query.getTableId(), query.getWhereClause(),
+              query.getSqlBindArgs(), query.getGroupByArgs(), query.getHavingClause(),
+              orderByCol, orderByDir, limit, offset, true, null,
+              callbackJSON, getFragmentID());
     } else {
-      request = new ExecutorRequest(queryParams.tableId, queryParams.whereClause,
-          queryParams.selectionArgs,
-          queryParams.groupBy, queryParams.having, queryParams.orderByElemKey,
-          queryParams.orderByDir, limit, offset, true, null, callbackJSON, getFragmentID());
+      // Invalid state
+      return;
     }
     queueRequest(request);
   }
@@ -264,9 +309,9 @@ public class OdkData {
       Integer limit, Integer offset, boolean includeKeyValueStoreMap, String metaDataRev, String callbackJSON) {
     logDebug("query: " + tableId + " whereClause: " + whereClause);
     BindArgs bindArgs = new BindArgs(sqlBindParamsJSON);
-    ExecutorRequest request = new ExecutorRequest(tableId, whereClause, bindArgs, groupBy,
-        having, orderByElementKey, orderByDirection, limit, offset, includeKeyValueStoreMap,
-        metaDataRev, callbackJSON, getFragmentID());
+    ExecutorRequest request = new ExecutorRequest(tableId, whereClause, bindArgs, groupBy, having,
+        orderByElementKey, orderByDirection, limit, offset, includeKeyValueStoreMap, metaDataRev,
+        callbackJSON, getFragmentID());
 
     queueRequest(request);
   }

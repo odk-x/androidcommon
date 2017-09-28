@@ -20,6 +20,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.database.data.*;
+import org.opendatakit.database.utilities.QueryUtil;
 import org.opendatakit.exception.ActionNotAuthorizedException;
 import org.opendatakit.exception.ServicesAvailabilityException;
 import org.opendatakit.provider.DataTableColumns;
@@ -603,11 +604,9 @@ public abstract class ExecutorProcessor implements Runnable {
     UserTable t = dbInterface
         .simpleQuery(context.getAppName(), dbHandle, request.tableId, columns, request.whereClause,
             request.sqlBindParams, request.groupBy, request.having,
-            (request.orderByElementKey == null) ?
-                emptyArray :
-                new String[] { request.orderByElementKey }, (request.orderByDirection == null) ?
-                emptyArray :
-                new String[] { request.orderByDirection }, request.limit, request.offset);
+            QueryUtil.convertStringToArray(request.orderByElementKey),
+            QueryUtil.convertStringToArray(request.orderByDirection),
+            request.limit, request.offset);
 
     if (t == null) {
       reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to query " + request.tableId);
