@@ -259,13 +259,14 @@ public class OdkDataIf {
    * @param limit   The maximum number of rows to return (null for unlimited)
    * @param offset  The offset into the result set for the first row to return (null ok)
    * @param includeKeyValueStoreMap true if the keyValueStoreMap should be returned
+   * @param metaDataRev             The revision number of the metadata for this tableId, if known
    * @param callbackJSON            The JSON object used by the JS layer to recover the callback function
    *                                that can process the response
    */
   @android.webkit.JavascriptInterface public void query(String tableId, String whereClause,
       String sqlBindParamsJSON, String[] groupBy, String having, String orderByElementKey,
       String orderByDirection, String limit, String offset, boolean includeKeyValueStoreMap,
-      String callbackJSON)
+      String metaDataRev, String callbackJSON)
       {
     if (isInactive())
       return;
@@ -274,7 +275,7 @@ public class OdkDataIf {
     Integer integerOffset = (offset != null ? Integer.valueOf(offset) : null);
 
     weakData.get().query(tableId, whereClause, sqlBindParamsJSON, groupBy, having, orderByElementKey,
-        orderByDirection, integerLimit, integerOffset, includeKeyValueStoreMap, callbackJSON);
+        orderByDirection, integerLimit, integerOffset, includeKeyValueStoreMap, metaDataRev, callbackJSON);
   }
 
   /**
@@ -289,17 +290,18 @@ public class OdkDataIf {
    *                          the having clause)
    * @param limit   The maximum number of rows to return (null for unlimited)
    * @param offset  The offset into the result set for the first row to return (null ok)
+   * @param metaDataRev             The revision number of the metadata for this tableId, if known
    * @param callbackJSON  The JSON object used by the JS layer to recover the callback function
    *                      that can process the response
    */
   @android.webkit.JavascriptInterface public void arbitraryQuery(String tableId, String sqlCommand,
-      String sqlBindParamsJSON, String limit, String offset, String callbackJSON) {
+      String sqlBindParamsJSON, String limit, String offset, String metaDataRev, String callbackJSON) {
     if (isInactive())
       return;
     Integer integerLimit = limit != null ? Integer.valueOf(limit) : null;
     Integer integerOffset = offset != null ? Integer.valueOf(offset) : null;
 
-    weakData.get().arbitraryQuery(tableId, sqlCommand, sqlBindParamsJSON, integerLimit, integerOffset, callbackJSON);
+    weakData.get().arbitraryQuery(tableId, sqlCommand, sqlBindParamsJSON, integerLimit, integerOffset, metaDataRev, callbackJSON);
   }
 
   /**
@@ -309,14 +311,15 @@ public class OdkDataIf {
    *
    * @param tableId      The table being updated
    * @param rowId        The rowId of the row being changed.
+   * @param metaDataRev  The revision number of the metadata for this tableId, if known
    * @param callbackJSON The JSON object used by the JS layer to recover the callback function
    *                     that can process the response
    */
   @android.webkit.JavascriptInterface public void getRows(String tableId, String rowId,
-      String callbackJSON) {
+      String metaDataRev, String callbackJSON) {
     if (isInactive())
       return;
-    weakData.get().getRows(tableId, rowId, callbackJSON);
+    weakData.get().getRows(tableId, rowId, metaDataRev, callbackJSON);
   }
 
   /**
@@ -325,14 +328,15 @@ public class OdkDataIf {
    *
    * @param tableId      The table being updated
    * @param rowId        The rowId of the row being changed.
+   * @param metaDataRev  The revision number of the metadata for this tableId, if known
    * @param callbackJSON The JSON object used by the JS layer to recover the callback function
    *                     that can process the response
    */
   @android.webkit.JavascriptInterface public void getMostRecentRow(String tableId, String rowId,
-      String callbackJSON) {
+      String metaDataRev, String callbackJSON) {
     if (isInactive())
       return;
-    weakData.get().getMostRecentRow(tableId, rowId, callbackJSON);
+    weakData.get().getMostRecentRow(tableId, rowId, metaDataRev, callbackJSON);
   }
 
   /**
@@ -341,33 +345,39 @@ public class OdkDataIf {
    * @param tableId         The table being updated
    * @param stringifiedJSON key-value map of values to store or update. If missing, the value remains unchanged.
    * @param rowId           The rowId of the row being changed.
+   * @param metaDataRev     The revision number of the metadata for this tableId, if known
    * @param callbackJSON    The JSON object used by the JS layer to recover the callback function
    *                        that can process the response
    */
   @android.webkit.JavascriptInterface public void updateRow(String tableId, String stringifiedJSON,
-      String rowId, String callbackJSON) {
+      String rowId, String metaDataRev, String callbackJSON) {
     if (isInactive())
       return;
-    weakData.get().updateRow(tableId, stringifiedJSON, rowId, callbackJSON);
+    weakData.get().updateRow(tableId, stringifiedJSON, rowId, metaDataRev, callbackJSON);
   }
 
   /**
    * Update a row in the table with the given filter type and value.
    *
    * @param tableId         The table being updated
-   * @param defaultAccess      cannot be null. One of DEFAULT, MODIFY, READ_ONLY, HIDDEN
-   * @param owner     can be null. userid of owner of the row.
+   * @param defaultAccess   cannot be null. One of DEFAULT, MODIFY, READ_ONLY, HIDDEN
+   * @param owner           can be null. userid of owner of the row.
+   * @param groupReadOnly   can be null. Group name with read-only privileges.
+   * @param groupModify   can be null. Group name with read-write privileges.
+   * @param groupPrivileged   can be null. Group name with read-write-delete-alter-privilege
+   *                          privileges.
    * @param rowId           The rowId of the row being changed.
+   * @param metaDataRev     The revision number of the metadata for this tableId, if known
    * @param callbackJSON    The JSON object used by the JS layer to recover the callback function
    *                        that can process the response
    */
   @android.webkit.JavascriptInterface public void changeAccessFilterOfRow(String tableId,
       String defaultAccess, String owner, String groupReadOnly, String groupModify, String groupPrivileged,
-      String rowId, String callbackJSON) {
+      String rowId, String metaDataRev, String callbackJSON) {
     if (isInactive())
       return;
     weakData.get().changeAccessFilterOfRow(tableId, defaultAccess, owner, groupReadOnly, groupModify,
-            groupPrivileged, rowId, callbackJSON);
+            groupPrivileged, rowId, metaDataRev, callbackJSON);
   }
 
   /**
@@ -376,14 +386,15 @@ public class OdkDataIf {
    * @param tableId         The table being updated
    * @param stringifiedJSON key-value map of values to store or update. If missing, the value remains unchanged.
    * @param rowId           The rowId of the row being deleted.
+   * @param metaDataRev     The revision number of the metadata for this tableId, if known
    * @param callbackJSON    The JSON object used by the JS layer to recover the callback function
    *                        that can process the response
    */
   @android.webkit.JavascriptInterface public void deleteRow(String tableId, String stringifiedJSON,
-      String rowId, String callbackJSON) {
+      String rowId, String metaDataRev, String callbackJSON) {
     if (isInactive())
       return;
-    weakData.get().deleteRow(tableId, stringifiedJSON, rowId, callbackJSON);
+    weakData.get().deleteRow(tableId, stringifiedJSON, rowId, metaDataRev, callbackJSON);
   }
 
   /**
@@ -392,14 +403,15 @@ public class OdkDataIf {
    * @param tableId         The table being updated
    * @param stringifiedJSON key-value map of values to store or update. If missing, the value remains unchanged.
    * @param rowId           The rowId of the row being added.
+   * @param metaDataRev     The revision number of the metadata for this tableId, if known
    * @param callbackJSON    The JSON object used by the JS layer to recover the callback function
    *                        that can process the response
    */
   @android.webkit.JavascriptInterface public void addRow(String tableId, String stringifiedJSON,
-      String rowId, String callbackJSON) {
+      String rowId, String metaDataRev, String callbackJSON) {
     if (isInactive())
       return;
-    weakData.get().addRow(tableId, stringifiedJSON, rowId, callbackJSON);
+    weakData.get().addRow(tableId, stringifiedJSON, rowId, metaDataRev, callbackJSON);
   }
 
   /**
@@ -408,14 +420,15 @@ public class OdkDataIf {
    * @param tableId         The table being updated
    * @param stringifiedJSON key-value map of values to store or update. If missing, the value remains unchanged.
    * @param rowId           The rowId of the row being added.
+   * @param metaDataRev     The revision number of the metadata for this tableId, if known
    * @param callbackJSON    The JSON object used by the JS layer to recover the callback function
    *                        that can process the response
    */
   @android.webkit.JavascriptInterface public void addCheckpoint(String tableId,
-      String stringifiedJSON, String rowId, String callbackJSON) {
+      String stringifiedJSON, String rowId, String metaDataRev, String callbackJSON) {
     if (isInactive())
       return;
-    weakData.get().addCheckpoint(tableId, stringifiedJSON, rowId, callbackJSON);
+    weakData.get().addCheckpoint(tableId, stringifiedJSON, rowId, metaDataRev, callbackJSON);
   }
 
   /**
@@ -424,14 +437,15 @@ public class OdkDataIf {
    * @param tableId         The table being updated
    * @param stringifiedJSON key-value map of values to store or update. If missing, the value remains unchanged.
    * @param rowId           The rowId of the row being saved-as-incomplete.
+   * @param metaDataRev     The revision number of the metadata for this tableId, if known
    * @param callbackJSON    The JSON object used by the JS layer to recover the callback function
    *                        that can process the response
    */
   @android.webkit.JavascriptInterface public void saveCheckpointAsIncomplete(String tableId,
-      String stringifiedJSON, String rowId, String callbackJSON) {
+      String stringifiedJSON, String rowId, String metaDataRev, String callbackJSON) {
     if (isInactive())
       return;
-    weakData.get().saveCheckpointAsIncomplete(tableId, stringifiedJSON, rowId, callbackJSON);
+    weakData.get().saveCheckpointAsIncomplete(tableId, stringifiedJSON, rowId, metaDataRev, callbackJSON);
   }
 
   /**
@@ -440,14 +454,15 @@ public class OdkDataIf {
    * @param tableId         The table being updated
    * @param stringifiedJSON key-value map of values to store or update. If missing, the value remains unchanged.
    * @param rowId           The rowId of the row being marked-as-complete.
+   * @param metaDataRev     The revision number of the metadata for this tableId, if known
    * @param callbackJSON    The JSON object used by the JS layer to recover the callback function
    *                        that can process the response
    */
   @android.webkit.JavascriptInterface public void saveCheckpointAsComplete(String tableId,
-      String stringifiedJSON, String rowId, String callbackJSON) {
+      String stringifiedJSON, String rowId, String metaDataRev, String callbackJSON) {
     if (isInactive())
       return;
-    weakData.get().saveCheckpointAsComplete(tableId, stringifiedJSON, rowId, callbackJSON);
+    weakData.get().saveCheckpointAsComplete(tableId, stringifiedJSON, rowId, metaDataRev, callbackJSON);
   }
 
   /**
@@ -455,14 +470,15 @@ public class OdkDataIf {
    *
    * @param tableId      The table being updated
    * @param rowId        The rowId of the row being saved-as-incomplete.
+   * @param metaDataRev  The revision number of the metadata for this tableId, if known
    * @param callbackJSON The JSON object used by the JS layer to recover the callback function
    *                     that can process the response
    */
   @android.webkit.JavascriptInterface public void deleteAllCheckpoints(String tableId, String rowId,
-      String callbackJSON) {
+      String metaDataRev, String callbackJSON) {
     if (isInactive())
       return;
-    weakData.get().deleteAllCheckpoints(tableId, rowId, callbackJSON);
+    weakData.get().deleteAllCheckpoints(tableId, rowId, metaDataRev, callbackJSON);
   }
 
   /**
@@ -470,13 +486,14 @@ public class OdkDataIf {
    *
    * @param tableId      The table being updated
    * @param rowId        The rowId of the row being saved-as-incomplete.
+   * @param metaDataRev  The revision number of the metadata for this tableId, if known
    * @param callbackJSON The JSON object used by the JS layer to recover the callback function
    *                     that can process the response
    */
   @android.webkit.JavascriptInterface public void deleteLastCheckpoint(String tableId, String rowId,
-      String callbackJSON) {
+      String metaDataRev, String callbackJSON) {
     if (isInactive())
       return;
-    weakData.get().deleteLastCheckpoint(tableId, rowId, callbackJSON);
+    weakData.get().deleteLastCheckpoint(tableId, rowId, metaDataRev, callbackJSON);
   }
 }

@@ -15,11 +15,12 @@
 package org.opendatakit.activities;
 
 import android.os.Bundle;
+
+import org.opendatakit.database.queries.ResumableQuery;
 import org.opendatakit.database.service.UserDbInterface;
 import org.opendatakit.listener.DatabaseConnectionListener;
 import org.opendatakit.views.ExecutorContext;
 import org.opendatakit.views.ExecutorProcessor;
-import org.opendatakit.views.ViewDataQueryParams;
 
 /**
  * @author mitchellsundt@gmail.com
@@ -87,5 +88,5 @@ public interface IOdkDataActivity {
   /**
    * Retrieves SQL query parameters
    */
-  ViewDataQueryParams getViewQueryParams(String viewID) throws IllegalArgumentException;
+  ResumableQuery getViewQuery(String viewID) throws IllegalArgumentException;
 }

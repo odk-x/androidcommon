@@ -36,6 +36,7 @@ import org.opendatakit.provider.FormsProviderUtils;
 import org.opendatakit.utilities.ODKFileUtils;
 import org.opendatakit.logging.WebLogger;
 import org.opendatakit.webkitserver.utilities.SerializationUtils;
+import org.opendatakit.webkitserver.utilities.UrlUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -73,7 +74,8 @@ public class OdkCommon {
   }
 
   public boolean isInactive() {
-    return (mWebView.get() == null || mWebView.get().isInactive());
+    ODKWebView view = mWebView.get();
+    return (view == null || view.isInactive());
   }
 
   private void logDebug(String loggingString) {
@@ -246,7 +248,7 @@ public class OdkCommon {
    */
   public String getBaseUrl() {
     logDebug("getBaseUrl()");
-    return ODKFileUtils.getRelativeSystemPath();
+    return getBaseContentUri();
   }
 
   /**
@@ -283,6 +285,14 @@ public class OdkCommon {
   public String getSessionVariable(String elementPath) {
     logDebug("getSessionVariable("+elementPath+")");
     return mActivity.getSessionVariable(elementPath);
+  }
+
+  public void frameworkHasLoaded() {
+    logDebug("frameworkHasLoaded()");
+    ODKWebView view = mWebView.get();
+    if ( view != null ) {
+     view.frameworkHasLoaded();
+    }
   }
 
   /**

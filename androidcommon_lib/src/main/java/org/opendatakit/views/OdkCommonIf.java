@@ -169,6 +169,24 @@ public class OdkCommonIf {
   }
 
   /**
+   * This is called within odkCommon.registerListener(fn) to indicate to the Java
+   * layer that a listener for doAction responses has been registered. Only after
+   * this has been invoked will doAction responses arriving after this cause a
+   * callback to be invoked on the Javascript side to trigger that listener.
+   *
+   * Prior to that, the doAction responses are silently queued in the Java layer
+   * awaiting their retrieval. The Javascript layer should call
+   * odkCommon.viewFirstQueuedAction() to retrieve any queued actions after having
+   * called odkCommon.registerListener(fn) to ensure that all actions are processed.
+   */
+  @android.webkit.JavascriptInterface
+  public void frameworkHasLoaded() {
+    if (isInactive())
+      return;
+    weakControl.get().frameworkHasLoaded();
+  }
+
+  /**
    * Execute an action (intent call).
    *
    * @param dispatchStructAsJSONstring Opaque string -- typically identifies prompt and user action
