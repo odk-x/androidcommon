@@ -15,6 +15,7 @@
 package org.opendatakit.views;
 
 import org.opendatakit.database.queries.BindArgs;
+import org.opendatakit.logging.WebLogger;
 
 /**
  * @author mitchellsundt@gmail.com
@@ -44,7 +45,7 @@ public class ExecutorRequest {
     public final String orderByDirection;
     public final Integer limit;
     public final Integer offset;
-    public final boolean includeKeyValueStoreMap;
+    public final boolean includeFullMetadata;
 
     // For user table modification interactions
     public final String stringifiedJSON;
@@ -55,6 +56,9 @@ public class ExecutorRequest {
 
     // For commit interaction
     public final boolean commitTransaction;
+
+    // For tableId interactions
+    public final String metaDataRev;
 
     // For most interactions
     public final String callbackJSON;
@@ -69,6 +73,7 @@ public class ExecutorRequest {
         // unused:
         this.sqlCommand = null;
         this.sqlBindParams = null;
+        this.metaDataRev = null;
         this.callbackJSON = null;
         this.tableId = null;
         this.whereClause = null;
@@ -78,12 +83,13 @@ public class ExecutorRequest {
         this.orderByDirection = null;
         this.limit = null;
         this.offset = null;
-        this.includeKeyValueStoreMap = false;
+        this.includeFullMetadata = false;
         this.stringifiedJSON = null;
         this.rowId = null;
         this.deleteAllCheckpoints = false;
         this.commitTransaction = false;
         this.callerID = null;
+        WebLogger.getContextLogger().d("ExecutorRequest", "updateExecutorContext");
     }
 
     /**
@@ -102,13 +108,16 @@ public class ExecutorRequest {
      *                     that can process the response
      */
     public ExecutorRequest(String tableId, String sqlCommand, BindArgs sqlBindParams,
-                Integer limit, Integer offset, String callbackJSON, String callerID) {
+                Integer limit, Integer offset, String metaDataRev, String callbackJSON,
+                           String callerID) {
         this.executorRequestType = ExecutorRequestType.ARBITRARY_QUERY;
         this.tableId = tableId;
         this.sqlCommand = sqlCommand;
         this.sqlBindParams = sqlBindParams;
         this.limit = limit;
         this.offset = offset;
+        this.metaDataRev = metaDataRev;
+        this.includeFullMetadata = (tableId != null);
         this.callbackJSON = callbackJSON;
         this.callerID = callerID;
 
@@ -119,7 +128,6 @@ public class ExecutorRequest {
         this.having = null;
         this.orderByElementKey = null;
         this.orderByDirection = null;
-        this.includeKeyValueStoreMap = false;
         this.stringifiedJSON = null;
         this.rowId = null;
         this.deleteAllCheckpoints = false;
@@ -139,14 +147,15 @@ public class ExecutorRequest {
      * @param orderByDirection 'ASC' or 'DESC' ordering
      * @param limit null to return everything. Otherwise, max number or rows to return
      * @param offset if limit is not null, specify the offset into the result set to return.
-     * @param includeKeyValueStoreMap true if the keyValueStoreMap should be returned
+     * @param includeFullMetadata true if the dataTableModel, KVS and extended (tool-specific)
+     *                            metadata should be returned
      * @param callbackJSON The JSON object used by the JS layer to recover the callback function
      *                     that can process the response
      */
     public ExecutorRequest(String tableId, String whereClause, BindArgs sqlBindParams,
                            String[] groupBy, String having, String orderByElementKey, String orderByDirection,
-                           Integer limit, Integer offset, boolean includeKeyValueStoreMap,
-                           String callbackJSON, String callerID) {
+                           Integer limit, Integer offset, boolean includeFullMetadata,
+                           String metaDataRev, String callbackJSON, String callerID) {
         this.executorRequestType = ExecutorRequestType.USER_TABLE_QUERY;
         this. tableId = tableId;
         this.whereClause = whereClause;
@@ -157,7 +166,8 @@ public class ExecutorRequest {
         this.orderByDirection = orderByDirection;
         this.limit = limit;
         this.offset = offset;
-        this.includeKeyValueStoreMap = includeKeyValueStoreMap;
+        this.includeFullMetadata = includeFullMetadata;
+        this.metaDataRev = metaDataRev;
         this.callbackJSON = callbackJSON;
         this.callerID = callerID;
 
@@ -192,11 +202,13 @@ public class ExecutorRequest {
      *                     that can process the response
      */
     public ExecutorRequest(ExecutorRequestType executorRequestType, String tableId, String stringifiedJSON, String rowId,
-        String callbackJSON, String callerID) {
+        String metaDataRev, String callbackJSON, String callerID) {
         this.executorRequestType = executorRequestType;
         this.tableId = tableId;
         this.stringifiedJSON = stringifiedJSON;
         this.rowId = rowId;
+        this.metaDataRev = metaDataRev;
+        this.includeFullMetadata = true;
         this.callbackJSON = callbackJSON;
         this.callerID = callerID;
 
@@ -211,7 +223,6 @@ public class ExecutorRequest {
         this.orderByDirection = null;
         this.limit = null;
         this.offset = null;
-        this.includeKeyValueStoreMap = false;
         this.deleteAllCheckpoints = false;
         this.commitTransaction = false;
     }
@@ -222,6 +233,7 @@ public class ExecutorRequest {
         this.tableId = null;
         this.stringifiedJSON = null;
         this.rowId = null;
+        this.metaDataRev = null;
         this.callbackJSON = callbackJSON;
         this.callerID = callerID;
 
@@ -236,7 +248,7 @@ public class ExecutorRequest {
         this.orderByDirection = null;
         this.limit = null;
         this.offset = null;
-        this.includeKeyValueStoreMap = false;
+        this.includeFullMetadata = false;
         this.deleteAllCheckpoints = false;
         this.commitTransaction = false;
     }

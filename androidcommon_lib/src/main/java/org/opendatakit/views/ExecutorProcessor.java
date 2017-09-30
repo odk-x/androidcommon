@@ -18,10 +18,9 @@ import android.content.ContentValues;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
-import org.opendatakit.database.data.ColumnDefinition;
-import org.opendatakit.database.data.OrderedColumns;
-import org.opendatakit.database.data.TableDefinitionEntry;
-import org.opendatakit.database.data.UserTable;
+import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
+import org.opendatakit.database.data.*;
+import org.opendatakit.database.utilities.QueryUtil;
 import org.opendatakit.exception.ActionNotAuthorizedException;
 import org.opendatakit.exception.ServicesAvailabilityException;
 import org.opendatakit.provider.DataTableColumns;
@@ -30,10 +29,7 @@ import org.opendatakit.utilities.DataHelper;
 import org.opendatakit.utilities.ODKFileUtils;
 import org.opendatakit.logging.WebLogger;
 import org.opendatakit.database.service.UserDbInterface;
-import org.opendatakit.database.data.KeyValueStoreEntry;
 import org.opendatakit.database.service.DbHandle;
-import org.opendatakit.database.data.Row;
-import org.opendatakit.database.data.BaseTable;
 import org.opendatakit.database.queries.ResumableQuery;
 import org.sqlite.database.sqlite.SQLiteException;
 
@@ -185,7 +181,11 @@ public abstract class ExecutorProcessor implements Runnable {
     } catch (SQLiteException e) {
       reportErrorAndCleanUp(SQLiteException.class.getName() +
           ": " + e.getMessage());
+    } catch (IllegalStateException e) {
+      WebLogger.getLogger(context.getAppName()).printStackTrace(e);
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": " + e.getMessage());
     } catch (Throwable t) {
+      WebLogger.getLogger(context.getAppName()).printStackTrace(t);
       reportErrorAndCleanUp(IllegalStateException.class.getName() +
           ": ExecutorProcessor unexpected exception " + t.toString());
     }
@@ -198,10 +198,12 @@ public abstract class ExecutorProcessor implements Runnable {
    */
   private void reportErrorAndCleanUp(String errorMessage) {
     try {
-      dbInterface.closeDatabase(context.getAppName(), dbHandle);
-    } catch (Exception e) {
+      if ( dbHandle != null ) {
+        dbInterface.closeDatabase(context.getAppName(), dbHandle);
+      }
+    } catch (Throwable t) {
       // ignore this -- favor first reported error
-      WebLogger.getLogger(context.getAppName()).printStackTrace(e);
+      WebLogger.getLogger(context.getAppName()).printStackTrace(t);
       WebLogger.getLogger(context.getAppName()).w(TAG, "error while releasing database conneciton");
     } finally {
       context.removeActiveConnection(transId);
@@ -262,10 +264,10 @@ public abstract class ExecutorProcessor implements Runnable {
       return cvValues;
     }
     try {
-      HashMap map = ODKFileUtils.mapper.readValue(stringifiedJSON, HashMap.class);
+      TypeReference<HashMap<String,Object>> type = new TypeReference<HashMap<String,Object>>() {};
+      HashMap<String,Object> map = ODKFileUtils.mapper.readValue(stringifiedJSON, type);
       // populate cvValues from the map...
-      for (Object okey : map.keySet()) {
-        String key = (String) okey;
+      for (String key : map.keySet()) {
         // the only 3 metadata fields that the user should update are formId, locale, and creator
         // and administrators or super-users can modify the filter type and filter value
         if ( !key.equals(DataTableColumns.FORM_ID) &&
@@ -361,9 +363,10 @@ public abstract class ExecutorProcessor implements Runnable {
   }
 
   private void populateKeyValueStoreList(Map<String, Object> metadata,
-      List<KeyValueStoreEntry> entries) {
+      List<KeyValueStoreEntry> entries) throws ServicesAvailabilityException {
     // keyValueStoreList
     if (entries != null) {
+      Map<String,String> choiceMap = new HashMap<String,String>();
       // It is unclear how to most easily represent the KVS for access.
       // We use the convention in ODK Survey, which is a list of maps,
       // one per KVS row, with integer, number and boolean resolved to JS
@@ -420,22 +423,28 @@ public abstract class ExecutorProcessor implements Runnable {
         anEntry.put("value", value);
 
         kvsArray.add(anEntry);
+
+        // and resolve the choice values
+        // this may explode the size of the KVS going back to the JS layer.
+        if ( entry.partition.equals(KeyValueStoreConstants.PARTITION_COLUMN) &&
+            entry.key.equals(KeyValueStoreConstants.COLUMN_DISPLAY_CHOICES_LIST) &&
+            !choiceMap.containsKey(entry.value)) {
+          String choiceList = dbInterface.getChoiceList(context.getAppName(), dbHandle, entry.value);
+          choiceMap.put(entry.value, choiceList);
+        }
       }
       metadata.put("keyValueStoreList", kvsArray);
+      metadata.put("choiceListMap", choiceMap);
     }
   }
 
   private void reportArbitraryQuerySuccessAndCleanUp(OrderedColumns columnDefinitions,
       BaseTable userTable) throws ServicesAvailabilityException {
-    List<KeyValueStoreEntry> entries = null;
 
-    // We are assuming that we always have the KVS
-    // otherwise use the request.includeKeyValueStoreMap
-    //if (request.includeKeyValueStoreMap) {
-    entries = dbInterface
+    TableMetaDataEntries metaDataEntries =
+       dbInterface
         .getTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null,
-            userTable.getMetaDataRev()).getEntries();
-    //}
+            null);
     TableDefinitionEntry tdef = dbInterface
         .getTableDefinitionEntry(context.getAppName(), dbHandle, request.tableId);
 
@@ -501,11 +510,22 @@ public abstract class ExecutorProcessor implements Runnable {
 
     // elementKey -> index in row within row list
     metadata.put("elementKeyMap", elementKeyToIndexMap);
-    // dataTableModel -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
-    TreeMap<String, Object> dataTableModel = columnDefinitions.getExtendedDataModel();
-    metadata.put("dataTableModel", dataTableModel);
-    // keyValueStoreList
-    populateKeyValueStoreList(metadata, entries);
+
+    // include metadata only if requested and if the existing metadata version is out-of-date.
+    if ( request.tableId != null && request.includeFullMetadata &&
+            (request.metaDataRev == null ||
+             !request.metaDataRev.equals(metaDataEntries.getRevId())) ) {
+
+      Map<String, Object> cachedMetadata = new HashMap<String, Object>();
+
+      cachedMetadata.put("metaDataRev", metaDataEntries.getRevId());
+      // dataTableModel -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
+      TreeMap<String, Object> dataTableModel = columnDefinitions.getExtendedDataModel();
+      cachedMetadata.put("dataTableModel", dataTableModel);
+      // keyValueStoreList
+      populateKeyValueStoreList(cachedMetadata, metaDataEntries.getEntries());
+      metadata.put("cachedMetadata", cachedMetadata);
+    }
 
     // raw queries are not extended.
     reportSuccessAndCleanUp(data, metadata);
@@ -584,11 +604,9 @@ public abstract class ExecutorProcessor implements Runnable {
     UserTable t = dbInterface
         .simpleQuery(context.getAppName(), dbHandle, request.tableId, columns, request.whereClause,
             request.sqlBindParams, request.groupBy, request.having,
-            (request.orderByElementKey == null) ?
-                emptyArray :
-                new String[] { request.orderByElementKey }, (request.orderByDirection == null) ?
-                emptyArray :
-                new String[] { request.orderByDirection }, request.limit, request.offset);
+            QueryUtil.convertStringToArray(request.orderByElementKey),
+            QueryUtil.convertStringToArray(request.orderByDirection),
+            request.limit, request.offset);
 
     if (t == null) {
       reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to query " + request.tableId);
@@ -598,15 +616,11 @@ public abstract class ExecutorProcessor implements Runnable {
   }
 
   private void reportSuccessAndCleanUp(UserTable userTable) throws ServicesAvailabilityException {
-    List<KeyValueStoreEntry> entries = null;
+    TableMetaDataEntries metaDataEntries =
+        dbInterface
+            .getTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null,
+                null);
 
-    // We are assuming that we always have the KVS
-    // otherwise use the request.includeKeyValueStoreMap
-    //if (request.includeKeyValueStoreMap) {
-    entries = dbInterface
-        .getTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null,
-            userTable.getMetaDataRev()).getEntries();
-    //}
     TableDefinitionEntry tdef = dbInterface
         .getTableDefinitionEntry(context.getAppName(), dbHandle, request.tableId);
 
@@ -667,15 +681,33 @@ public abstract class ExecutorProcessor implements Runnable {
 
     // elementKey -> index in row within row list
     metadata.put("elementKeyMap", elementKeyToIndexMap);
-    // dataTableModel -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
-    TreeMap<String, Object> dataTableModel = columnDefinitions.getExtendedDataModel();
-    metadata.put("dataTableModel", dataTableModel);
-    // keyValueStoreList
-    populateKeyValueStoreList(metadata, entries);
 
-    // extend the metadata with whatever else this app needs....
-    // e.g., row and column color maps
-    extendQueryMetadata(dbInterface, dbHandle, entries, userTable, metadata);
+    // include metadata only if requested and if the existing metadata version is out-of-date.
+    if ( request.tableId != null && request.includeFullMetadata &&
+        (request.metaDataRev == null ||
+            !request.metaDataRev.equals(metaDataEntries.getRevId())) ) {
+
+      Map<String, Object> cachedMetadata = new HashMap<String, Object>();
+
+      cachedMetadata.put("metaDataRev", metaDataEntries.getRevId());
+      // dataTableModel -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
+      TreeMap<String, Object> dataTableModel = columnDefinitions.getExtendedDataModel();
+      cachedMetadata.put("dataTableModel", dataTableModel);
+      // keyValueStoreList
+      populateKeyValueStoreList(cachedMetadata, metaDataEntries.getEntries());
+      metadata.put("cachedMetadata", cachedMetadata);
+    }
+
+    // Always include tool-specific metadata if we are including metadata.
+    // The tool-specific metadata, such as cell, row, status and column colors
+    // varies with the content of the individual rows and therefore must always
+    // be returned.
+    if ( request.includeFullMetadata ) {
+      // extend the metadata with whatever else this app needs....
+      // e.g., row and column color maps
+      extendQueryMetadata(dbInterface, dbHandle, metaDataEntries.getEntries(), userTable, metadata);
+    }
+
     reportSuccessAndCleanUp(data, metadata);
   }
 
@@ -893,6 +925,15 @@ public abstract class ExecutorProcessor implements Runnable {
       context.putOrderedColumns(request.tableId, columns);
     }
 
+    if ( request.stringifiedJSON != null ) {
+      ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
+      if (!cvValues.keySet().isEmpty()) {
+        dbInterface
+            .insertCheckpointRowWithId(context.getAppName(), dbHandle, request.tableId, columns,
+                cvValues, request.rowId);
+      }
+    }
+
     UserTable t = dbInterface
         .saveAsIncompleteMostRecentCheckpointRowWithId(context.getAppName(), dbHandle,
             request.tableId, columns, request.rowId);
@@ -918,6 +959,15 @@ public abstract class ExecutorProcessor implements Runnable {
     if (columns == null) {
       columns = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
       context.putOrderedColumns(request.tableId, columns);
+    }
+
+    if ( request.stringifiedJSON != null ) {
+      ContentValues cvValues = convertJSON(columns, request.stringifiedJSON);
+      if (!cvValues.keySet().isEmpty()) {
+        dbInterface
+            .insertCheckpointRowWithId(context.getAppName(), dbHandle, request.tableId, columns,
+                cvValues, request.rowId);
+      }
     }
 
     UserTable t = dbInterface

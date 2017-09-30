@@ -15,7 +15,6 @@
 package org.opendatakit.webkitserver.utilities;
 
 import android.support.test.runner.AndroidJUnit4;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -111,7 +110,7 @@ public class UrlUtilsTest {
    * @param start
    */
   protected void assertRetrieveFileNameHelper(String expected, String start) {
-    String result = UrlUtils.getFileNameFromUriSegment(start);
+    String result = UrlUtils.getPathFromUriFragment(start);
     assertEquals(expected, result);
   }
   
@@ -121,7 +120,7 @@ public class UrlUtilsTest {
   }
   
   protected void assertGetParamsHelper(String segment, String expected) {
-    String actual = UrlUtils.getParametersFromSegment(segment);
+    String actual = UrlUtils.getParametersFromUriFragment(segment);
     assertEquals(expected, actual);
   }
 
