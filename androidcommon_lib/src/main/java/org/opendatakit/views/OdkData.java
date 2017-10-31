@@ -185,7 +185,8 @@ public class OdkData {
     if (queryParams instanceof ArbitraryQuery) {
       ArbitraryQuery query = (ArbitraryQuery) queryParams;
 
-      request = new ExecutorRequest(query.getTableId(), query.getSqlCommand(),
+      request = new ExecutorRequest(ExecutorRequestType.ARBITRARY_QUERY, query.getTableId(),
+              query.getSqlCommand(),
               query.getSqlBindArgs(), query.getSqlLimit(), query.getSqlOffset(),
               null, callbackJSON, getFragmentID());
     } else if (queryParams instanceof SingleRowQuery &&
@@ -196,9 +197,9 @@ public class OdkData {
       SingleRowQuery query = (SingleRowQuery) queryParams;
 
       BindArgs bindArgs = new BindArgs(new Object[] { query.getRowId() });
-      request = new ExecutorRequest(query.getTableId(), DataTableColumns.ID + "=?", bindArgs,
-          null, null, DataTableColumns.SAVEPOINT_TIMESTAMP, descOrder, limit, offset, true,
-          null, callbackJSON, getFragmentID());
+      request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_QUERY, query.getTableId(),
+              DataTableColumns.ID + "=?", bindArgs, null, null, DataTableColumns.SAVEPOINT_TIMESTAMP,
+              descOrder, limit, offset, true, null, callbackJSON, getFragmentID());
     } else if (queryParams instanceof SimpleQuery || queryParams instanceof SingleRowQuery) {
       SimpleQuery query = (SimpleQuery) queryParams;
 
@@ -213,9 +214,10 @@ public class OdkData {
       String orderByDir = (queryOrderByDir == null || queryOrderByDir.length == 0) ?
           null : queryOrderByDir[0];
 
-      request = new ExecutorRequest(query.getTableId(), query.getWhereClause(),
-              query.getSqlBindArgs(), query.getGroupByArgs(), query.getHavingClause(),
-              orderByCol, orderByDir, limit, offset, true, null,
+
+      request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_QUERY, query.getTableId(),
+              query.getWhereClause(), query.getSqlBindArgs(), query.getGroupByArgs(),
+              query.getHavingClause(), orderByCol, orderByDir, limit, offset, true, null,
               callbackJSON, getFragmentID());
     } else {
       // Invalid state
@@ -309,9 +311,9 @@ public class OdkData {
       Integer limit, Integer offset, boolean includeKeyValueStoreMap, String metaDataRev, String callbackJSON) {
     logDebug("query: " + tableId + " whereClause: " + whereClause);
     BindArgs bindArgs = new BindArgs(sqlBindParamsJSON);
-    ExecutorRequest request = new ExecutorRequest(tableId, whereClause, bindArgs, groupBy, having,
-        orderByElementKey, orderByDirection, limit, offset, includeKeyValueStoreMap, metaDataRev,
-        callbackJSON, getFragmentID());
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.USER_TABLE_QUERY,
+            tableId, whereClause, bindArgs, groupBy, having, orderByElementKey, orderByDirection,
+            limit, offset, includeKeyValueStoreMap, metaDataRev, callbackJSON, getFragmentID());
 
     queueRequest(request);
   }
@@ -337,8 +339,9 @@ public class OdkData {
       Integer limit, Integer offset, String metaDataRev, String callbackJSON) {
     logDebug("arbitraryQuery: " + tableId + " sqlCommand: " + sqlCommand);
     BindArgs bindArgs = new BindArgs(sqlBindParamsJSON);
-    ExecutorRequest request = new ExecutorRequest(tableId, sqlCommand, bindArgs,
-        limit, offset, metaDataRev, callbackJSON, getFragmentID());
+
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.ARBITRARY_QUERY, tableId,
+            sqlCommand, bindArgs, limit, offset, metaDataRev, callbackJSON, getFragmentID());
 
     queueRequest(request);
   }
@@ -554,6 +557,157 @@ public class OdkData {
     ExecutorRequest request = new ExecutorRequest(
         ExecutorRequestType.USER_TABLE_DELETE_LAST_CHECKPOINT, tableId, null, rowId,
         metaDataRev, callbackJSON, getFragmentID());
+
+    queueRequest(request);
+  }
+
+  /****** LOCAL TABLE functions ******/
+  /**
+   * Create local table with columns
+   *
+   * @param tableId         The table being updated
+   * @param stringifiedJSON The key-value map of columns
+   * @param callbackJSON    The JSON object used by the JS layer to recover the callback function
+   *                        that can process the response
+   */
+  public void createLocalOnlyTableWithColumns(String tableId, String stringifiedJSON,
+                                              String callbackJSON) {
+
+    logDebug("createLocalOnlyTableWithColumns: " + tableId);
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.LOCAL_TABLE_CREATE_TABLE,
+            tableId, stringifiedJSON, null, null, null, callbackJSON, getFragmentID());
+    queueRequest(request);
+  }
+
+  /**
+   * Delete local table
+   *
+   * @param tableId      The table being updated
+   * @param callbackJSON The JSON object used by the JS layer to recover the callback function
+   *                     that can process the response
+   */
+  public void deleteLocalOnlyTable(String tableId, String callbackJSON) {
+
+    logDebug("deleteLocalOnlyTable: " + tableId);
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.LOCAL_TABLE_DELETE_TABLE,
+            tableId, null, null, null, null, callbackJSON, getFragmentID());
+    queueRequest(request);
+  }
+
+  /**
+   * Insert rows into local table
+   *
+   * @param tableId         The table being updated
+   * @param stringifiedJSON The key-value map of columns
+   * @param callbackJSON    The JSON object used by the JS layer to recover the callback function
+   *                        that can process the response
+   */
+  public void insertLocalOnlyRow(String tableId, String stringifiedJSON, String callbackJSON) {
+
+    logDebug("insertLocalOnlyRow: " + tableId);
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.LOCAL_TABLE_INSERT_ROW,
+            tableId, stringifiedJSON, null, null, null, callbackJSON, getFragmentID());
+
+      queueRequest(request);
+  }
+
+  /**
+   * Update rows into local table
+   *
+   * @param tableId           The table being updated
+   * @param stringifiedJSON   The key-value map of columns
+   * @param whereClause       The where clause for to use when udpating rows
+   * @param sqlBindParamsJSON JSON.stringify of array of bind parameter values
+   * @param callbackJSON      The JSON object used by the JS layer to recover the callback function
+   *                          that can process the response
+   */
+  public void updateLocalOnlyRows(String tableId, String stringifiedJSON, String whereClause,
+                                 String sqlBindParamsJSON, String callbackJSON) {
+
+    logDebug("updateLocalOnlyRows: " + tableId + " whereClause: " + whereClause);
+    BindArgs bindArgs = new BindArgs(sqlBindParamsJSON);
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.LOCAL_TABLE_UPDATE_ROW,
+            tableId, stringifiedJSON, null, whereClause, bindArgs, callbackJSON, getFragmentID());
+
+    queueRequest(request);
+  }
+
+  /**
+   * Delete rows in local table
+   *
+   * @param tableId           The table being updated
+   * @param whereClause       The where clause for to use when udpating rows
+   * @param sqlBindParamsJSON JSON.stringify of array of bind parameter values
+   * @param callbackJSON      The JSON object used by the JS layer to recover the callback function
+   *                          that can process the response
+   */
+  public void deleteLocalOnlyRows(String tableId, String whereClause, String sqlBindParamsJSON,
+                                  String callbackJSON) {
+
+    logDebug("deleteLocalOnlyRows: " + tableId + " whereClause: " + whereClause);
+    BindArgs bindArgs = new BindArgs(sqlBindParamsJSON);
+
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.LOCAL_TABLE_DELETE_ROW,
+            tableId, null, null, whereClause, bindArgs, callbackJSON, getFragmentID());
+
+    queueRequest(request);
+  }
+
+  /**
+   * Simple query for local table
+   *
+   * @param tableId           The table being queried. This is a user-defined table.
+   * @param whereClause       The where clause for the query
+   * @param sqlBindParamsJSON JSON.stringify of array of bind parameter values (including any in
+   *                          the having clause)
+   * @param groupBy           The array of columns to group by
+   * @param having            The having clause
+   * @param orderByElementKey The column to order by
+   * @param orderByDirection  'ASC' or 'DESC' ordering
+   * @param limit             The maximum number of rows to return (null returns all)
+   * @param offset            The offset into the result set of the first row to return (null ok)
+   * @param callbackJSON      The JSON object used by the JS layer to recover the callback function
+   *                          that can process the response
+   */
+  public void simpleQueryLocalOnlyTables(String tableId, String whereClause, String sqlBindParamsJSON,
+                                         String[] groupBy, String having, String orderByElementKey,
+                                         String orderByDirection, Integer limit, Integer offset,
+                                         String callbackJSON) {
+    logDebug("simpleQueryLocalOnlyTables: " + tableId + " whereClause: " + whereClause);
+    BindArgs bindArgs = new BindArgs(sqlBindParamsJSON);
+
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.LOCAL_TABLE_SIMPLE_QUERY,
+            tableId, whereClause, bindArgs, groupBy, having,
+            orderByElementKey, orderByDirection, limit, offset, false, null, callbackJSON,
+            getFragmentID());
+
+    queueRequest(request);
+  }
+
+  /**
+   * Arbitrary query for local table
+   *
+   * @param tableId           The table being queried. If a result
+   *                          column matches the column name in this tableId, then the data
+   *                          type interpretations for that column will be applied to the result
+   *                          column (e.g., integer, number, array, object conversions).
+   * @param sqlCommand        The Select statement to issue. It can reference any table in the database,
+   *                          including system tables.
+   * @param sqlBindParamsJSON JSON.stringify of array of bind parameter values (including any in
+   *                          the having clause)
+   * @param limit             The maximum number of rows to return (null returns all)
+   * @param offset            The offset into the result set of the first row to return (null ok)
+   * @param callbackJSON      The JSON object used by the JS layer to recover the callback function
+   *                          that can process the response
+   */
+  public void arbitrarySqlQueryLocalOnlyTables(String tableId, String sqlCommand, String sqlBindParamsJSON,
+                                               Integer limit, Integer offset, String callbackJSON) {
+
+    logDebug("arbitrarySqlQueryLocalOnlyTables: " + tableId + " sqlCommand: " + sqlCommand);
+    BindArgs bindArgs = new BindArgs(sqlBindParamsJSON);
+
+    ExecutorRequest request = new ExecutorRequest(ExecutorRequestType.LOCAL_TABLE_ARBITRARY_QUERY,
+            tableId, sqlCommand, bindArgs, limit, offset, null, callbackJSON, getFragmentID());
 
     queueRequest(request);
   }
