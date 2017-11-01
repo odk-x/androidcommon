@@ -496,4 +496,149 @@ public class OdkDataIf {
       return;
     weakData.get().deleteLastCheckpoint(tableId, rowId, metaDataRev, callbackJSON);
   }
+
+  /****** LOCAL TABLE functions ******/
+  /**
+   * Create local only table with columns
+   *
+   * @param tableId         The table being updated
+   * @param stringifiedJSON The key-value map of columns
+   * @param callbackJSON    The JSON object used by the JS layer to recover the callback function
+   *                        that can process the response
+   */
+  @android.webkit.JavascriptInterface public void createLocalOnlyTableWithColumns(String tableId,
+                                                                                  String stringifiedJSON,
+                                                                                  String callbackJSON) {
+    if (isInactive())
+      return;
+    weakData.get().createLocalOnlyTableWithColumns(tableId, stringifiedJSON, callbackJSON);
+  }
+
+  /**
+   * Delete local only table
+   *
+   * @param tableId      The table being updated
+   * @param callbackJSON The JSON object used by the JS layer to recover the callback function
+   *                     that can process the response
+   */
+  @android.webkit.JavascriptInterface public void deleteLocalOnlyTable(String tableId,
+                                                                       String callbackJSON) {
+    if (isInactive())
+      return;
+    weakData.get().deleteLocalOnlyTable(tableId, callbackJSON);
+  }
+
+  /**
+   * Insert rows into local table
+   *
+   * @param tableId         The table being updated
+   * @param stringifiedJSON The key-value map of columns
+   * @param callbackJSON    The JSON object used by the JS layer to recover the callback function
+   *                        that can process the response
+   */
+  @android.webkit.JavascriptInterface public void insertLocalOnlyRow(String tableId,
+                                                                      String stringifiedJSON,
+                                                                      String callbackJSON) {
+    if (isInactive())
+      return;
+    weakData.get().insertLocalOnlyRow(tableId, stringifiedJSON, callbackJSON);
+  }
+
+  /**
+   * Update rows into local table
+   *
+   * @param tableId           The table being updated
+   * @param stringifiedJSON   The key-value map of columns
+   * @param whereClause       The where clause for to use when udpating rows
+   * @param sqlBindParamsJSON JSON.stringify of array of bind parameter values
+   * @param callbackJSON      The JSON object used by the JS layer to recover the callback function
+   *                          that can process the response
+   */
+  @android.webkit.JavascriptInterface public void updateLocalOnlyRows(String tableId,
+                                                                      String stringifiedJSON,
+                                                                      String whereClause,
+                                                                      String sqlBindParamsJSON,
+                                                                      String callbackJSON) {
+    if (isInactive())
+      return;
+    weakData.get().updateLocalOnlyRows(tableId, stringifiedJSON, whereClause, sqlBindParamsJSON,
+            callbackJSON);
+  }
+
+  /**
+   * Delete rows in local only table
+   *
+   * @param tableId           The table being updated
+   * @param whereClause       The where clause for to use when udpating rows
+   * @param sqlBindParamsJSON JSON.stringify of array of bind parameter values
+   * @param callbackJSON      The JSON object used by the JS layer to recover the callback function
+   *                          that can process the response
+   */
+  @android.webkit.JavascriptInterface public void deleteLocalOnlyRows(String tableId, String whereClause,
+                                                                      String sqlBindParamsJSON,
+                                                                      String callbackJSON) {
+    if (isInactive())
+      return;
+    weakData.get().deleteLocalOnlyRows(tableId, whereClause, sqlBindParamsJSON, callbackJSON);
+  }
+
+  /**
+   * Simple query for local only table
+   *
+   * @param tableId           The table being queried. This is a user-defined table.
+   * @param whereClause       The where clause for the query
+   * @param sqlBindParamsJSON JSON.stringify of array of bind parameter values (including any in
+   *                          the having clause)
+   * @param groupBy           The array of columns to group by
+   * @param having            The having clause
+   * @param orderByElementKey The column to order by
+   * @param orderByDirection  'ASC' or 'DESC' ordering
+   * @param limit             The maximum number of rows to return (null returns all)
+   * @param offset            The offset into the result set of the first row to return (null ok)
+   * @param callbackJSON      The JSON object used by the JS layer to recover the callback function
+   *                          that can process the response
+   */
+  @android.webkit.JavascriptInterface public void simpleQueryLocalOnlyTables(String tableId,
+                                                                             String whereClause,
+                                                                             String sqlBindParamsJSON,
+                                                                             String[] groupBy,
+                                                                             String having,
+                                                                             String orderByElementKey,
+                                                                             String orderByDirection,
+                                                                             Integer limit, Integer offset,
+                                                                             String callbackJSON) {
+    if (isInactive())
+      return;
+    weakData.get().simpleQueryLocalOnlyTables(tableId, whereClause, sqlBindParamsJSON, groupBy,
+            having, orderByElementKey, orderByDirection, limit, offset, callbackJSON);
+  }
+
+  /**
+   * Arbitrary query for local only table
+   *
+   * @param tableId           The table being queried. If a result
+   *                          column matches the column name in this tableId, then the data
+   *                          type interpretations for that column will be applied to the result
+   *                          column (e.g., integer, number, array, object conversions).
+   * @param sqlCommand        The Select statement to issue. It can reference any table in the database,
+   *                          including system tables.
+   * @param sqlBindParamsJSON JSON.stringify of array of bind parameter values (including any in
+   *                          the having clause)
+   * @param limit             The maximum number of rows to return (null returns all)
+   * @param offset            The offset into the result set of the first row to return (null ok)
+   * @param callbackJSON      The JSON object used by the JS layer to recover the callback function
+   *                          that can process the response
+   */
+  @android.webkit.JavascriptInterface public void arbitrarySqlQueryLocalOnlyTables(String tableId,
+                                                                                   String sqlCommand,
+                                                                                   String sqlBindParamsJSON,
+                                                                                   Integer limit,
+                                                                                   Integer offset,
+                                                                                   String callbackJSON) {
+    if (isInactive())
+      return;
+    weakData.get().arbitrarySqlQueryLocalOnlyTables(tableId, sqlCommand, sqlBindParamsJSON, limit,
+            offset, callbackJSON);
+  }
+
 }

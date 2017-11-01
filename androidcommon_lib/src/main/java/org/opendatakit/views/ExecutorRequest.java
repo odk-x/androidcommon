@@ -23,233 +23,297 @@ import org.opendatakit.logging.WebLogger;
 public class ExecutorRequest {
 
 
-    public final ExecutorRequestType executorRequestType;
+  public final ExecutorRequestType executorRequestType;
 
-    // To clear an older context
-    public final ExecutorContext oldContext;
+  // To clear an older context
+  public final ExecutorContext oldContext;
 
-    // For raw query interaction
-    public final String sqlCommand;
+  // For raw query interaction
+  public final String sqlCommand;
 
-    // shared between raw query and user table query interactions
-    public final BindArgs sqlBindParams;
+  // shared between raw query and user table query interactions
+  public final BindArgs sqlBindParams;
 
-    // For user table interactions
-    public final String tableId;
+  // For user table interactions
+  public final String tableId;
 
-    // For user table query interaction
-    public final String whereClause;
-    public final String[] groupBy;
-    public final String having;
-    public final String orderByElementKey;
-    public final String orderByDirection;
-    public final Integer limit;
-    public final Integer offset;
-    public final boolean includeFullMetadata;
+  // For user table query interaction
+  public final String whereClause;
+  public final String[] groupBy;
+  public final String having;
+  public final String orderByElementKey;
+  public final String orderByDirection;
+  public final Integer limit;
+  public final Integer offset;
+  public final boolean includeFullMetadata;
 
-    // For user table modification interactions
-    public final String stringifiedJSON;
-    public final String rowId;
+  // For user table modification interactions
+  public final String stringifiedJSON;
+  public final String rowId;
 
-    // For checkpoint delete interations
-    public final boolean deleteAllCheckpoints;
+  // For checkpoint delete interations
+  public final boolean deleteAllCheckpoints;
 
-    // For commit interaction
-    public final boolean commitTransaction;
+  // For commit interaction
+  public final boolean commitTransaction;
 
-    // For tableId interactions
-    public final String metaDataRev;
+  // For tableId interactions
+  public final String metaDataRev;
 
-    // For most interactions
-    public final String callbackJSON;
+  // For most interactions
+  public final String callbackJSON;
 
-    // Find its way back to the correct caller
-    public final String callerID;
+  // Find its way back to the correct caller
+  public final String callerID;
 
-    public ExecutorRequest(ExecutorContext oldContext) {
-        this.executorRequestType = ExecutorRequestType.UPDATE_EXECUTOR_CONTEXT;
-        this.oldContext = oldContext;
+  public ExecutorRequest(ExecutorContext oldContext) {
+    this.executorRequestType = ExecutorRequestType.UPDATE_EXECUTOR_CONTEXT;
+    this.oldContext = oldContext;
 
-        // unused:
-        this.sqlCommand = null;
-        this.sqlBindParams = null;
-        this.metaDataRev = null;
-        this.callbackJSON = null;
-        this.tableId = null;
-        this.whereClause = null;
-        this.groupBy = null;
-        this.having = null;
-        this.orderByElementKey = null;
-        this.orderByDirection = null;
-        this.limit = null;
-        this.offset = null;
-        this.includeFullMetadata = false;
-        this.stringifiedJSON = null;
-        this.rowId = null;
-        this.deleteAllCheckpoints = false;
-        this.commitTransaction = false;
-        this.callerID = null;
-        WebLogger.getContextLogger().d("ExecutorRequest", "updateExecutorContext");
-    }
+    // unused:
+    this.sqlCommand = null;
+    this.sqlBindParams = null;
+    this.metaDataRev = null;
+    this.callbackJSON = null;
+    this.tableId = null;
+    this.whereClause = null;
+    this.groupBy = null;
+    this.having = null;
+    this.orderByElementKey = null;
+    this.orderByDirection = null;
+    this.limit = null;
+    this.offset = null;
+    this.includeFullMetadata = false;
+    this.stringifiedJSON = null;
+    this.rowId = null;
+    this.deleteAllCheckpoints = false;
+    this.commitTransaction = false;
+    this.callerID = null;
+    WebLogger.getContextLogger().d("ExecutorRequest", "updateExecutorContext");
+  }
 
-    /**
-     * Arbitrary SQL query
-     *
-     * @param tableId              The tableId whose metadata should be returned. If a result
-     *                             column matches the column name in this tableId, then the data
-     *                             type interpretations for that column will be applied to the result
-     *                             column (e.g., integer, number, array, object conversions).
-     * @param sqlCommand The Select statement to issue. It can reference any table in the database, including system tables.
-     * @param sqlBindParams The array of bind parameter values (including any in the having clause)
-     *                      wrapped in a BindArgs object.
-     * @param limit null to return everything. Otherwise, max number or rows to return
-     * @param offset if limit is not null, specify the offset into the result set to return.
-     * @param callbackJSON The JSON object used by the JS layer to recover the callback function
-     *                     that can process the response
-     */
-    public ExecutorRequest(String tableId, String sqlCommand, BindArgs sqlBindParams,
-                Integer limit, Integer offset, String metaDataRev, String callbackJSON,
-                           String callerID) {
-        this.executorRequestType = ExecutorRequestType.ARBITRARY_QUERY;
-        this.tableId = tableId;
-        this.sqlCommand = sqlCommand;
-        this.sqlBindParams = sqlBindParams;
-        this.limit = limit;
-        this.offset = offset;
-        this.metaDataRev = metaDataRev;
-        this.includeFullMetadata = (tableId != null);
-        this.callbackJSON = callbackJSON;
-        this.callerID = callerID;
+  /**
+   * Arbitrary SQL query
+   *
+   * @param executorRequestType The type of request. One of:
+   *                            <ul><li>ARBITRARY_QUERY</li>
+   *                            <li>LOCAL_TABLE_ARBITRARY_QUERY</li></ul>
+   *
+   * @param tableId             The tableId whose metadata should be returned. If a result
+   *                            column matches the column name in this tableId, then the data
+   *                            type interpretations for that column will be applied to the result
+   *                            column (e.g., integer, number, array, object conversions).
+   * @param sqlCommand          The Select statement to issue. It can reference any table in the database,
+   *                            including system tables.
+   * @param sqlBindParams       The array of bind parameter values (including any in the having clause)
+   *                            wrapped in a BindArgs object.
+   * @param limit               null to return everything. Otherwise, max number or rows to return
+   * @param offset              if limit is not null, specify the offset into the result set to return.
+   * @param callbackJSON        The JSON object used by the JS layer to recover the callback function
+   *                            that can process the response
+   * @param callerID            The id of the fragment for the caller function
+   *
+   */
+  public ExecutorRequest(ExecutorRequestType executorRequestType, String tableId, String sqlCommand,
+                         BindArgs sqlBindParams, Integer limit, Integer offset, String metaDataRev,
+                         String callbackJSON, String callerID) {
+    this.executorRequestType = executorRequestType;
+    this.tableId = tableId;
+    this.sqlCommand = sqlCommand;
+    this.sqlBindParams = sqlBindParams;
+    this.limit = limit;
+    this.offset = offset;
+    this.metaDataRev = metaDataRev;
+    this.includeFullMetadata = (tableId != null);
+    this.callbackJSON = callbackJSON;
+    this.callerID = callerID;
 
-        // unused:
-        this.oldContext = null;
-        this.whereClause = null;
-        this.groupBy = null;
-        this.having = null;
-        this.orderByElementKey = null;
-        this.orderByDirection = null;
-        this.stringifiedJSON = null;
-        this.rowId = null;
-        this.deleteAllCheckpoints = false;
-        this.commitTransaction = false;
-    }
+    // unused:
+    this.oldContext = null;
+    this.whereClause = null;
+    this.groupBy = null;
+    this.having = null;
+    this.orderByElementKey = null;
+    this.orderByDirection = null;
+    this.stringifiedJSON = null;
+    this.rowId = null;
+    this.deleteAllCheckpoints = false;
+    this.commitTransaction = false;
+  }
 
-    /**
-     * Query the database using sql.
-     *
-     * @param tableId  The table being queried. This is a user-defined table.
-     * @param whereClause The where clause for the query
-     * @param sqlBindParams The array of bind parameter values (including any in the having clause)
-     *                      wrapped in a BindArgs object.
-     * @param groupBy The array of columns to group by
-     * @param having The having clause
-     * @param orderByElementKey The column to order by
-     * @param orderByDirection 'ASC' or 'DESC' ordering
-     * @param limit null to return everything. Otherwise, max number or rows to return
-     * @param offset if limit is not null, specify the offset into the result set to return.
-     * @param includeFullMetadata true if the dataTableModel, KVS and extended (tool-specific)
-     *                            metadata should be returned
-     * @param callbackJSON The JSON object used by the JS layer to recover the callback function
-     *                     that can process the response
-     */
-    public ExecutorRequest(String tableId, String whereClause, BindArgs sqlBindParams,
-                           String[] groupBy, String having, String orderByElementKey, String orderByDirection,
-                           Integer limit, Integer offset, boolean includeFullMetadata,
-                           String metaDataRev, String callbackJSON, String callerID) {
-        this.executorRequestType = ExecutorRequestType.USER_TABLE_QUERY;
-        this. tableId = tableId;
-        this.whereClause = whereClause;
-        this.sqlBindParams = sqlBindParams;
-        this.groupBy = groupBy;
-        this.having = having;
-        this.orderByElementKey = orderByElementKey;
-        this.orderByDirection = orderByDirection;
-        this.limit = limit;
-        this.offset = offset;
-        this.includeFullMetadata = includeFullMetadata;
-        this.metaDataRev = metaDataRev;
-        this.callbackJSON = callbackJSON;
-        this.callerID = callerID;
+  /**
+   * Query the database using sql.
+   *
+   * @param executorRequestType The type of request. One of:
+   *                            <ul><li>USER_TABLE_QUERY</li>
+   *                            <li>LOCAL_TABLE_SIMPLE_QUERY</li></ul>
+   *
+   * @param tableId             The table being queried. This is a user-defined table.
+   * @param whereClause         The where clause for the query
+   * @param sqlBindParams       The array of bind parameter values (including any in the having clause)
+   *                            wrapped in a BindArgs object.
+   * @param groupBy             The array of columns to group by
+   * @param having              The having clause
+   * @param orderByElementKey   The column to order by
+   * @param orderByDirection    'ASC' or 'DESC' ordering
+   * @param limit               null to return everything. Otherwise, max number or rows to return
+   * @param offset              if limit is not null, specify the offset into the result set to return.
+   * @param includeFullMetadata true if the dataTableModel, KVS and extended (tool-specific)
+   *                            metadata should be returned
+   * @param callbackJSON        The JSON object used by the JS layer to recover the callback function
+   *                            that can process the response
+   * @param callerID            The id of the fragment for the caller function
+   *
+   */
+  public ExecutorRequest(ExecutorRequestType executorRequestType, String tableId, String whereClause,
+                         BindArgs sqlBindParams, String[] groupBy, String having, String orderByElementKey,
+                         String orderByDirection, Integer limit, Integer offset, boolean includeFullMetadata,
+                         String metaDataRev, String callbackJSON, String callerID) {
+    this.executorRequestType = executorRequestType;
+    this.tableId = tableId;
+    this.whereClause = whereClause;
+    this.sqlBindParams = sqlBindParams;
+    this.groupBy = groupBy;
+    this.having = having;
+    this.orderByElementKey = orderByElementKey;
+    this.orderByDirection = orderByDirection;
+    this.limit = limit;
+    this.offset = offset;
+    this.includeFullMetadata = includeFullMetadata;
+    this.metaDataRev = metaDataRev;
+    this.callbackJSON = callbackJSON;
+    this.callerID = callerID;
 
-        // unused:
-        this.oldContext = null;
-        this.sqlCommand = null;
-        this.stringifiedJSON = null;
-        this.rowId = null;
-        this.deleteAllCheckpoints = false;
-        this.commitTransaction = false;
-    }
+    // unused:
+    this.oldContext = null;
+    this.sqlCommand = null;
+    this.stringifiedJSON = null;
+    this.rowId = null;
+    this.deleteAllCheckpoints = false;
+    this.commitTransaction = false;
+  }
 
-    /**
-     * Add or modify a row in the table, or save-as-incomplete or save-as-complete
-     *
-     * @param executorRequestType The type of request. One of:
-     *                    <ul><li>USER_TABLE_UPDATE_ROW</li>
-     *                    <li>USER_TABLE_DELETE_ROW</li>
-     *                    <li>USER_TABLE_GET_MOST_RECENT_ROW</li>
-     *                    <li>USER_TABLE_ADD_ROW</li>
-     *                    <li>USER_TABLE_ADD_CHECKPOINT</li>
-     *                    <li>USER_TABLE_SAVE_CHECKPOINT_AS_INCOMPLETE</li>
-     *                    <li>USER_TABLE_SAVE_CHECKPOINT_AS_COMPLETE</li>
-     *                    <li>USER_TABLE_DELETE_ALL_CHECKPOINTS</li>
-     *                    <li>USER_TABLE_DELETE_LAST_CHECKPOINT</li></ul>
-     * @param tableId  The table being updated
-     * @param stringifiedJSON key-value map of values to store or update. If missing, the value remains unchanged.
-     *                        This field is ignored when performing
-     *                        USER_TABLE_DELETE_LAST_CHECKPOINT or USER_TABLE_GET_MOST_RECENT_ROW
-     * @param rowId The rowId of the row being deleted.
-     * @param callbackJSON The JSON object used by the JS layer to recover the callback function
-     *                     that can process the response
-     */
-    public ExecutorRequest(ExecutorRequestType executorRequestType, String tableId, String stringifiedJSON, String rowId,
-        String metaDataRev, String callbackJSON, String callerID) {
-        this.executorRequestType = executorRequestType;
-        this.tableId = tableId;
-        this.stringifiedJSON = stringifiedJSON;
-        this.rowId = rowId;
-        this.metaDataRev = metaDataRev;
-        this.includeFullMetadata = true;
-        this.callbackJSON = callbackJSON;
-        this.callerID = callerID;
+  /**
+   * Add or modify a row in the table, or save-as-incomplete or save-as-complete
+   *
+   * @param executorRequestType The type of request. One of:
+   *                            <li>LOCAL_TABLE_CREATE_TABLE</li>
+   *                            <li>LOCAL_TABLE_DELETE_TABLE</li>
+   *                            <li>LOCAL_TABLE_INSERT_ROW</li>
+   *                            <li>LOCAL_TABLE_UPDATE_ROW</li>
+   *                            <li>LOCAL_TABLE_DELETE_ROW</li></ul>
+   *
+   * @param tableId             The table being updated
+   * @param stringifiedJSON     The key-value map of values to store or update. If missing,
+   *                            the value remains unchanged.  This field is ignored when performing
+   *                            USER_TABLE_DELETE_LAST_CHECKPOINT or USER_TABLE_GET_MOST_RECENT_ROW
+   * @param rowId               The rowId of the row being deleted.
+   * @param callbackJSON        The JSON object used by the JS layer to recover the callback function
+   *                            that can process the response
+   * @param callerID            The id of the fragment for the caller function
+   *
+   */
+  public ExecutorRequest(ExecutorRequestType executorRequestType, String tableId, String stringifiedJSON,
+                         String rowId, String whereClause, BindArgs sqlBindParams,
+                         String callbackJSON, String callerID) {
+    this.executorRequestType = executorRequestType;
+    this.tableId = tableId;
+    this.stringifiedJSON = stringifiedJSON;
+    this.rowId = rowId;
+    this.includeFullMetadata = true;
+    this.whereClause = whereClause;
+    this.sqlBindParams = sqlBindParams;
+    this.callbackJSON = callbackJSON;
+    this.callerID = callerID;
 
-        // unused:
-        this.oldContext = null;
-        this.sqlCommand = null;
-        this.whereClause = null;
-        this.sqlBindParams = null;
-        this.groupBy = null;
-        this.having = null;
-        this.orderByElementKey = null;
-        this.orderByDirection = null;
-        this.limit = null;
-        this.offset = null;
-        this.deleteAllCheckpoints = false;
-        this.commitTransaction = false;
-    }
+    // unused:
+    this.metaDataRev = null;
+    this.oldContext = null;
+    this.sqlCommand = null;
+    this.groupBy = null;
+    this.having = null;
+    this.orderByElementKey = null;
+    this.orderByDirection = null;
+    this.limit = null;
+    this.offset = null;
+    this.deleteAllCheckpoints = false;
+    this.commitTransaction = false;
+  }
 
-    public ExecutorRequest(ExecutorRequestType executorRequestType, String callbackJSON,
-        String callerID) {
-        this.executorRequestType = executorRequestType;
-        this.tableId = null;
-        this.stringifiedJSON = null;
-        this.rowId = null;
-        this.metaDataRev = null;
-        this.callbackJSON = callbackJSON;
-        this.callerID = callerID;
+  /**
+   * Add or modify a row in the table, or save-as-incomplete or save-as-complete
+   *
+   * @param executorRequestType The type of request. One of:
+   *                            <ul><li>USER_TABLE_UPDATE_ROW</li>
+   *                            <li>USER_TABLE_DELETE_ROW</li>
+   *                            <li>USER_TABLE_GET_MOST_RECENT_ROW</li>
+   *                            <li>USER_TABLE_ADD_ROW</li>
+   *                            <li>USER_TABLE_ADD_CHECKPOINT</li>
+   *                            <li>USER_TABLE_SAVE_CHECKPOINT_AS_INCOMPLETE</li>
+   *                            <li>USER_TABLE_SAVE_CHECKPOINT_AS_COMPLETE</li>
+   *                            <li>USER_TABLE_DELETE_ALL_CHECKPOINTS</li>
+   *                            <li>USER_TABLE_DELETE_LAST_CHECKPOINT</li></ul>
+   *
+   * @param tableId             The table being updated
+   * @param stringifiedJSON     The key-value map of values to store or update. If missing,
+   *                            the value remains unchanged.  This field is ignored when performing
+   *                            USER_TABLE_DELETE_LAST_CHECKPOINT or USER_TABLE_GET_MOST_RECENT_ROW
+   * @param rowId               The rowId of the row being deleted.
+   * @param metaDataRev         The metadata revision to use for cached metadata
+   * @param callbackJSON        The JSON object used by the JS layer to recover the callback function
+   *                            that can process the response
+   * @param callerID            The id of the fragment for the caller function
+   *
+   */
+  public ExecutorRequest(ExecutorRequestType executorRequestType, String tableId, String stringifiedJSON,
+                         String rowId, String metaDataRev, String callbackJSON, String callerID) {
+    this.executorRequestType = executorRequestType;
+    this.tableId = tableId;
+    this.stringifiedJSON = stringifiedJSON;
+    this.rowId = rowId;
+    this.metaDataRev = metaDataRev;
+    this.includeFullMetadata = true;
+    this.callbackJSON = callbackJSON;
+    this.callerID = callerID;
 
-        // unused:
-        this.oldContext = null;
-        this.sqlCommand = null;
-        this.whereClause = null;
-        this.sqlBindParams = null;
-        this.groupBy = null;
-        this.having = null;
-        this.orderByElementKey = null;
-        this.orderByDirection = null;
-        this.limit = null;
-        this.offset = null;
-        this.includeFullMetadata = false;
-        this.deleteAllCheckpoints = false;
-        this.commitTransaction = false;
-    }
+    // unused:
+    this.oldContext = null;
+    this.sqlCommand = null;
+    this.whereClause = null;
+    this.sqlBindParams = null;
+    this.groupBy = null;
+    this.having = null;
+    this.orderByElementKey = null;
+    this.orderByDirection = null;
+    this.limit = null;
+    this.offset = null;
+    this.deleteAllCheckpoints = false;
+    this.commitTransaction = false;
+  }
+
+  public ExecutorRequest(ExecutorRequestType executorRequestType, String callbackJSON,
+                         String callerID) {
+    this.executorRequestType = executorRequestType;
+    this.tableId = null;
+    this.stringifiedJSON = null;
+    this.rowId = null;
+    this.metaDataRev = null;
+    this.callbackJSON = callbackJSON;
+    this.callerID = callerID;
+
+    // unused:
+    this.oldContext = null;
+    this.sqlCommand = null;
+    this.whereClause = null;
+    this.sqlBindParams = null;
+    this.groupBy = null;
+    this.having = null;
+    this.orderByElementKey = null;
+    this.orderByDirection = null;
+    this.limit = null;
+    this.offset = null;
+    this.includeFullMetadata = false;
+    this.deleteAllCheckpoints = false;
+    this.commitTransaction = false;
+  }
 }
