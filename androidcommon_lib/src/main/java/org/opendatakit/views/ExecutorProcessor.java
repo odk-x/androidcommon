@@ -17,20 +17,30 @@ package org.opendatakit.views;
 import android.content.ContentValues;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
-import org.opendatakit.database.data.*;
+import org.opendatakit.aggregate.odktables.rest.entity.Column;
+import org.opendatakit.data.utilities.ColumnUtil;
+import org.opendatakit.database.data.BaseTable;
+import org.opendatakit.database.data.ColumnDefinition;
+import org.opendatakit.database.data.ColumnList;
+import org.opendatakit.database.data.KeyValueStoreEntry;
+import org.opendatakit.database.data.OrderedColumns;
+import org.opendatakit.database.data.Row;
+import org.opendatakit.database.data.TableDefinitionEntry;
+import org.opendatakit.database.data.TableMetaDataEntries;
+import org.opendatakit.database.data.UserTable;
+import org.opendatakit.database.queries.ResumableQuery;
+import org.opendatakit.database.service.DbHandle;
+import org.opendatakit.database.service.UserDbInterface;
 import org.opendatakit.database.utilities.QueryUtil;
 import org.opendatakit.exception.ActionNotAuthorizedException;
 import org.opendatakit.exception.ServicesAvailabilityException;
+import org.opendatakit.logging.WebLogger;
 import org.opendatakit.provider.DataTableColumns;
-import org.opendatakit.data.utilities.ColumnUtil;
 import org.opendatakit.utilities.DataHelper;
 import org.opendatakit.utilities.ODKFileUtils;
-import org.opendatakit.logging.WebLogger;
-import org.opendatakit.database.service.UserDbInterface;
-import org.opendatakit.database.service.DbHandle;
-import org.opendatakit.database.queries.ResumableQuery;
 import org.sqlite.database.sqlite.SQLiteException;
 
 import java.io.IOException;
@@ -43,6 +53,8 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 
+import static org.opendatakit.utilities.ODKFileUtils.mapper;
+
 /**
  * @author mitchellsundt@gmail.com
  */
@@ -52,6 +64,7 @@ public abstract class ExecutorProcessor implements Runnable {
   // Changed this to protected so that extended
   // ExecutorProcessors can make use of this
   protected static final List<String> ADMIN_COLUMNS;
+  protected static final String ID_COLUMN = "id";
 
   static {
     // everything is a STRING except for
@@ -167,6 +180,27 @@ public abstract class ExecutorProcessor implements Runnable {
         break;
       case USER_TABLE_DELETE_LAST_CHECKPOINT:
         deleteLastCheckpoint();
+        break;
+      case LOCAL_TABLE_CREATE_TABLE:
+        createLocalOnlyTableWithColumns();
+        break;
+      case LOCAL_TABLE_DELETE_TABLE:
+        deleteLocalOnlyTable();
+        break;
+      case LOCAL_TABLE_INSERT_ROW:
+        insertLocalOnlyRow();
+        break;
+      case LOCAL_TABLE_UPDATE_ROW:
+        updateLocalOnlyRows();
+        break;
+      case LOCAL_TABLE_DELETE_ROW:
+        deleteLocalOnlyRows();
+        break;
+      case LOCAL_TABLE_SIMPLE_QUERY:
+        simpleQueryLocalOnlyTables();
+        break;
+      case LOCAL_TABLE_ARBITRARY_QUERY:
+        arbitrarySqlQueryLocalOnlyTables();
         break;
       default:
         reportErrorAndCleanUp(IllegalStateException.class.getName() +
@@ -308,6 +342,52 @@ public abstract class ExecutorProcessor implements Runnable {
     } catch (IOException e) {
       WebLogger.getLogger(context.getAppName()).printStackTrace(e);
       throw new IllegalStateException("should never be reached");
+    }
+  }
+
+  /**
+   * Assumes incoming stringifiedJSON map only contains integers, doubles, strings, booleans
+   * and arrays or string-value maps.
+   *
+   * @param stringifiedJSON
+   * @return ContentValues object drawn from stringifiedJSON
+   */
+  private ContentValues convertLocalOnlyJSON(String stringifiedJSON) {
+    ContentValues cvValues = new ContentValues();
+    if (stringifiedJSON == null) {
+      return cvValues;
+    }
+    try {
+      TypeReference<HashMap<String,Object>> type = new TypeReference<HashMap<String,Object>>() {};
+      HashMap<String,Object> map = mapper.readValue(stringifiedJSON, type);
+      // populate cvValues from the map...
+      for (String key : map.keySet()) {
+
+        // the only types are integer/long, float/double, string, boolean
+        // complex types (array, object) should come across the interface as strings
+        Object value = map.get(key);
+        if (value == null) {
+          cvValues.putNull(key);
+        } else if (value instanceof Long) {
+          cvValues.put(key, (Long) value);
+        } else if (value instanceof Integer) {
+          cvValues.put(key, (Integer) value);
+        } else if (value instanceof Float) {
+          cvValues.put(key, (Float) value);
+        } else if (value instanceof Double) {
+          cvValues.put(key, (Double) value);
+        } else if (value instanceof String) {
+          cvValues.put(key, (String) value);
+        } else if (value instanceof Boolean) {
+          cvValues.put(key, (Boolean) value);
+        } else {
+          throw new IllegalStateException("convertLocalOnlyJSON: unimplemented case");
+        }
+      }
+      return cvValues;
+    } catch (IOException e) {
+      WebLogger.getLogger(context.getAppName()).printStackTrace(e);
+      throw new IllegalStateException("convertLocalOnlyJSON: should never be reached");
     }
   }
 
@@ -615,20 +695,95 @@ public abstract class ExecutorProcessor implements Runnable {
     }
   }
 
+  private void reportLocalOnlyTableQuerySuccessAndCleanUp(BaseTable baseTable,
+                                                          OrderedColumns orderedColumns)
+          throws ServicesAvailabilityException {
+
+    HashMap<String, Integer> elementKeyToIndexMap = new HashMap<String, Integer>();
+
+    ArrayList<List<Object>> data = new ArrayList<List<Object>>();
+
+    // TODO: Pass typed objects back to JS side
+    // Currently, all local table data is passed back as strings
+    if ( baseTable != null ) {
+      int idx;
+      // resolve the data types of all of the columns in the result set.
+      Class<?>[] classes = new Class<?>[baseTable.getWidth()];
+      for ( idx = 0 ; idx < baseTable.getWidth(); ++idx ) {
+        // String is the default
+        classes[idx] = String.class;
+        // clean up the column name...
+        String colName = baseTable.getElementKey(idx);
+        // set up the map -- use full column name here
+        elementKeyToIndexMap.put(colName, idx);
+        // remove any table alias qualifier from the name (assumes no quoting of column names)
+        if ( colName.lastIndexOf('.') != -1 ) {
+          colName = colName.substring(colName.lastIndexOf('.')+1);
+        }
+        // and try to deduce what type it should be...
+        // we keep object and array as String
+        // integer
+        if ( colName.equals(DataTableColumns.CONFLICT_TYPE) ) {
+          classes[idx] = Integer.class;
+        } else {
+          try {
+            ColumnDefinition defn = orderedColumns.find(colName);
+            ElementDataType dataType = defn.getType().getDataType();
+            Class<?> clazz = ColumnUtil.get().getOdkDataIfType(dataType);
+            classes[idx] = clazz;
+          } catch ( Exception e ) {
+            // ignore
+          }
+        }
+      }
+
+      // assemble the data array
+      for (int i = 0; i < baseTable.getNumberOfRows(); ++i) {
+        Row r = baseTable.getRowAtIndex(i);
+        Object[] values = new Object[baseTable.getWidth()];
+
+        for ( idx = 0 ; idx < baseTable.getWidth() ; ++idx ) {
+          values[idx] = r.getDataType(idx, classes[idx]);
+        }
+        data.add(Arrays.asList(values));
+      }
+    }
+
+    Map<String, Object> metadata = new HashMap<String, Object>();
+    ResumableQuery q = baseTable.getQuery();
+    if ( q != null ) {
+      metadata.put("limit", q.getSqlLimit());
+      metadata.put("offset", q.getSqlOffset());
+    }
+
+    metadata.put("tableId", orderedColumns.getTableId());
+
+    // elementKey -> index in row within row list
+    metadata.put("elementKeyMap", elementKeyToIndexMap);
+
+    // TODO: add dataTableModel to metadata once type information is available
+    // dataTableModel -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
+    //TreeMap<String, Object> dataTableModel = orderedColumns.getDataModel();
+    //metadata.put("dataTableModel", dataTableModel);
+
+    // raw queries are not extended.
+    reportSuccessAndCleanUp(data, metadata);
+  }
+
   private void reportSuccessAndCleanUp(UserTable userTable) throws ServicesAvailabilityException {
     TableMetaDataEntries metaDataEntries =
-        dbInterface
-            .getTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null,
-                null);
+            dbInterface
+                    .getTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null,
+                            null);
 
     TableDefinitionEntry tdef = dbInterface
-        .getTableDefinitionEntry(context.getAppName(), dbHandle, request.tableId);
+            .getTableDefinitionEntry(context.getAppName(), dbHandle, request.tableId);
 
     // assemble the data and metadata objects
     ArrayList<List<Object>> data = new ArrayList<List<Object>>();
     Map<String, Integer> elementKeyToIndexMap = userTable.getElementKeyToIndex();
     Integer idxEffectiveAccessColumn =
-        elementKeyToIndexMap.get(DataTableColumns.EFFECTIVE_ACCESS);
+            elementKeyToIndexMap.get(DataTableColumns.EFFECTIVE_ACCESS);
 
     OrderedColumns columnDefinitions = userTable.getColumnDefinitions();
 
@@ -663,7 +818,7 @@ public abstract class ExecutorProcessor implements Runnable {
       if ( idxEffectiveAccessColumn != null ) {
 
         typedValues[idxEffectiveAccessColumn] =
-            r.getDataType(DataTableColumns.EFFECTIVE_ACCESS, String.class);
+                r.getDataType(DataTableColumns.EFFECTIVE_ACCESS, String.class);
       }
     }
 
@@ -684,8 +839,8 @@ public abstract class ExecutorProcessor implements Runnable {
 
     // include metadata only if requested and if the existing metadata version is out-of-date.
     if ( request.tableId != null && request.includeFullMetadata &&
-        (request.metaDataRev == null ||
-            !request.metaDataRev.equals(metaDataEntries.getRevId())) ) {
+            (request.metaDataRev == null ||
+                    !request.metaDataRev.equals(metaDataEntries.getRevId())) ) {
 
       Map<String, Object> cachedMetadata = new HashMap<String, Object>();
 
@@ -1036,6 +1191,145 @@ public abstract class ExecutorProcessor implements Runnable {
           request.tableId + "._id = " +  request.rowId);
     } else {
       reportSuccessAndCleanUp(t);
+    }
+  }
+
+  private void createLocalOnlyTableWithColumns() throws ServicesAvailabilityException, IOException {
+    if (request.tableId == null) {
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
+      return;
+    }
+
+    if (request.stringifiedJSON == null) {
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": stringifiedJSON cannot be null");
+      return;
+    }
+
+    ArrayList<Column> colArrayList = ODKFileUtils.mapper.readValue(request.stringifiedJSON,
+            ODKFileUtils.mapper.getTypeFactory().constructCollectionType(ArrayList.class, Column.class));
+    ColumnList colList = new ColumnList(colArrayList);
+
+    OrderedColumns localCols = dbInterface.createLocalOnlyTableWithColumns(context.getAppName(),
+            dbHandle, request.tableId, colList);
+
+    if (localCols == null) {
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable create table: " + request.tableId);
+    } else {
+      // TODO: Pass localCols back once type is respected
+      reportSuccessAndCleanUp(null, null);
+    }
+  }
+
+  private void deleteLocalOnlyTable() throws ServicesAvailabilityException {
+    if (request.tableId == null) {
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
+      return;
+    }
+
+    dbInterface.deleteLocalOnlyTable(context.getAppName(), dbHandle, request.tableId);
+
+    reportSuccessAndCleanUp(null, null);
+  }
+
+  private void insertLocalOnlyRow() throws ServicesAvailabilityException {
+    if (request.tableId == null) {
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
+      return;
+    }
+
+    if (request.stringifiedJSON == null) {
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": stringifiedJSON cannot be null");
+      return;
+    }
+
+    ContentValues cvValues = convertLocalOnlyJSON(request.stringifiedJSON);
+    dbInterface.insertLocalOnlyRow(context.getAppName(), dbHandle, request.tableId, cvValues);
+
+    reportSuccessAndCleanUp(null, null);
+  }
+
+  private void updateLocalOnlyRows() throws ServicesAvailabilityException {
+    if (request.tableId == null) {
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
+      return;
+    }
+
+    if (request.stringifiedJSON == null) {
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": stringifiedJSON cannot be null");
+      return;
+    }
+
+    ContentValues cvValues = convertLocalOnlyJSON(request.stringifiedJSON);
+
+    dbInterface.updateLocalOnlyRows(context.getAppName(), dbHandle, request.tableId,
+            cvValues, request.whereClause, request.sqlBindParams);
+
+    reportSuccessAndCleanUp(null, null);
+  }
+
+  private void deleteLocalOnlyRows() throws ServicesAvailabilityException{
+    if (request.tableId == null) {
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
+      return;
+    }
+
+    dbInterface.deleteLocalOnlyRows(context.getAppName(), dbHandle, request.tableId,
+            request.whereClause, request.sqlBindParams);
+
+    reportSuccessAndCleanUp(null, null);
+  }
+
+  private void simpleQueryLocalOnlyTables() throws ServicesAvailabilityException {
+    if (request.tableId == null) {
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
+      return;
+    }
+
+    // TODO: Get type information
+    // OrderedColumns for unsynced tables are not currently stored in the _column_definitions
+    // If they were, the code below would retrieve type information
+    OrderedColumns ordCols = context.getOrderedColumns(request.tableId);
+    if (ordCols == null) {
+      ordCols = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
+      context.putOrderedColumns(request.tableId, ordCols);
+    }
+
+    BaseTable baseTable = dbInterface.simpleQueryLocalOnlyTables(context.getAppName(), dbHandle, request.tableId,
+            request.whereClause, request.sqlBindParams, request.groupBy, request.having,
+            QueryUtil.convertStringToArray(request.orderByElementKey),
+            QueryUtil.convertStringToArray(request.orderByDirection), request.limit, request.offset);
+
+    if (baseTable == null) {
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to query " + request.tableId);
+    } else {
+      reportLocalOnlyTableQuerySuccessAndCleanUp(baseTable, ordCols);
+    }
+
+  }
+
+  private void arbitrarySqlQueryLocalOnlyTables() throws ServicesAvailabilityException {
+    if (request.tableId == null) {
+      reportErrorAndCleanUp(IllegalArgumentException.class.getName() + ": tableId cannot be null");
+      return;
+    }
+
+    // TODO: Get type information
+    // OrderedColumns for unsynced tables are not currently stored in the _column_definitions
+    // If they were, the code below would retrieve type information
+    OrderedColumns ordCols = context.getOrderedColumns(request.tableId);
+    if (ordCols == null) {
+      ordCols = dbInterface.getUserDefinedColumns(context.getAppName(), dbHandle, request.tableId);
+      context.putOrderedColumns(request.tableId, ordCols);
+    }
+
+    BaseTable baseTable = dbInterface.arbitrarySqlQueryLocalOnlyTables(context.getAppName(), dbHandle, request.tableId,
+            request.sqlCommand, request.sqlBindParams, request.limit, request.offset);
+
+    if ( baseTable == null ) {
+      reportErrorAndCleanUp(IllegalStateException.class.getName() + ": Unable to rawQuery against: " + request.tableId +
+              " sql: " + request.sqlCommand );
+    } else {
+      reportLocalOnlyTableQuerySuccessAndCleanUp(baseTable, ordCols);
     }
   }
 
