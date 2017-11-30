@@ -33,18 +33,28 @@ android {
 	    // set by command line arguments
     publishNonDefault(gradle.ext.odkPublishConfig.toBoolean())
     defaultPublishConfig(gradle.ext.odkDefaultPublishConfig)
-	
+
+    flavorDimensions "stage", "testing"
+
     productFlavors {
         demo {
+            dimension 'stage'
         }
 
         master {
+            dimension 'stage'
         }
 
         snapshot {
+            dimension 'stage'
+        }
+
+        basic {
+            dimension 'testing'
         }
 
         uitest {
+            dimension 'testing'
         }
     }
 
@@ -96,25 +106,21 @@ allprojects {
 }
 
 dependencies {
-    compile fileTree(include: '*.jar', dir: 'libs')
-    compile 'com.android.support:support-annotations:25.4.0'
-    compile 'com.android.support:support-v13:25.4.0'
+    api fileTree(include: '*.jar', dir: 'libs')
 
     if (libraryProjectPath.exists() && gradle.useLocal) { // Local project is favoured
-        compile project(libraryProjectName)
+        implementation project(libraryProjectName)
     } else {
-        demoCompile(group: groupId, name: libraryDemoArtifactName, classifier: demoRelease,
+        demoImplementation(group: groupId, name: libraryDemoArtifactName, classifier: demoRelease,
                     version: latestVersion, ext: 'aar')
-        masterCompile(group: groupId, name: libraryMasterArtifactName, classifier: masterRelease,
+        masterImplementation(group: groupId, name: libraryMasterArtifactName, classifier: masterRelease,
                       version: masterArtifactVersion, ext: 'aar')
-        snapshotCompile(group: groupId, name: librarySnapshotArtifactName,
+        snapshotImplementation(group: groupId, name: librarySnapshotArtifactName,
                 classifier: snapshotRelease, version: latestVersion, ext: 'aar')
-        uitestCompile(group: groupId, name: librarySnapshotArtifactName,
-                      classifier: snapshotRelease, version: latestVersion, ext: 'aar')
     }
 
     // Testing dependencies
-    testCompile 'junit:junit:4.12'
-    androidTestCompile 'com.android.support.test:runner:1.0.0'
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'com.android.support.test:runner:1.0.1'
 
 }
