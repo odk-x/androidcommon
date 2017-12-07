@@ -33,7 +33,6 @@ android {
     }
 
 	    // set by command line arguments
-    publishNonDefault(gradle.ext.odkPublishConfig.toBoolean())
     defaultPublishConfig(gradle.ext.odkDefaultPublishConfig)
 
     flavorDimensions "stage", "testing"
@@ -156,8 +155,8 @@ task updateClassifierSnapshotBasic {
 
 task updateClassifierDemoBasic {
     doLast {
-        bundleSnapshotBasicRelease.classifier demoRelease
-        bundleSnapshotBasicDebug.classifier demoDebug
+        bundleDemoBasicRelease.classifier demoRelease
+        bundleDemoBasicDebug.classifier demoDebug
 
         publishing.publications.aarRelease.artifact bundleDemoBasicRelease
         publishing.publications.aarDebug.artifact bundleDemoBasicDebug
