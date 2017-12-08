@@ -27,8 +27,8 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
-import android.view.View;
 import android.webkit.WebView;
+
 import org.opendatakit.consts.IntentConsts;
 import org.opendatakit.consts.WebkitServerConsts;
 import org.opendatakit.database.service.AidlDbInterface;
@@ -41,7 +41,6 @@ import org.opendatakit.properties.CommonToolProperties;
 import org.opendatakit.properties.PropertiesSingleton;
 import org.opendatakit.task.InitializationTask;
 import org.opendatakit.utilities.LocalizationUtils;
-import org.opendatakit.views.ODKWebView;
 import org.opendatakit.webkitserver.service.WebkitServerInterface;
 
 import java.util.ArrayList;
@@ -319,7 +318,9 @@ public abstract class CommonApplication extends ToolAwareApplication implements
 
   public boolean shouldRunInitializationTask(String appName) {
     PropertiesSingleton props = CommonToolProperties.get(this, appName);
-    return props.shouldRunInitializationTask(this.getToolName());
+    // Run task if either one is true
+    return (props.shouldRunInitializationTask(this.getToolName()) ||
+            props.shouldRunCommonInitializationTask());
   }
 
   public void clearRunInitializationTask(String appName) {

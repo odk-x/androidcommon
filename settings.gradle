@@ -1,4 +1,4 @@
-gradle.ext.gradleConfigVersion = 84
+gradle.ext.gradleConfigVersion = 87
 
 
 if ( !gradle.ext.has('workspacePath') ) {
@@ -76,10 +76,6 @@ if (libraryProjectPath.exists() && gradle.ext.useLocal) { // check if local libr
 }
 
 
-
 if(gradle.ext.odkPublishConfig) {
-
     project(commonProjectChild).name = gradle.ext.odkCommonArchiveName
-
 }
-
