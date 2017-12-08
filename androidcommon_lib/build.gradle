@@ -81,16 +81,6 @@ android {
         targetCompatibility javaVersion
     }
 
-    variantFilter { variant ->
-        def names = variant.flavors*.name
-        if (gradle.ext.odkPublishConfig) {
-            if (names.contains(gradle.ext.odkPublishConfigName)) {
-                variant.setIgnore(false)
-            } else {
-                variant.setIgnore(true)
-            }
-        }
-    }
 }
 
 configurations.all {
@@ -130,8 +120,10 @@ dependencies {
 
 publishing {
     publications {
-        aarRelease(MavenPublication) {}
-        aarDebug(MavenPublication) {}
+        aarRelease(MavenPublication) {
+        }
+        aarDebug(MavenPublication) {
+        }
     }
     repositories {
         ivy {
@@ -141,7 +133,7 @@ publishing {
     }
 }
 
-task updateClassifierSnapshotBasic {
+task updateCommonClassifierSnapshotBasic {
     doLast {
         bundleSnapshotBasicRelease.classifier snapshotRelease
         bundleSnapshotBasicDebug.classifier snapshotDebug
@@ -153,7 +145,7 @@ task updateClassifierSnapshotBasic {
     }
 }
 
-task updateClassifierDemoBasic {
+task updateCommonClassifierDemoBasic {
     doLast {
         bundleDemoBasicRelease.classifier demoRelease
         bundleDemoBasicDebug.classifier demoDebug
@@ -166,8 +158,10 @@ task updateClassifierDemoBasic {
 }
 
 
-task spawnSnapshotBasicArchives(dependsOn: ['snapshotVersion', 'assembleSnapshotBasicDebug',
-                                            'assembleSnapshotBasicRelease', 'updateClassifierSnapshotBasic'])
+task spawnCommonSnapshotBasicArchives(dependsOn: ['snapshotVersion',
+                                                  'assembleSnapshotBasicDebug',
+                                            'assembleSnapshotBasicRelease',
+                                                  'updateCommonClassifierSnapshotBasic'])
 
-task spawnDemoBasicArchives(dependsOn: ['snapshotVersion', 'assembleDemoBasicDebug',
+task spawnCommonDemoBasicArchives(dependsOn: ['snapshotVersion', 'assembleDemoBasicDebug',
                                         'assembleDemoBasicRelease', 'updateClassifierDemoBasic'])

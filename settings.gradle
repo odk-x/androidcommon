@@ -76,10 +76,6 @@ if (libraryProjectPath.exists() && gradle.ext.useLocal) { // check if local libr
 }
 
 
-
 if(gradle.ext.odkPublishConfig) {
-
     project(commonProjectChild).name = gradle.ext.odkCommonArchiveName
-
 }
-
