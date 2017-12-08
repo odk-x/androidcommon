@@ -164,4 +164,4 @@ task spawnCommonSnapshotBasicArchives(dependsOn: ['snapshotVersion',
                                                   'updateCommonClassifierSnapshotBasic'])
 
 task spawnCommonDemoBasicArchives(dependsOn: ['snapshotVersion', 'assembleDemoBasicDebug',
-                                        'assembleDemoBasicRelease', 'updateClassifierDemoBasic'])
+                                        'assembleDemoBasicRelease', 'updateCommonClassifierDemoBasic'])
