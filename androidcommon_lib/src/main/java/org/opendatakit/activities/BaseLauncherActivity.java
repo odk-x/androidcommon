@@ -18,6 +18,9 @@ import org.opendatakit.consts.RequestCodeConsts;
 import org.opendatakit.dependencies.DependencyChecker;
 import org.opendatakit.utilities.RuntimePermissionUtils;
 
+import java.util.ArrayList;
+import java.util.Collections;
+
 
 public abstract class BaseLauncherActivity extends BaseActivity implements ActivityCompat.OnRequestPermissionsResultCallback {
   protected static final int REQUIRED_PERMISSIONS_REQ_CODE = 0;
@@ -27,7 +30,11 @@ public abstract class BaseLauncherActivity extends BaseActivity implements Activ
       Manifest.permission.WRITE_EXTERNAL_STORAGE
   };
 
+  protected ArrayList<String> appSpecific_Required_Permissions = new ArrayList<String>();
+
   protected Bundle savedInstanceState;
+
+  protected abstract void setAppSpecificPerms();
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -53,9 +60,22 @@ public abstract class BaseLauncherActivity extends BaseActivity implements Activ
 
       startActivityForResult(launchIntent, RequestCodeConsts.RequestCodes.LAUNCH_MAIN_ACTIVITY);
     } else {
-      if (!RuntimePermissionUtils.checkSelfAllPermission(this, REQUIRED_PERMISSIONS)) {
+      setAppSpecificPerms();
+      if (appSpecific_Required_Permissions.size() > 0) {
+        for (String perm : REQUIRED_PERMISSIONS) {
+          if (!appSpecific_Required_Permissions.contains(perm)) {
+            appSpecific_Required_Permissions.add(perm);
+          }
+        }
+      } else {
+        Collections.addAll(appSpecific_Required_Permissions, REQUIRED_PERMISSIONS);
+      }
+
+      String[] appSpecPermArray = appSpecific_Required_Permissions.toArray(
+              new String[appSpecific_Required_Permissions.size()]);
+      if (!RuntimePermissionUtils.checkSelfAllPermission(this, appSpecPermArray)) {
         ActivityCompat.requestPermissions(
-            this, REQUIRED_PERMISSIONS, REQUIRED_PERMISSIONS_REQ_CODE);
+            this, appSpecPermArray, REQUIRED_PERMISSIONS_REQ_CODE);
       } else {
         onCreateWithPermission(savedInstanceState);
       }
