@@ -102,14 +102,6 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
     return isInactive;
   }
 
-  /**
-   * Stop all handling of calls from the Webkit Javascript
-   * to any of the injected Java interfaces.
-   */
-  public void setInactive() {
-    isInactive = true;
-  }
-
   public void serviceChange(boolean ready) {
     if (ready) {
       loadPage();
@@ -234,7 +226,7 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
 
   @Override public void destroy() {
     // bare minimum time to mark this as inactive.
-    setInactive();
+    isInactive = true;
     if (odkData != null) {
       odkData.shutdownContext();
     }
@@ -295,12 +287,6 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
     }
   }
 
-  public void gotoUrlHash(String hash) {
-    log.i(t, "[" + this.hashCode() + "] gotoUrlHash: " + hash);
-    ((IOdkCommonActivity) getContext()).queueUrlChange(hash);
-    signalQueuedActionAvailable();
-  }
-
   public void pageFinished(String url) {
     if ( !hasPageFramework() ) {
       // if we get an onPageFinished() callback on the WebViewClient that matches our
@@ -342,23 +328,19 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
     // otherwise, wait for the framework to tell us it has fully loaded.
   }
 
-  protected boolean hasPageFrameworkFinishedLoading() {
+  protected synchronized boolean hasPageFrameworkFinishedLoading() {
     return isLoadPageFrameworkFinished;
   }
 
-  public void setForceLoadDuringReload() {
+  public synchronized void setForceLoadDuringReload() {
     shouldForceLoadDuringReload = true;
-  }
-
-  protected boolean shouldForceLoadDuringReload() {
-    return shouldForceLoadDuringReload;
   }
 
   public synchronized void frameworkHasLoaded() {
     isLoadPageFrameworkFinished = true;
   }
 
-  protected synchronized void resetLoadPageStatus(String baseUrl, String containerFragmentID) {
+  private synchronized void resetLoadPageStatus(String baseUrl, String containerFragmentID) {
     if ( isInactive() ) return; // no-op
     shouldForceLoadDuringReload = true;
     isLoadPageFrameworkFinished = false;
@@ -378,7 +360,7 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
      if (url != null) {
 
         if (reload ||
-            shouldForceLoadDuringReload() ||
+            shouldForceLoadDuringReload ||
             !url.equals(getLoadPageUrl()))
            {
               // NOTE:
