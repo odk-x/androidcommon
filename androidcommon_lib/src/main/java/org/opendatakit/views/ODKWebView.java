@@ -23,7 +23,6 @@ import android.os.Looper;
 import android.os.Parcelable;
 import android.util.AttributeSet;
 import android.view.View;
-import android.webkit.ValueCallback;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
