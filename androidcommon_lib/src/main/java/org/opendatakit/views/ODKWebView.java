@@ -49,6 +49,21 @@ import org.opendatakit.utilities.ODKFileUtils;
  */
 @SuppressLint("SetJavaScriptEnabled")
 public abstract class ODKWebView extends WebView implements IOdkWebView {
+  protected enum LoadType {
+    RELOAD("reloadPage"),
+    FULL_LOAD("loadPage");
+
+    String name;
+
+    LoadType(String name) {
+      this.name = name;
+    }
+
+    @Override
+    public String toString() {
+      return name;
+    }
+  }
 
   private static final String t = "ODKWebView";
   private static final String BASE_STATE = "BASE_STATE";
@@ -80,6 +95,7 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
   private boolean isInactive = false;
   private boolean shouldForceLoadDuringReload = true;
   private boolean isLoadPageFrameworkFinished = false;
+  private boolean shouldReloadAfterLoad = false;
 
   /**
    * @return if the webpage has a framework that will call back to notify that it has loaded,
@@ -253,6 +269,7 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
     // NOTE: this is asynchronous
     log.i(t, "[" + this.hashCode() + "] signalQueuedActionAvailable()");
     loadJavascriptUrl("javascript:window.odkCommon.signalQueuedActionAvailable()", true);
+    shouldReloadAfterLoad = true;
   }
 
   /**
@@ -346,64 +363,86 @@ public abstract class ODKWebView extends WebView implements IOdkWebView {
     isLoadPageFrameworkFinished = false;
     loadPageUrl = baseUrl;
     this.containerFragmentID = containerFragmentID;
+    shouldReloadAfterLoad = false;
   }
 
   protected synchronized void loadPageOnUiThread(final String url, final String containerFragmentID,
-                                                 boolean reload) {
-     String typeOfLoad = reload ? "reloadPage" : "loadPage";
-
+                                                 LoadType loadType) {
      if ( isInactive() ) {
-        log.w(t, typeOfLoad + ": ignored -- webkit is inactive!");
+        log.w(t, loadType.toString() + ": ignored -- webkit is inactive!");
         return;
      }
 
      if (url != null) {
+       if (!url.equals(getLoadPageUrl())) {
+         if (shouldForceLoadDuringReload || loadType == LoadType.FULL_LOAD) {
+           // NOTE:
+           // there is a potential race condition if there
+           // is a page loading that hasn't yet had its framework
+           // load and we are *forcing* a reload or loading a different
+           // url. No easy way to guard against that since preventing a
+           // reload if the prior load did not complete would prevent a reset
+           // of the UI. And allowing the reload can cause a premature
+           // transition into the framework-has-loaded status. In general,
+           // we expect webkits to load a single URL and spawn new webkits
+           // when launching different URLs, so this race condition is
+           // largely prevented via our usage model: 1-url <=> 1-webkit
+           // and only reload or load that URL once.
 
-        if (reload ||
-            shouldForceLoadDuringReload ||
-            !url.equals(getLoadPageUrl()))
-           {
-              // NOTE:
-              // there is a potential race condition if there
-              // is a page loading that hasn't yet had its framework
-              // load and we are *forcing* a reload or loading a different
-              // url. No easy way to guard against that since preventing a
-              // reload if the prior load did not complete would prevent a reset
-              // of the UI. And allowing the reload can cause a premature
-              // transition into the framework-has-loaded status. In general,
-              // we expect webkits to load a single URL and spawn new webkits
-              // when launching different URLs, so this race condition is
-              // largely prevented via our usage model: 1-url <=> 1-webkit
-              // and only reload or load that URL once.
-              //
-              // reset to a clean need-to-reload state
-              resetLoadPageStatus(url, containerFragmentID);
-              // and signal that a load is commencing for url
-              // if a subsequent load for url is issued, it will
-              // be ignored until this one has completed or until
-              // a load is forced by the caller (reload == false).
-              shouldForceLoadDuringReload = false;
+           log.i(t, loadType.toString() + ": load: " + url);
 
-              log.i(t, typeOfLoad + ": load: " + url);
-
-              // Ensure that this is run on the UI thread
-              if (Thread.currentThread() != Looper.getMainLooper().getThread()) {
-                 post(new Runnable() {
-                    public void run() {
-                       loadUrl(url);
-                    }
-                 });
-              } else {
+           // Ensure that this is run on the UI thread
+           if (Thread.currentThread() != Looper.getMainLooper().getThread()) {
+             post(new Runnable() {
+               @Override
+               public void run() {
                  loadUrl(url);
-              }
+
+                 if (shouldReloadAfterLoad) {
+                   reload();
+                 }
+               }
+             });
            } else {
-              log.w(t, typeOfLoad + ": framework in process of loading -- ignoring request!");
+             loadUrl(url);
+
+             if (shouldReloadAfterLoad) {
+               reload();
+             }
            }
 
+           // reset to a clean need-to-reload state
+           resetLoadPageStatus(url, containerFragmentID);
+           // and signal that a load is commencing for url
+           // if a subsequent load for url is issued, it will
+           // be ignored until this one has completed or until
+           // a load is forced by the caller (reload == false).
+           shouldForceLoadDuringReload = false;
+         } else {
+           if (Thread.currentThread() != Looper.getMainLooper().getThread()) {
+             post(new Runnable() {
+               @Override
+               public void run() {
+                 reload();
+               }
+             });
+           } else {
+             reload();
+           }
+         }
+       } else {
+         log.w(t, loadType.toString() + ": framework in process of loading -- ignoring request!");
+       }
      } else {
-        log.w(t, typeOfLoad + ": cannot load anything -- url is null!");
+        log.w(t, loadType.toString() + ": cannot load anything -- url is null!");
      }
-
   }
 
+  @Override
+  public void loadUrl(String url) {
+    log.e(t, "loadurl!!!!");
+    log.e(t, Thread.currentThread().getName());
+    log.e(t, "loadUrl " + url);
+    super.loadUrl(url);
+  }
 }
