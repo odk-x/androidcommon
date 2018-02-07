@@ -47,19 +47,6 @@ import org.opendatakit.utilities.ODKFileUtils;
  */
 @SuppressLint("SetJavaScriptEnabled") public abstract class ODKWebView extends WebView
     implements IOdkWebView {
-   protected enum LoadType {
-      RELOAD("reloadPage"), FULL_LOAD("loadPage");
-
-      String name;
-
-      LoadType(String name) {
-         this.name = name;
-      }
-
-      @Override public String toString() {
-         return name;
-      }
-   }
 
    private static final String t = "ODKWebView";
    private static final String BASE_STATE = "BASE_STATE";
@@ -100,8 +87,6 @@ import org.opendatakit.utilities.ODKFileUtils;
     */
    public abstract boolean hasPageFramework();
 
-   public abstract void loadPage();
-
    public abstract void reloadPage();
 
    /**
@@ -112,14 +97,6 @@ import org.opendatakit.utilities.ODKFileUtils;
     */
    public boolean isInactive() {
       return isInactive;
-   }
-
-   public void serviceChange(boolean ready) {
-      if (ready) {
-         loadPage();
-      } else {
-         resetLoadPageStatus(loadPageUrl, containerFragmentID);
-      }
    }
 
    public String getLoadPageUrl() {
@@ -160,7 +137,20 @@ import org.opendatakit.utilities.ODKFileUtils;
 
    @Override public void onPause() {
       super.onPause();
-      this.resetLoadPageStatus(loadPageUrl, getContainerFragmentID());
+
+      shouldForceLoadDuringReload = true;
+      isLoadPageFrameworkFinished = false;
+      containerFragmentID = getContainerFragmentID();
+   }
+
+   @Override public void destroy() {
+      // bare minimum time to mark this as inactive.
+      isInactive = true;
+      if (odkData != null) {
+         odkData.shutdownContext();
+      }
+
+      super.destroy();
    }
 
    @SuppressLint("NewApi") private void perhapsEnableDebugging() {
@@ -232,15 +222,7 @@ import org.opendatakit.utilities.ODKFileUtils;
           Constants.JavaScriptHandles.DATA);
    }
 
-   @Override public void destroy() {
-      // bare minimum time to mark this as inactive.
-      isInactive = true;
-      if (odkData != null) {
-         odkData.shutdownContext();
-      }
 
-      super.destroy();
-   }
 
    public final WebLoggerIf getLogger() {
       return log;
@@ -339,10 +321,6 @@ import org.opendatakit.utilities.ODKFileUtils;
       // otherwise, wait for the framework to tell us it has fully loaded.
    }
 
-   protected synchronized boolean hasPageFrameworkFinishedLoading() {
-      return isLoadPageFrameworkFinished;
-   }
-
    public synchronized void setForceLoadDuringReload() {
       shouldForceLoadDuringReload = true;
    }
@@ -351,27 +329,18 @@ import org.opendatakit.utilities.ODKFileUtils;
       isLoadPageFrameworkFinished = true;
    }
 
-   private synchronized void resetLoadPageStatus(String baseUrl, String containerFragmentID) {
-      if (isInactive())
-         return; // no-op
-      shouldForceLoadDuringReload = true;
-      isLoadPageFrameworkFinished = false;
-      loadPageUrl = baseUrl;
-      this.containerFragmentID = containerFragmentID;
-   }
 
    protected synchronized void loadPageOnUiThread(final String url,
-       final String containerFragmentID, LoadType loadType) {
+       final String containerFragmentID) {
       if (isInactive()) {
-         log.w(t, loadType.toString() + ": ignored -- webkit is inactive!");
+         log.w(t, "LoadPageonUIThread: ignored -- webkit is inactive!");
          return;
       }
 
       if (url != null) {
          boolean isSameUrl = url.equals(getLoadPageUrl());
 
-         if (shouldForceLoadDuringReload || loadType == LoadType.FULL_LOAD ||
-             !isSameUrl || shouldReloadAfterLoad) {
+         if (shouldForceLoadDuringReload || !isSameUrl || shouldReloadAfterLoad) {
 
             // NOTE:
             // there is a potential race condition if there
@@ -386,14 +355,13 @@ import org.opendatakit.utilities.ODKFileUtils;
             // largely prevented via our usage model: 1-url <=> 1-webkit
             // and only reload or load that URL once.
 
-            log.i(t, loadType.toString() + ": load: " + url);
-
             // reset to a clean need-to-reload state
             isLoadPageFrameworkFinished = false;
             loadPageUrl = url;
             this.containerFragmentID = containerFragmentID;
 
-            if (shouldForceLoadDuringReload || loadType == LoadType.FULL_LOAD || !isSameUrl) {
+            if (shouldForceLoadDuringReload || !isSameUrl) {
+               log.i(t, "loadURL: " + url);
                // Ensure that this is run on the UI thread
                if (Thread.currentThread() != Looper.getMainLooper().getThread()) {
                   post(new Runnable() {
@@ -406,8 +374,8 @@ import org.opendatakit.utilities.ODKFileUtils;
                }
             }
 
-            if (shouldForceLoadDuringReload || loadType == LoadType.FULL_LOAD
-                || shouldReloadAfterLoad) {
+            if (shouldForceLoadDuringReload || shouldReloadAfterLoad) {
+               log.i(t, "initatiate reload");
                // Ensure that this is run on the UI thread
                if (Thread.currentThread() != Looper.getMainLooper().getThread()) {
                   post(new Runnable() {
@@ -428,17 +396,10 @@ import org.opendatakit.utilities.ODKFileUtils;
             shouldReloadAfterLoad = false;
 
          } else {
-            log.w(t,loadType.toString() +
-                ": framework in process of loading -- ignoring request!");
+            log.w(t, "framework in process of loading -- ignoring request!");
          }
       } else {
-         log.w(t,loadType.toString() + ": cannot load anything -- url is null!");
+         log.w(t, "cannot load anything -- url is null!");
       }
-   }
-
-   @Override public void loadUrl(String url) {
-      log.e(t, "loadurl!!!!");
-      log.e(t, "loadUrl " + url);
-      super.loadUrl(url);
    }
 }
