@@ -15,7 +15,6 @@
 package org.opendatakit.views;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-
 import org.opendatakit.activities.IOdkDataActivity;
 import org.opendatakit.consts.IntentConsts;
 import org.opendatakit.database.queries.ArbitraryQuery;
