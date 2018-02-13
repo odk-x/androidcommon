@@ -14,9 +14,8 @@
 
 package org.opendatakit.activities;
 
-import org.opendatakit.application.CommonApplication;
-
 import android.preference.PreferenceActivity;
+import org.opendatakit.application.CommonApplication;
 
 public abstract class BasePreferenceActivity extends PreferenceActivity implements IAppAwareActivity {
 

@@ -17,12 +17,12 @@ package org.opendatakit.views;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.opendatakit.activities.IOdkDataActivity;
 import org.opendatakit.database.data.OrderedColumns;
+import org.opendatakit.database.service.DbHandle;
+import org.opendatakit.database.service.UserDbInterface;
 import org.opendatakit.exception.ServicesAvailabilityException;
 import org.opendatakit.listener.DatabaseConnectionListener;
-import org.opendatakit.utilities.ODKFileUtils;
 import org.opendatakit.logging.WebLogger;
-import org.opendatakit.database.service.UserDbInterface;
-import org.opendatakit.database.service.DbHandle;
+import org.opendatakit.utilities.ODKFileUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;

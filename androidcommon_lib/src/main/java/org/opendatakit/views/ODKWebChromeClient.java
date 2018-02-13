@@ -14,7 +14,12 @@
 
 package org.opendatakit.views;
 
-import android.webkit.*;
+import android.webkit.ConsoleMessage;
+import android.webkit.GeolocationPermissions;
+import android.webkit.JsResult;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
+import android.webkit.WebView;
 
 public class ODKWebChromeClient extends WebChromeClient {
 
