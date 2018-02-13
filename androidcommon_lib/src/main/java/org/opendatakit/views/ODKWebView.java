@@ -25,7 +25,6 @@ import android.util.AttributeSet;
 import android.view.View;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
-
 import org.opendatakit.activities.IAppAwareActivity;
 import org.opendatakit.activities.IOdkCommonActivity;
 import org.opendatakit.activities.IOdkDataActivity;

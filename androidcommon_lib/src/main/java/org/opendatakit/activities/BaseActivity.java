@@ -14,10 +14,9 @@
 
 package org.opendatakit.activities;
 
+import android.app.Activity;
 import org.opendatakit.application.CommonApplication;
 import org.opendatakit.listener.DatabaseConnectionListener;
-
-import android.app.Activity;
 
 public abstract class BaseActivity extends Activity implements DatabaseConnectionListener, IAppAwareActivity {
 

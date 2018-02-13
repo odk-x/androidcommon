@@ -14,9 +14,8 @@
 
 package org.opendatakit.activities;
 
-import org.opendatakit.application.CommonApplication;
-
 import android.app.ListActivity;
+import org.opendatakit.application.CommonApplication;
 
 public abstract class BaseListActivity extends ListActivity implements IAppAwareActivity {
 
