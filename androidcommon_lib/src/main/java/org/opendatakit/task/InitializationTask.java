@@ -15,13 +15,13 @@
 package org.opendatakit.task;
 
 import android.os.AsyncTask;
-
 import org.opendatakit.application.CommonApplication;
 import org.opendatakit.builder.InitializationOutcome;
 import org.opendatakit.builder.InitializationSupervisor;
 import org.opendatakit.builder.InitializationUtil;
 import org.opendatakit.database.service.UserDbInterface;
 import org.opendatakit.listener.InitializationListener;
+
 import java.util.ArrayList;
 
 /**

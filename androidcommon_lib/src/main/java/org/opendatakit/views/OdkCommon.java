@@ -27,6 +27,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.opendatakit.activities.IOdkCommonActivity;
+import org.opendatakit.logging.WebLogger;
 import org.opendatakit.properties.CommonToolProperties;
 import org.opendatakit.properties.DynamicPropertiesCallback;
 import org.opendatakit.properties.PropertiesSingleton;
@@ -34,9 +35,7 @@ import org.opendatakit.properties.PropertyManager;
 import org.opendatakit.provider.FormsProviderAPI;
 import org.opendatakit.provider.FormsProviderUtils;
 import org.opendatakit.utilities.ODKFileUtils;
-import org.opendatakit.logging.WebLogger;
 import org.opendatakit.webkitserver.utilities.SerializationUtils;
-import org.opendatakit.webkitserver.utilities.UrlUtils;
 
 import java.io.File;
 import java.io.IOException;

@@ -15,8 +15,6 @@
 package org.opendatakit.views;
 
 import android.annotation.TargetApi;
-import android.os.Build;
-import android.os.Message;
 import android.view.KeyEvent;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;

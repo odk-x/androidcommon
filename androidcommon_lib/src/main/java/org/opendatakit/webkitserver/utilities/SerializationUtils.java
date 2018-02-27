@@ -14,15 +14,14 @@
 
 package org.opendatakit.webkitserver.utilities;
 
-import java.util.Iterator;
-import java.util.Set;
-
+import android.os.Bundle;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import android.os.Bundle;
 import org.opendatakit.logging.WebLogger;
+
+import java.util.Iterator;
+import java.util.Set;
 
 /**
  * Utilities for converting a Bundle to and from a JSON serialization for

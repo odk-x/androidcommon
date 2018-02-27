@@ -14,12 +14,11 @@
 
 package org.opendatakit.webkitserver.utilities;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-
+import android.net.Uri;
 import org.opendatakit.consts.WebkitServerConsts;
 
-import android.net.Uri;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 /**
  * Utilities class for urls
