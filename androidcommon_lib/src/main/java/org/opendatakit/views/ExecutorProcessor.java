@@ -15,6 +15,7 @@
 package org.opendatakit.views;
 
 import android.content.ContentValues;
+import android.support.annotation.NonNull;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
@@ -443,7 +444,13 @@ public abstract class ExecutorProcessor implements Runnable {
                 } catch (Exception e2) {
                     WebLogger.getLogger(context.getAppName()).e(TAG,
                         "ElementDataType: " + entry.type + " could not be converted from string");
-                    e2.printStackTrace();
+
+                    try {
+                      value = (Integer.parseInt(entry.value) != 0);
+                    } catch (Exception e) {
+                      WebLogger.getLogger(context.getAppName()).e(TAG,  "ElementDataType: " + entry.type + " could not be converted from int");
+                      e2.printStackTrace();
+                    }
                 }
               }
             } else if (type == ElementDataType.number) {
@@ -489,14 +496,6 @@ public abstract class ExecutorProcessor implements Runnable {
   private void reportArbitraryQuerySuccessAndCleanUp(OrderedColumns columnDefinitions,
       BaseTable baseTable) throws ServicesAvailabilityException {
 
-    TableMetaDataEntries metaDataEntries =
-       dbInterface
-        .getTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null,
-            null);
-    TableDefinitionEntry tdef = dbInterface
-        .getTableDefinitionEntry(context.getAppName(), dbHandle, request.tableId);
-
-    HashMap<String, Integer> elementKeyToIndexMap = new HashMap<String, Integer>();
 
     ArrayList<List<Object>> data = new ArrayList<List<Object>>();
 
@@ -513,36 +512,7 @@ public abstract class ExecutorProcessor implements Runnable {
         }
     }
 
-    Map<String, Object> metadata = new HashMap<String, Object>();
-    ResumableQuery q = baseTable.getQuery();
-    if ( q != null ) {
-      metadata.put("limit", q.getSqlLimit());
-      metadata.put("offset", q.getSqlOffset());
-    }
-    metadata.put("canCreateRow", baseTable.getEffectiveAccessCreateRow());
-    metadata.put("tableId", columnDefinitions.getTableId());
-    metadata.put("schemaETag", tdef.getSchemaETag());
-    metadata.put("lastDataETag", tdef.getLastDataETag());
-    metadata.put("lastSyncTime", tdef.getLastSyncTime());
-
-    // elementKey -> index in row within row list
-    metadata.put("elementKeyMap", elementKeyToIndexMap);
-
-    // include metadata only if requested and if the existing metadata version is out-of-date.
-    if ( request.tableId != null && request.includeFullMetadata &&
-            (request.metaDataRev == null ||
-             !request.metaDataRev.equals(metaDataEntries.getRevId())) ) {
-
-      Map<String, Object> cachedMetadata = new HashMap<String, Object>();
-
-      cachedMetadata.put("metaDataRev", metaDataEntries.getRevId());
-      // dataTableModel -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
-      TreeMap<String, Object> dataTableModel = columnDefinitions.getExtendedDataModel();
-      cachedMetadata.put("dataTableModel", dataTableModel);
-      // keyValueStoreList
-      populateKeyValueStoreList(cachedMetadata, metaDataEntries.getEntries());
-      metadata.put("cachedMetadata", cachedMetadata);
-    }
+    Map<String, Object> metadata = getMetaData(columnDefinitions, baseTable);
 
     // raw queries are not extended.
     reportSuccessAndCleanUp(data, metadata);
@@ -730,46 +700,7 @@ public abstract class ExecutorProcessor implements Runnable {
       data.add(typedValuesAsList);
     }
 
-    Map<String, Object> metadata = new HashMap<String, Object>();
-    ResumableQuery q = userTable.getQuery();
-    if ( q != null ) {
-      metadata.put("limit", q.getSqlLimit());
-      metadata.put("offset", q.getSqlOffset());
-    }
-    metadata.put("canCreateRow", userTable.getEffectiveAccessCreateRow());
-    metadata.put("tableId", userTable.getTableId());
-    metadata.put("schemaETag", tdef.getSchemaETag());
-    metadata.put("lastDataETag", tdef.getLastDataETag());
-    metadata.put("lastSyncTime", tdef.getLastSyncTime());
-
-    // elementKey -> index in row within row list
-    metadata.put("elementKeyMap", userTable.getElementKeyToIndex());
-
-    // include metadata only if requested and if the existing metadata version is out-of-date.
-    if ( request.tableId != null && request.includeFullMetadata &&
-            (request.metaDataRev == null ||
-                    !request.metaDataRev.equals(metaDataEntries.getRevId())) ) {
-
-      Map<String, Object> cachedMetadata = new HashMap<String, Object>();
-
-      cachedMetadata.put("metaDataRev", metaDataEntries.getRevId());
-      // dataTableModel -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
-      TreeMap<String, Object> dataTableModel = columnDefinitions.getExtendedDataModel();
-      cachedMetadata.put("dataTableModel", dataTableModel);
-      // keyValueStoreList
-      populateKeyValueStoreList(cachedMetadata, metaDataEntries.getEntries());
-      metadata.put("cachedMetadata", cachedMetadata);
-    }
-
-    // Always include tool-specific metadata if we are including metadata.
-    // The tool-specific metadata, such as cell, row, status and column colors
-    // varies with the content of the individual rows and therefore must always
-    // be returned.
-    if ( request.includeFullMetadata ) {
-      // extend the metadata with whatever else this app needs....
-      // e.g., row and column color maps
-      extendQueryMetadata(dbInterface, dbHandle, metaDataEntries.getEntries(), userTable, metadata);
-    }
+    Map<String, Object> metadata = getMetaDataForUserTable(userTable);
 
     reportSuccessAndCleanUp(data, metadata);
   }
@@ -1239,6 +1170,84 @@ public abstract class ExecutorProcessor implements Runnable {
     } else {
       reportLocalOnlyTableQuerySuccessAndCleanUp(baseTable, ordCols);
     }
+  }
+
+  @NonNull private Map<String, Object> getMetaData(OrderedColumns columnDefinitions,
+      BaseTable baseTable) throws
+      ServicesAvailabilityException {
+    TableMetaDataEntries metaDataEntries =
+        dbInterface
+            .getTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null,
+                null);
+    TableDefinitionEntry tdef = dbInterface
+        .getTableDefinitionEntry(context.getAppName(), dbHandle, request.tableId);
+
+    return getMetaData(metaDataEntries, tdef, columnDefinitions, baseTable);
+  }
+
+  @NonNull private Map<String, Object> getMetaDataForUserTable(UserTable userTable) throws
+      ServicesAvailabilityException {
+
+    TableMetaDataEntries metaDataEntries =
+        dbInterface
+            .getTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null,
+                null);
+    TableDefinitionEntry tdef = dbInterface
+        .getTableDefinitionEntry(context.getAppName(), dbHandle, request.tableId);
+
+    Map<String, Object> metadata = getMetaData(metaDataEntries, tdef, userTable
+            .getColumnDefinitions(), userTable.getBaseTable());
+
+    // Always include tool-specific metadata if we are including metadata.
+    // The tool-specific metadata, such as cell, row, status and column colors
+    // varies with the content of the individual rows and therefore must always
+    // be returned.
+    if ( request.includeFullMetadata ) {
+      // extend the metadata with whatever else this app needs....
+      // e.g., row and column color maps
+      extendQueryMetadata(dbInterface, dbHandle, metaDataEntries.getEntries(), userTable, metadata);
+    }
+
+    return metadata;
+  }
+
+  @NonNull private Map<String, Object> getMetaData( TableMetaDataEntries metaDataEntries,
+      TableDefinitionEntry tdef,
+      OrderedColumns columnDefinitions,
+      BaseTable baseTable) throws
+      ServicesAvailabilityException {
+
+    Map<String, Object> metadata = new HashMap<String, Object>();
+    ResumableQuery q = baseTable.getQuery();
+    if ( q != null ) {
+      metadata.put("limit", q.getSqlLimit());
+      metadata.put("offset", q.getSqlOffset());
+    }
+    metadata.put("canCreateRow", baseTable.getEffectiveAccessCreateRow());
+    metadata.put("tableId", columnDefinitions.getTableId());
+    metadata.put("schemaETag", tdef.getSchemaETag());
+    metadata.put("lastDataETag", tdef.getLastDataETag());
+    metadata.put("lastSyncTime", tdef.getLastSyncTime());
+
+    // elementKey -> index in row within row list
+    metadata.put("elementKeyMap", baseTable.getElementKeyToIndex());
+
+    // include metadata only if requested and if the existing metadata version is out-of-date.
+    if ( request.tableId != null && request.includeFullMetadata &&
+        (request.metaDataRev == null ||
+            !request.metaDataRev.equals(metaDataEntries.getRevId())) ) {
+
+      Map<String, Object> cachedMetadata = new HashMap<String, Object>();
+
+      cachedMetadata.put("metaDataRev", metaDataEntries.getRevId());
+      // dataTableModel -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
+      TreeMap<String, Object> dataTableModel = columnDefinitions.getExtendedDataModel();
+      cachedMetadata.put("dataTableModel", dataTableModel);
+      // keyValueStoreList
+      populateKeyValueStoreList(cachedMetadata, metaDataEntries.getEntries());
+      metadata.put("cachedMetadata", cachedMetadata);
+    }
+    return metadata;
   }
 
 }
