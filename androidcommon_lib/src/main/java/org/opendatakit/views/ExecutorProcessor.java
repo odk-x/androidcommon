@@ -28,6 +28,7 @@ import org.opendatakit.database.data.OrderedColumns;
 import org.opendatakit.database.data.Row;
 import org.opendatakit.database.data.TableDefinitionEntry;
 import org.opendatakit.database.data.TableMetaDataEntries;
+import org.opendatakit.database.data.TypedRow;
 import org.opendatakit.database.data.UserTable;
 import org.opendatakit.database.queries.ResumableQuery;
 import org.opendatakit.database.service.DbHandle;
@@ -37,14 +38,12 @@ import org.opendatakit.exception.ActionNotAuthorizedException;
 import org.opendatakit.exception.ServicesAvailabilityException;
 import org.opendatakit.logging.WebLogger;
 import org.opendatakit.provider.DataTableColumns;
-import org.opendatakit.utilities.DataHelper;
 import org.opendatakit.utilities.ODKFileUtils;
 import org.sqlite.database.sqlite.SQLiteException;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,31 +60,8 @@ public abstract class ExecutorProcessor implements Runnable {
 
   // Changed this to protected so that extended
   // ExecutorProcessors can make use of this
-  protected static final List<String> ADMIN_COLUMNS;
+  protected static final List<String> ADMIN_COLUMNS = DataTableColumns.getAdminColumns();
   protected static final String ID_COLUMN = "id";
-
-  static {
-    // everything is a STRING except for
-    // CONFLICT_TYPE which is an INTEGER
-    // see OdkDatabaseImplUtils.getUserDefinedTableCreationStatement()
-    ArrayList<String> adminColumns = new ArrayList<String>();
-    adminColumns.add(DataTableColumns.ID);
-    adminColumns.add(DataTableColumns.ROW_ETAG);
-    adminColumns.add(DataTableColumns.SYNC_STATE); // not exportable
-    adminColumns.add(DataTableColumns.CONFLICT_TYPE); // not exportable
-    adminColumns.add(DataTableColumns.DEFAULT_ACCESS);
-    adminColumns.add(DataTableColumns.ROW_OWNER);
-    adminColumns.add(DataTableColumns.GROUP_READ_ONLY);
-    adminColumns.add(DataTableColumns.GROUP_MODIFY);
-    adminColumns.add(DataTableColumns.GROUP_PRIVILEGED);
-    adminColumns.add(DataTableColumns.FORM_ID);
-    adminColumns.add(DataTableColumns.LOCALE);
-    adminColumns.add(DataTableColumns.SAVEPOINT_TYPE);
-    adminColumns.add(DataTableColumns.SAVEPOINT_TIMESTAMP);
-    adminColumns.add(DataTableColumns.SAVEPOINT_CREATOR);
-    Collections.sort(adminColumns);
-    ADMIN_COLUMNS = Collections.unmodifiableList(adminColumns);
-  }
 
   private ExecutorContext context;
 
@@ -463,17 +439,11 @@ public abstract class ExecutorProcessor implements Runnable {
               value = entry.value;
               if (value != null) {
                 try {
-                  value = DataHelper.intToBool(Integer.parseInt(entry.value));
-                } catch (Exception e) {
-                  WebLogger.getLogger(context.getAppName()).e(TAG,
-                      "ElementDataType: " + entry.type + " could not be converted from int");
-                  try {
-                    value = DataHelper.stringToBool(entry.value);
-                  } catch (Exception e2) {
+                    value = Boolean.valueOf(entry.value);
+                } catch (Exception e2) {
                     WebLogger.getLogger(context.getAppName()).e(TAG,
                         "ElementDataType: " + entry.type + " could not be converted from string");
                     e2.printStackTrace();
-                  }
                 }
               }
             } else if (type == ElementDataType.number) {
@@ -517,7 +487,7 @@ public abstract class ExecutorProcessor implements Runnable {
   }
 
   private void reportArbitraryQuerySuccessAndCleanUp(OrderedColumns columnDefinitions,
-      BaseTable userTable) throws ServicesAvailabilityException {
+      BaseTable baseTable) throws ServicesAvailabilityException {
 
     TableMetaDataEntries metaDataEntries =
        dbInterface
@@ -530,57 +500,26 @@ public abstract class ExecutorProcessor implements Runnable {
 
     ArrayList<List<Object>> data = new ArrayList<List<Object>>();
 
-    if ( userTable != null ) {
-        int idx;
-        // resolve the data types of all of the columns in the result set.
-        Class<?>[] classes = new Class<?>[userTable.getWidth()];
-        for ( idx = 0 ; idx < userTable.getWidth(); ++idx ) {
-          // String is the default
-          classes[idx] = String.class;
-          // clean up the column name...
-          String colName = userTable.getElementKey(idx);
-          // set up the map -- use full column name here
-          elementKeyToIndexMap.put(colName, idx);
-          // remove any table alias qualifier from the name (assumes no quoting of column names)
-          if ( colName.lastIndexOf('.') != -1 ) {
-            colName = colName.substring(colName.lastIndexOf('.')+1);
-          }
-          // and try to deduce what type it should be...
-        // we keep object and array as String
-        // integer
-          if ( colName.equals(DataTableColumns.CONFLICT_TYPE) ) {
-            classes[idx] = Integer.class;
-          } else {
-            try {
-              ColumnDefinition defn = columnDefinitions.find(colName);
-              ElementDataType dataType = defn.getType().getDataType();
-            Class<?> clazz = ColumnUtil.get().getOdkDataIfType(dataType);
-              classes[idx] = clazz;
-            } catch ( Exception e ) {
-              // ignore
-            }
-          }
-        }
-
+    if ( baseTable != null ) {
         // assemble the data array
-        for (int i = 0; i < userTable.getNumberOfRows(); ++i) {
-          Row r = userTable.getRowAtIndex(i);
-          Object[] values = new Object[userTable.getWidth()];
+        for (int i = 0; i < baseTable.getNumberOfRows(); ++i) {
+          TypedRow r = new TypedRow(baseTable.getRowAtIndex(i), columnDefinitions);
+          Object[] values = new Object[baseTable.getWidth()];
 
-          for ( idx = 0 ; idx < userTable.getWidth() ; ++idx ) {
-            values[idx] = r.getDataType(idx, classes[idx]);
+          for (int idx = 0 ; idx < baseTable.getWidth() ; ++idx ) {
+            values[idx] = r.getDataByIndex(idx);
           }
           data.add(Arrays.asList(values));
         }
     }
 
     Map<String, Object> metadata = new HashMap<String, Object>();
-    ResumableQuery q = userTable.getQuery();
+    ResumableQuery q = baseTable.getQuery();
     if ( q != null ) {
       metadata.put("limit", q.getSqlLimit());
       metadata.put("offset", q.getSqlOffset());
     }
-    metadata.put("canCreateRow", userTable.getEffectiveAccessCreateRow());
+    metadata.put("canCreateRow", baseTable.getEffectiveAccessCreateRow());
     metadata.put("tableId", columnDefinitions.getTableId());
     metadata.put("schemaETag", tdef.getSchemaETag());
     metadata.put("lastDataETag", tdef.getLastDataETag());
@@ -779,45 +718,16 @@ public abstract class ExecutorProcessor implements Runnable {
 
     // assemble the data and metadata objects
     ArrayList<List<Object>> data = new ArrayList<List<Object>>();
-    Map<String, Integer> elementKeyToIndexMap = userTable.getElementKeyToIndex();
-    Integer idxEffectiveAccessColumn =
-            elementKeyToIndexMap.get(DataTableColumns.EFFECTIVE_ACCESS);
-
-    OrderedColumns columnDefinitions = userTable.getColumnDefinitions();
+      OrderedColumns columnDefinitions = userTable.getColumnDefinitions();
 
     for (int i = 0; i < userTable.getNumberOfRows(); ++i) {
-      Row r = userTable.getRowAtIndex(i);
-      Object[] typedValues = new Object[elementKeyToIndexMap.size()];
+      TypedRow r = userTable.getRowAtIndex(i);
+      Object[] typedValues = new Object[userTable.getWidth()];
+      for (int idx = 0 ; idx < userTable.getWidth() ; ++idx ) {
+        typedValues[idx] = r.getDataByIndex(idx);
+      }
       List<Object> typedValuesAsList = Arrays.asList(typedValues);
       data.add(typedValuesAsList);
-
-      for (String name : ADMIN_COLUMNS) {
-        int idx = elementKeyToIndexMap.get(name);
-        if (name.equals(DataTableColumns.CONFLICT_TYPE)) {
-          Integer value = r.getDataType(name, Integer.class);
-          typedValues[idx] = value;
-        } else {
-          String value = r.getDataType(name, String.class);
-          typedValues[idx] = value;
-        }
-      }
-
-      ArrayList<String> elementKeys = columnDefinitions.getRetentionColumnNames();
-
-      for (String name : elementKeys) {
-        int idx = elementKeyToIndexMap.get(name);
-        ColumnDefinition defn = columnDefinitions.find(name);
-        ElementDataType dataType = defn.getType().getDataType();
-        Class<?> clazz = ColumnUtil.get().getOdkDataIfType(dataType);
-        Object value = r.getDataType(name, clazz);
-        typedValues[idx] = value;
-      }
-
-      if ( idxEffectiveAccessColumn != null ) {
-
-        typedValues[idxEffectiveAccessColumn] =
-                r.getDataType(DataTableColumns.EFFECTIVE_ACCESS, String.class);
-      }
     }
 
     Map<String, Object> metadata = new HashMap<String, Object>();
@@ -833,7 +743,7 @@ public abstract class ExecutorProcessor implements Runnable {
     metadata.put("lastSyncTime", tdef.getLastSyncTime());
 
     // elementKey -> index in row within row list
-    metadata.put("elementKeyMap", elementKeyToIndexMap);
+    metadata.put("elementKeyMap", userTable.getElementKeyToIndex());
 
     // include metadata only if requested and if the existing metadata version is out-of-date.
     if ( request.tableId != null && request.includeFullMetadata &&
