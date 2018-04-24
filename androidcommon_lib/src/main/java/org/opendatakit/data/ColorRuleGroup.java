@@ -26,10 +26,7 @@ import org.opendatakit.aggregate.odktables.rest.ElementType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.data.utilities.ColorRuleUtil;
 import org.opendatakit.database.LocalKeyValueStoreConstants;
-import org.opendatakit.database.data.ColumnDefinition;
-import org.opendatakit.database.data.KeyValueStoreEntry;
-import org.opendatakit.database.data.OrderedColumns;
-import org.opendatakit.database.data.Row;
+import org.opendatakit.database.data.*;
 import org.opendatakit.database.service.DbHandle;
 import org.opendatakit.database.service.UserDbInterface;
 import org.opendatakit.database.utilities.KeyValueStoreUtils;
@@ -328,7 +325,7 @@ public class ColorRuleGroup {
    * @param row the data from the row
    * @return null or the matching rule in the group, {@link ColorGuide}.
    */
-  public ColorGuide getColorGuide(OrderedColumns orderedDefns, Row row) {
+  public ColorGuide getColorGuide(OrderedColumns orderedDefns, TypedRow row) {
     for (int i = 0; i < ruleList.size(); i++) {
       ColorRule cr = ruleList.get(i);
       // First get the data about the column. It is possible that we are trying
