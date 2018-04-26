@@ -20,13 +20,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
-import org.opendatakit.data.utilities.ColumnUtil;
 import org.opendatakit.database.data.BaseTable;
 import org.opendatakit.database.data.ColumnDefinition;
 import org.opendatakit.database.data.ColumnList;
 import org.opendatakit.database.data.KeyValueStoreEntry;
 import org.opendatakit.database.data.OrderedColumns;
-import org.opendatakit.database.data.Row;
 import org.opendatakit.database.data.TableDefinitionEntry;
 import org.opendatakit.database.data.TableMetaDataEntries;
 import org.opendatakit.database.data.TypedRow;
@@ -506,7 +504,7 @@ public abstract class ExecutorProcessor implements Runnable {
           Object[] values = new Object[baseTable.getWidth()];
 
           for (int idx = 0 ; idx < baseTable.getWidth() ; ++idx ) {
-            values[idx] = r.getDataByIndex(idx);
+            values[idx] = r.getOdkDataIfDataByIndex(idx);
           }
           data.add(Arrays.asList(values));
         }
@@ -606,51 +604,16 @@ public abstract class ExecutorProcessor implements Runnable {
                                                           OrderedColumns orderedColumns)
           throws ServicesAvailabilityException {
 
-    HashMap<String, Integer> elementKeyToIndexMap = new HashMap<String, Integer>();
-
     ArrayList<List<Object>> data = new ArrayList<List<Object>>();
 
-    // TODO: Pass typed objects back to JS side
-    // Currently, all local table data is passed back as strings
     if ( baseTable != null ) {
-      int idx;
-      // resolve the data types of all of the columns in the result set.
-      Class<?>[] classes = new Class<?>[baseTable.getWidth()];
-      for ( idx = 0 ; idx < baseTable.getWidth(); ++idx ) {
-        // String is the default
-        classes[idx] = String.class;
-        // clean up the column name...
-        String colName = baseTable.getElementKey(idx);
-        // set up the map -- use full column name here
-        elementKeyToIndexMap.put(colName, idx);
-        // remove any table alias qualifier from the name (assumes no quoting of column names)
-        if ( colName.lastIndexOf('.') != -1 ) {
-          colName = colName.substring(colName.lastIndexOf('.')+1);
-        }
-        // and try to deduce what type it should be...
-        // we keep object and array as String
-        // integer
-        if ( colName.equals(DataTableColumns.CONFLICT_TYPE) ) {
-          classes[idx] = Integer.class;
-        } else {
-          try {
-            ColumnDefinition defn = orderedColumns.find(colName);
-            ElementDataType dataType = defn.getType().getDataType();
-            Class<?> clazz = ColumnUtil.get().getOdkDataIfType(dataType);
-            classes[idx] = clazz;
-          } catch ( Exception e ) {
-            // ignore
-          }
-        }
-      }
-
       // assemble the data array
       for (int i = 0; i < baseTable.getNumberOfRows(); ++i) {
-        Row r = baseTable.getRowAtIndex(i);
+        TypedRow r = new TypedRow(baseTable.getRowAtIndex(i), orderedColumns);
         Object[] values = new Object[baseTable.getWidth()];
 
-        for ( idx = 0 ; idx < baseTable.getWidth() ; ++idx ) {
-          values[idx] = r.getDataType(idx, classes[idx]);
+        for (int idx = 0 ; idx < baseTable.getWidth() ; ++idx ) {
+          values[idx] = r.getOdkDataIfDataByIndex(idx);
         }
         data.add(Arrays.asList(values));
       }
@@ -666,7 +629,7 @@ public abstract class ExecutorProcessor implements Runnable {
     metadata.put("tableId", orderedColumns.getTableId());
 
     // elementKey -> index in row within row list
-    metadata.put("elementKeyMap", elementKeyToIndexMap);
+    metadata.put("elementKeyMap", baseTable.getElementKeyToIndex());
 
     // TODO: add dataTableModel to metadata once type information is available
     // dataTableModel -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
@@ -694,7 +657,7 @@ public abstract class ExecutorProcessor implements Runnable {
       TypedRow r = userTable.getRowAtIndex(i);
       Object[] typedValues = new Object[userTable.getWidth()];
       for (int idx = 0 ; idx < userTable.getWidth() ; ++idx ) {
-        typedValues[idx] = r.getDataByIndex(idx);
+        typedValues[idx] = r.getOdkDataIfDataByIndex(idx);
       }
       List<Object> typedValuesAsList = Arrays.asList(typedValues);
       data.add(typedValuesAsList);
