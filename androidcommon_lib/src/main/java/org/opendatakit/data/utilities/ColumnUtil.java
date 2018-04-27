@@ -301,28 +301,4 @@ public class ColumnUtil {
     return colWidths;
   }
 
-  /**
-   * These are the data type mappings used across the odkData Javascript interface.
-   * NOTE: integer data types are mapped to Long values.
-   * This is consistent with the support for Long values in Javascript.
-   *
-   * @param dataType
-   * @return
-   */
-  public Class<?> getOdkDataIfType(ElementDataType dataType) {
-    
-    if ( dataType == ElementDataType.integer ) {
-      return Long.class;
-    }
-
-    if ( dataType == ElementDataType.number ) {
-      return Double.class;
-    }
-
-    if ( dataType == ElementDataType.bool ) {
-      return Boolean.class;
-    }
-
-    return String.class;
-  }
 }

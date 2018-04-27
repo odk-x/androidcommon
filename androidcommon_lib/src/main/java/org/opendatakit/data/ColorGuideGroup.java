@@ -1,6 +1,7 @@
 package org.opendatakit.data;
 
 import org.opendatakit.database.data.Row;
+import org.opendatakit.database.data.TypedRow;
 import org.opendatakit.database.data.UserTable;
 
 import java.util.Map;
@@ -42,7 +43,7 @@ public class ColorGuideGroup {
   public ColorGuide getColorGuideForRowIndex(int i) {
     ColorGuide cg = null;
 
-    Row colorRow = null;
+    TypedRow colorRow = null;
 
     try {
       colorRow = mUT.getRowAtIndex(i);

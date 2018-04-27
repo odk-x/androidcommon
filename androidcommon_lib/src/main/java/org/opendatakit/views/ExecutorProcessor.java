@@ -15,19 +15,19 @@
 package org.opendatakit.views;
 
 import android.content.ContentValues;
+import android.support.annotation.NonNull;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.opendatakit.aggregate.odktables.rest.ElementDataType;
 import org.opendatakit.aggregate.odktables.rest.KeyValueStoreConstants;
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
-import org.opendatakit.data.utilities.ColumnUtil;
 import org.opendatakit.database.data.BaseTable;
 import org.opendatakit.database.data.ColumnDefinition;
 import org.opendatakit.database.data.ColumnList;
 import org.opendatakit.database.data.KeyValueStoreEntry;
 import org.opendatakit.database.data.OrderedColumns;
-import org.opendatakit.database.data.Row;
 import org.opendatakit.database.data.TableDefinitionEntry;
 import org.opendatakit.database.data.TableMetaDataEntries;
+import org.opendatakit.database.data.TypedRow;
 import org.opendatakit.database.data.UserTable;
 import org.opendatakit.database.queries.ResumableQuery;
 import org.opendatakit.database.service.DbHandle;
@@ -37,14 +37,12 @@ import org.opendatakit.exception.ActionNotAuthorizedException;
 import org.opendatakit.exception.ServicesAvailabilityException;
 import org.opendatakit.logging.WebLogger;
 import org.opendatakit.provider.DataTableColumns;
-import org.opendatakit.utilities.DataHelper;
 import org.opendatakit.utilities.ODKFileUtils;
 import org.sqlite.database.sqlite.SQLiteException;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,31 +59,8 @@ public abstract class ExecutorProcessor implements Runnable {
 
   // Changed this to protected so that extended
   // ExecutorProcessors can make use of this
-  protected static final List<String> ADMIN_COLUMNS;
+  protected static final List<String> ADMIN_COLUMNS = DataTableColumns.getAdminColumns();
   protected static final String ID_COLUMN = "id";
-
-  static {
-    // everything is a STRING except for
-    // CONFLICT_TYPE which is an INTEGER
-    // see OdkDatabaseImplUtils.getUserDefinedTableCreationStatement()
-    ArrayList<String> adminColumns = new ArrayList<String>();
-    adminColumns.add(DataTableColumns.ID);
-    adminColumns.add(DataTableColumns.ROW_ETAG);
-    adminColumns.add(DataTableColumns.SYNC_STATE); // not exportable
-    adminColumns.add(DataTableColumns.CONFLICT_TYPE); // not exportable
-    adminColumns.add(DataTableColumns.DEFAULT_ACCESS);
-    adminColumns.add(DataTableColumns.ROW_OWNER);
-    adminColumns.add(DataTableColumns.GROUP_READ_ONLY);
-    adminColumns.add(DataTableColumns.GROUP_MODIFY);
-    adminColumns.add(DataTableColumns.GROUP_PRIVILEGED);
-    adminColumns.add(DataTableColumns.FORM_ID);
-    adminColumns.add(DataTableColumns.LOCALE);
-    adminColumns.add(DataTableColumns.SAVEPOINT_TYPE);
-    adminColumns.add(DataTableColumns.SAVEPOINT_TIMESTAMP);
-    adminColumns.add(DataTableColumns.SAVEPOINT_CREATOR);
-    Collections.sort(adminColumns);
-    ADMIN_COLUMNS = Collections.unmodifiableList(adminColumns);
-  }
 
   private ExecutorContext context;
 
@@ -463,17 +438,17 @@ public abstract class ExecutorProcessor implements Runnable {
               value = entry.value;
               if (value != null) {
                 try {
-                  value = DataHelper.intToBool(Integer.parseInt(entry.value));
-                } catch (Exception e) {
-                  WebLogger.getLogger(context.getAppName()).e(TAG,
-                      "ElementDataType: " + entry.type + " could not be converted from int");
-                  try {
-                    value = DataHelper.stringToBool(entry.value);
-                  } catch (Exception e2) {
+                    value = Boolean.valueOf(entry.value);
+                } catch (Exception e2) {
                     WebLogger.getLogger(context.getAppName()).e(TAG,
                         "ElementDataType: " + entry.type + " could not be converted from string");
-                    e2.printStackTrace();
-                  }
+
+                    try {
+                      value = (Integer.parseInt(entry.value) != 0);
+                    } catch (Exception e) {
+                      WebLogger.getLogger(context.getAppName()).e(TAG,  "ElementDataType: " + entry.type + " could not be converted from int");
+                      e2.printStackTrace();
+                    }
                 }
               }
             } else if (type == ElementDataType.number) {
@@ -517,93 +492,25 @@ public abstract class ExecutorProcessor implements Runnable {
   }
 
   private void reportArbitraryQuerySuccessAndCleanUp(OrderedColumns columnDefinitions,
-      BaseTable userTable) throws ServicesAvailabilityException {
+      BaseTable baseTable) throws ServicesAvailabilityException {
 
-    TableMetaDataEntries metaDataEntries =
-       dbInterface
-        .getTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null,
-            null);
-    TableDefinitionEntry tdef = dbInterface
-        .getTableDefinitionEntry(context.getAppName(), dbHandle, request.tableId);
-
-    HashMap<String, Integer> elementKeyToIndexMap = new HashMap<String, Integer>();
 
     ArrayList<List<Object>> data = new ArrayList<List<Object>>();
 
-    if ( userTable != null ) {
-        int idx;
-        // resolve the data types of all of the columns in the result set.
-        Class<?>[] classes = new Class<?>[userTable.getWidth()];
-        for ( idx = 0 ; idx < userTable.getWidth(); ++idx ) {
-          // String is the default
-          classes[idx] = String.class;
-          // clean up the column name...
-          String colName = userTable.getElementKey(idx);
-          // set up the map -- use full column name here
-          elementKeyToIndexMap.put(colName, idx);
-          // remove any table alias qualifier from the name (assumes no quoting of column names)
-          if ( colName.lastIndexOf('.') != -1 ) {
-            colName = colName.substring(colName.lastIndexOf('.')+1);
-          }
-          // and try to deduce what type it should be...
-        // we keep object and array as String
-        // integer
-          if ( colName.equals(DataTableColumns.CONFLICT_TYPE) ) {
-            classes[idx] = Integer.class;
-          } else {
-            try {
-              ColumnDefinition defn = columnDefinitions.find(colName);
-              ElementDataType dataType = defn.getType().getDataType();
-            Class<?> clazz = ColumnUtil.get().getOdkDataIfType(dataType);
-              classes[idx] = clazz;
-            } catch ( Exception e ) {
-              // ignore
-            }
-          }
-        }
-
+    if ( baseTable != null ) {
         // assemble the data array
-        for (int i = 0; i < userTable.getNumberOfRows(); ++i) {
-          Row r = userTable.getRowAtIndex(i);
-          Object[] values = new Object[userTable.getWidth()];
+        for (int i = 0; i < baseTable.getNumberOfRows(); ++i) {
+          TypedRow r = new TypedRow(baseTable.getRowAtIndex(i), columnDefinitions);
+          Object[] values = new Object[baseTable.getWidth()];
 
-          for ( idx = 0 ; idx < userTable.getWidth() ; ++idx ) {
-            values[idx] = r.getDataType(idx, classes[idx]);
+          for (int idx = 0 ; idx < baseTable.getWidth() ; ++idx ) {
+            values[idx] = r.getOdkDataIfDataByIndex(idx);
           }
           data.add(Arrays.asList(values));
         }
     }
 
-    Map<String, Object> metadata = new HashMap<String, Object>();
-    ResumableQuery q = userTable.getQuery();
-    if ( q != null ) {
-      metadata.put("limit", q.getSqlLimit());
-      metadata.put("offset", q.getSqlOffset());
-    }
-    metadata.put("canCreateRow", userTable.getEffectiveAccessCreateRow());
-    metadata.put("tableId", columnDefinitions.getTableId());
-    metadata.put("schemaETag", tdef.getSchemaETag());
-    metadata.put("lastDataETag", tdef.getLastDataETag());
-    metadata.put("lastSyncTime", tdef.getLastSyncTime());
-
-    // elementKey -> index in row within row list
-    metadata.put("elementKeyMap", elementKeyToIndexMap);
-
-    // include metadata only if requested and if the existing metadata version is out-of-date.
-    if ( request.tableId != null && request.includeFullMetadata &&
-            (request.metaDataRev == null ||
-             !request.metaDataRev.equals(metaDataEntries.getRevId())) ) {
-
-      Map<String, Object> cachedMetadata = new HashMap<String, Object>();
-
-      cachedMetadata.put("metaDataRev", metaDataEntries.getRevId());
-      // dataTableModel -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
-      TreeMap<String, Object> dataTableModel = columnDefinitions.getExtendedDataModel();
-      cachedMetadata.put("dataTableModel", dataTableModel);
-      // keyValueStoreList
-      populateKeyValueStoreList(cachedMetadata, metaDataEntries.getEntries());
-      metadata.put("cachedMetadata", cachedMetadata);
-    }
+    Map<String, Object> metadata = getMetaData(columnDefinitions, baseTable);
 
     // raw queries are not extended.
     reportSuccessAndCleanUp(data, metadata);
@@ -697,51 +604,16 @@ public abstract class ExecutorProcessor implements Runnable {
                                                           OrderedColumns orderedColumns)
           throws ServicesAvailabilityException {
 
-    HashMap<String, Integer> elementKeyToIndexMap = new HashMap<String, Integer>();
-
     ArrayList<List<Object>> data = new ArrayList<List<Object>>();
 
-    // TODO: Pass typed objects back to JS side
-    // Currently, all local table data is passed back as strings
     if ( baseTable != null ) {
-      int idx;
-      // resolve the data types of all of the columns in the result set.
-      Class<?>[] classes = new Class<?>[baseTable.getWidth()];
-      for ( idx = 0 ; idx < baseTable.getWidth(); ++idx ) {
-        // String is the default
-        classes[idx] = String.class;
-        // clean up the column name...
-        String colName = baseTable.getElementKey(idx);
-        // set up the map -- use full column name here
-        elementKeyToIndexMap.put(colName, idx);
-        // remove any table alias qualifier from the name (assumes no quoting of column names)
-        if ( colName.lastIndexOf('.') != -1 ) {
-          colName = colName.substring(colName.lastIndexOf('.')+1);
-        }
-        // and try to deduce what type it should be...
-        // we keep object and array as String
-        // integer
-        if ( colName.equals(DataTableColumns.CONFLICT_TYPE) ) {
-          classes[idx] = Integer.class;
-        } else {
-          try {
-            ColumnDefinition defn = orderedColumns.find(colName);
-            ElementDataType dataType = defn.getType().getDataType();
-            Class<?> clazz = ColumnUtil.get().getOdkDataIfType(dataType);
-            classes[idx] = clazz;
-          } catch ( Exception e ) {
-            // ignore
-          }
-        }
-      }
-
       // assemble the data array
       for (int i = 0; i < baseTable.getNumberOfRows(); ++i) {
-        Row r = baseTable.getRowAtIndex(i);
+        TypedRow r = new TypedRow(baseTable.getRowAtIndex(i), orderedColumns);
         Object[] values = new Object[baseTable.getWidth()];
 
-        for ( idx = 0 ; idx < baseTable.getWidth() ; ++idx ) {
-          values[idx] = r.getDataType(idx, classes[idx]);
+        for (int idx = 0 ; idx < baseTable.getWidth() ; ++idx ) {
+          values[idx] = r.getOdkDataIfDataByIndex(idx);
         }
         data.add(Arrays.asList(values));
       }
@@ -757,7 +629,7 @@ public abstract class ExecutorProcessor implements Runnable {
     metadata.put("tableId", orderedColumns.getTableId());
 
     // elementKey -> index in row within row list
-    metadata.put("elementKeyMap", elementKeyToIndexMap);
+    metadata.put("elementKeyMap", baseTable.getElementKeyToIndex());
 
     // TODO: add dataTableModel to metadata once type information is available
     // dataTableModel -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
@@ -779,87 +651,19 @@ public abstract class ExecutorProcessor implements Runnable {
 
     // assemble the data and metadata objects
     ArrayList<List<Object>> data = new ArrayList<List<Object>>();
-    Map<String, Integer> elementKeyToIndexMap = userTable.getElementKeyToIndex();
-    Integer idxEffectiveAccessColumn =
-            elementKeyToIndexMap.get(DataTableColumns.EFFECTIVE_ACCESS);
-
-    OrderedColumns columnDefinitions = userTable.getColumnDefinitions();
+      OrderedColumns columnDefinitions = userTable.getColumnDefinitions();
 
     for (int i = 0; i < userTable.getNumberOfRows(); ++i) {
-      Row r = userTable.getRowAtIndex(i);
-      Object[] typedValues = new Object[elementKeyToIndexMap.size()];
+      TypedRow r = userTable.getRowAtIndex(i);
+      Object[] typedValues = new Object[userTable.getWidth()];
+      for (int idx = 0 ; idx < userTable.getWidth() ; ++idx ) {
+        typedValues[idx] = r.getOdkDataIfDataByIndex(idx);
+      }
       List<Object> typedValuesAsList = Arrays.asList(typedValues);
       data.add(typedValuesAsList);
-
-      for (String name : ADMIN_COLUMNS) {
-        int idx = elementKeyToIndexMap.get(name);
-        if (name.equals(DataTableColumns.CONFLICT_TYPE)) {
-          Integer value = r.getDataType(name, Integer.class);
-          typedValues[idx] = value;
-        } else {
-          String value = r.getDataType(name, String.class);
-          typedValues[idx] = value;
-        }
-      }
-
-      ArrayList<String> elementKeys = columnDefinitions.getRetentionColumnNames();
-
-      for (String name : elementKeys) {
-        int idx = elementKeyToIndexMap.get(name);
-        ColumnDefinition defn = columnDefinitions.find(name);
-        ElementDataType dataType = defn.getType().getDataType();
-        Class<?> clazz = ColumnUtil.get().getOdkDataIfType(dataType);
-        Object value = r.getDataType(name, clazz);
-        typedValues[idx] = value;
-      }
-
-      if ( idxEffectiveAccessColumn != null ) {
-
-        typedValues[idxEffectiveAccessColumn] =
-                r.getDataType(DataTableColumns.EFFECTIVE_ACCESS, String.class);
-      }
     }
 
-    Map<String, Object> metadata = new HashMap<String, Object>();
-    ResumableQuery q = userTable.getQuery();
-    if ( q != null ) {
-      metadata.put("limit", q.getSqlLimit());
-      metadata.put("offset", q.getSqlOffset());
-    }
-    metadata.put("canCreateRow", userTable.getEffectiveAccessCreateRow());
-    metadata.put("tableId", userTable.getTableId());
-    metadata.put("schemaETag", tdef.getSchemaETag());
-    metadata.put("lastDataETag", tdef.getLastDataETag());
-    metadata.put("lastSyncTime", tdef.getLastSyncTime());
-
-    // elementKey -> index in row within row list
-    metadata.put("elementKeyMap", elementKeyToIndexMap);
-
-    // include metadata only if requested and if the existing metadata version is out-of-date.
-    if ( request.tableId != null && request.includeFullMetadata &&
-            (request.metaDataRev == null ||
-                    !request.metaDataRev.equals(metaDataEntries.getRevId())) ) {
-
-      Map<String, Object> cachedMetadata = new HashMap<String, Object>();
-
-      cachedMetadata.put("metaDataRev", metaDataEntries.getRevId());
-      // dataTableModel -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
-      TreeMap<String, Object> dataTableModel = columnDefinitions.getExtendedDataModel();
-      cachedMetadata.put("dataTableModel", dataTableModel);
-      // keyValueStoreList
-      populateKeyValueStoreList(cachedMetadata, metaDataEntries.getEntries());
-      metadata.put("cachedMetadata", cachedMetadata);
-    }
-
-    // Always include tool-specific metadata if we are including metadata.
-    // The tool-specific metadata, such as cell, row, status and column colors
-    // varies with the content of the individual rows and therefore must always
-    // be returned.
-    if ( request.includeFullMetadata ) {
-      // extend the metadata with whatever else this app needs....
-      // e.g., row and column color maps
-      extendQueryMetadata(dbInterface, dbHandle, metaDataEntries.getEntries(), userTable, metadata);
-    }
+    Map<String, Object> metadata = getMetaDataForUserTable(userTable);
 
     reportSuccessAndCleanUp(data, metadata);
   }
@@ -1329,6 +1133,84 @@ public abstract class ExecutorProcessor implements Runnable {
     } else {
       reportLocalOnlyTableQuerySuccessAndCleanUp(baseTable, ordCols);
     }
+  }
+
+  @NonNull private Map<String, Object> getMetaData(OrderedColumns columnDefinitions,
+      BaseTable baseTable) throws
+      ServicesAvailabilityException {
+    TableMetaDataEntries metaDataEntries =
+        dbInterface
+            .getTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null,
+                null);
+    TableDefinitionEntry tdef = dbInterface
+        .getTableDefinitionEntry(context.getAppName(), dbHandle, request.tableId);
+
+    return getMetaData(metaDataEntries, tdef, columnDefinitions, baseTable);
+  }
+
+  @NonNull private Map<String, Object> getMetaDataForUserTable(UserTable userTable) throws
+      ServicesAvailabilityException {
+
+    TableMetaDataEntries metaDataEntries =
+        dbInterface
+            .getTableMetadata(context.getAppName(), dbHandle, request.tableId, null, null, null,
+                null);
+    TableDefinitionEntry tdef = dbInterface
+        .getTableDefinitionEntry(context.getAppName(), dbHandle, request.tableId);
+
+    Map<String, Object> metadata = getMetaData(metaDataEntries, tdef, userTable
+            .getColumnDefinitions(), userTable.getBaseTable());
+
+    // Always include tool-specific metadata if we are including metadata.
+    // The tool-specific metadata, such as cell, row, status and column colors
+    // varies with the content of the individual rows and therefore must always
+    // be returned.
+    if ( request.includeFullMetadata ) {
+      // extend the metadata with whatever else this app needs....
+      // e.g., row and column color maps
+      extendQueryMetadata(dbInterface, dbHandle, metaDataEntries.getEntries(), userTable, metadata);
+    }
+
+    return metadata;
+  }
+
+  @NonNull private Map<String, Object> getMetaData( TableMetaDataEntries metaDataEntries,
+      TableDefinitionEntry tdef,
+      OrderedColumns columnDefinitions,
+      BaseTable baseTable) throws
+      ServicesAvailabilityException {
+
+    Map<String, Object> metadata = new HashMap<String, Object>();
+    ResumableQuery q = baseTable.getQuery();
+    if ( q != null ) {
+      metadata.put("limit", q.getSqlLimit());
+      metadata.put("offset", q.getSqlOffset());
+    }
+    metadata.put("canCreateRow", baseTable.getEffectiveAccessCreateRow());
+    metadata.put("tableId", columnDefinitions.getTableId());
+    metadata.put("schemaETag", tdef.getSchemaETag());
+    metadata.put("lastDataETag", tdef.getLastDataETag());
+    metadata.put("lastSyncTime", tdef.getLastSyncTime());
+
+    // elementKey -> index in row within row list
+    metadata.put("elementKeyMap", baseTable.getElementKeyToIndex());
+
+    // include metadata only if requested and if the existing metadata version is out-of-date.
+    if ( request.tableId != null && request.includeFullMetadata &&
+        (request.metaDataRev == null ||
+            !request.metaDataRev.equals(metaDataEntries.getRevId())) ) {
+
+      Map<String, Object> cachedMetadata = new HashMap<String, Object>();
+
+      cachedMetadata.put("metaDataRev", metaDataEntries.getRevId());
+      // dataTableModel -- JS nested schema struct { elementName : extended_JS_schema_struct, ...}
+      TreeMap<String, Object> dataTableModel = columnDefinitions.getExtendedDataModel();
+      cachedMetadata.put("dataTableModel", dataTableModel);
+      // keyValueStoreList
+      populateKeyValueStoreList(cachedMetadata, metaDataEntries.getEntries());
+      metadata.put("cachedMetadata", cachedMetadata);
+    }
+    return metadata;
   }
 
 }
