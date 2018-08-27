@@ -30,7 +30,7 @@ import android.util.Log;
 import android.webkit.WebView;
 import org.opendatakit.consts.IntentConsts;
 import org.opendatakit.consts.WebkitServerConsts;
-import org.opendatakit.database.service.AidlDbInterface;
+import org.opendatakit.database.service.IDbInterface;
 import org.opendatakit.database.service.InternalUserDbInterfaceAidlWrapperImpl;
 import org.opendatakit.database.service.UserDbInterface;
 import org.opendatakit.database.service.UserDbInterfaceImpl;
@@ -40,7 +40,7 @@ import org.opendatakit.properties.CommonToolProperties;
 import org.opendatakit.properties.PropertiesSingleton;
 import org.opendatakit.task.InitializationTask;
 import org.opendatakit.utilities.LocalizationUtils;
-import org.opendatakit.webkitserver.service.WebkitServerInterface;
+import org.opendatakit.webkitserver.service.IWebkitServerInterface;
 
 import java.util.ArrayList;
 
@@ -75,7 +75,7 @@ public abstract class CommonApplication extends ToolAwareApplication implements
   private static final class BackgroundServices {
 
     private ServiceConnection webkitfilesServiceConnection = null;
-    private WebkitServerInterface webkitfilesService = null;
+    private IWebkitServerInterface webkitfilesService = null;
     private ServiceConnection databaseServiceConnection = null;
     private UserDbInterface databaseService = null;
     private boolean isDestroying = false;
@@ -95,7 +95,7 @@ public abstract class CommonApplication extends ToolAwareApplication implements
       return databaseService;
     }
 
-    private synchronized WebkitServerInterface getWebkitServer() {
+    private synchronized IWebkitServerInterface getWebkitServer() {
       return webkitfilesService;
     }
     private void bindToService(final CommonApplication application,
@@ -163,7 +163,7 @@ public abstract class CommonApplication extends ToolAwareApplication implements
         Log.i(TAG, "Bound to WebServer service");
         synchronized (this) {
           try {
-            webkitfilesService = (service == null) ? null : WebkitServerInterface.Stub.asInterface(service);
+            webkitfilesService = (service == null) ? null : IWebkitServerInterface.Stub.asInterface(service);
           } catch (Exception e) {
             webkitfilesService = null;
           }
@@ -176,7 +176,7 @@ public abstract class CommonApplication extends ToolAwareApplication implements
           try {
             databaseService = (service == null) ? null : new UserDbInterfaceImpl(
                 new InternalUserDbInterfaceAidlWrapperImpl(
-                  AidlDbInterface.Stub.asInterface(service)));
+                  IDbInterface.Stub.asInterface(service)));
           } catch (Exception e) {
             databaseService = null;
           }
@@ -417,7 +417,7 @@ public abstract class CommonApplication extends ToolAwareApplication implements
       return mBackgroundServices.getDatabase();
   }
   
-  private WebkitServerInterface getWebkitServer() {
+  private IWebkitServerInterface getWebkitServer() {
       return mBackgroundServices.getWebkitServer();
 
   }
