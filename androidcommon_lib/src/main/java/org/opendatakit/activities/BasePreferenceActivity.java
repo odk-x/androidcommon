@@ -14,10 +14,10 @@
 
 package org.opendatakit.activities;
 
-import android.preference.PreferenceActivity;
+import android.support.v4.app.FragmentActivity;
 import org.opendatakit.application.CommonApplication;
 
-public abstract class BasePreferenceActivity extends PreferenceActivity implements IAppAwareActivity {
+public abstract class BasePreferenceActivity extends FragmentActivity implements IAppAwareActivity {
 
   @Override
   protected void onResume() {
