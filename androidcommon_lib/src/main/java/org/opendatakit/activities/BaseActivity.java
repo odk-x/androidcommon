@@ -14,11 +14,11 @@
 
 package org.opendatakit.activities;
 
-import android.support.v4.app.FragmentActivity;
+import android.support.v7.app.AppCompatActivity;
 import org.opendatakit.application.CommonApplication;
 import org.opendatakit.listener.DatabaseConnectionListener;
 
-public abstract class BaseActivity extends FragmentActivity implements DatabaseConnectionListener,
+public abstract class BaseActivity extends AppCompatActivity implements DatabaseConnectionListener,
     IAppAwareActivity {
 
   @Override
