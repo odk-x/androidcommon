@@ -14,11 +14,12 @@
 
 package org.opendatakit.activities;
 
-import android.app.Activity;
+import android.support.v7.app.AppCompatActivity;
 import org.opendatakit.application.CommonApplication;
 import org.opendatakit.listener.DatabaseConnectionListener;
 
-public abstract class BaseActivity extends Activity implements DatabaseConnectionListener, IAppAwareActivity {
+public abstract class BaseActivity extends AppCompatActivity implements DatabaseConnectionListener,
+    IAppAwareActivity {
 
   @Override
   protected void onResume() {
