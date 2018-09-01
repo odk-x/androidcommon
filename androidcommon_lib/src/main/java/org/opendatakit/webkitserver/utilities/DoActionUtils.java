@@ -9,7 +9,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.opendatakit.activities.IOdkCommonActivity;
-import org.opendatakit.application.ToolAwareApplication;
+import org.opendatakit.application.IToolAware;
 import org.opendatakit.consts.IntentConsts;
 import org.opendatakit.logging.WebLogger;
 import org.opendatakit.properties.CommonToolProperties;
@@ -33,7 +33,7 @@ public class DoActionUtils {
     * Invoked from within Javascript to launch an activity.
     *
     * @param activity         The IOdkCommonActivity from which this is invoked.
-    *                         ApplicationContext should derive from ToolAwareApplication.
+    *                         ApplicationContext should derive from IToolAware.
     *
     * @param propertyManager  The property manager for this tool.
     *
@@ -77,7 +77,8 @@ public class DoActionUtils {
 
       Intent i;
       boolean isCurrentApp = false;
-      String currentApp = "org.opendatakit." + ((ToolAwareApplication) activity.getApplicationContext())
+      String currentApp = "org.opendatakit." + ((IToolAware) (activity
+          .getApplicationContext()))
           .getToolName();
 
       boolean isOpendatakitApp = false;
