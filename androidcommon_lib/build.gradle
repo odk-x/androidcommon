@@ -140,8 +140,8 @@ task updateCommonClassifierSnapshotBasic {
         bundleSnapshotBasicRelease.classifier snapshotRelease
         bundleSnapshotBasicDebug.classifier snapshotDebug
 
-        publishing.publications.aarRelease.artifact bundleSnapshotBasicRelease
-        publishing.publications.aarDebug.artifact bundleSnapshotBasicDebug
+        publishing.publications.aarRelease.artifact bundleSnapshotBasicReleaseAar
+        publishing.publications.aarDebug.artifact bundleSnapshotBasicDebugAar
 
         project.getArtifacts().add("default", bundleSnapshotBasicDebug)
     }
@@ -152,8 +152,8 @@ task updateCommonClassifierDemoBasic {
         bundleDemoBasicRelease.classifier demoRelease
         bundleDemoBasicDebug.classifier demoDebug
 
-        publishing.publications.aarRelease.artifact bundleDemoBasicRelease
-        publishing.publications.aarDebug.artifact bundleDemoBasicDebug
+        publishing.publications.aarRelease.artifact bundleDemoBasicReleaseAar
+        publishing.publications.aarDebug.artifact bundleDemoBasicDebugAar
 
         project.getArtifacts().add("default", bundleDemoBasicDebug)
     }
