@@ -99,9 +99,9 @@ allprojects {
 
 dependencies {
     api fileTree(include: '*.jar', dir: 'libs')
-    api 'com.android.support:support-annotations:27.1.1'
-    api 'com.android.support:support-v4:27.1.1'
-    api 'com.android.support:preference-v7:27.1.1'
+    api 'com.android.support:support-annotations:28.0.0'
+    api 'com.android.support:support-v4:28.0.0'
+    api 'com.android.support:preference-v7:28.0.0'
 
     if (libraryProjectPath.exists() && gradle.useLocal) { // Local project is favoured
         implementation project(libraryProjectName)
@@ -137,25 +137,25 @@ publishing {
 
 task updateCommonClassifierSnapshotBasic {
     doLast {
-        bundleSnapshotBasicRelease.classifier snapshotRelease
-        bundleSnapshotBasicDebug.classifier snapshotDebug
+        bundleSnapshotBasicReleaseAar.classifier snapshotRelease
+        bundleSnapshotBasicDebugAar.classifier snapshotDebug
 
-        publishing.publications.aarRelease.artifact bundleSnapshotBasicRelease
-        publishing.publications.aarDebug.artifact bundleSnapshotBasicDebug
+        publishing.publications.aarRelease.artifact bundleSnapshotBasicReleaseAar
+        publishing.publications.aarDebug.artifact bundleSnapshotBasicDebugAar
 
-        project.getArtifacts().add("default", bundleSnapshotBasicDebug)
+        project.getArtifacts().add("default", bundleSnapshotBasicDebugAar)
     }
 }
 
 task updateCommonClassifierDemoBasic {
     doLast {
-        bundleDemoBasicRelease.classifier demoRelease
-        bundleDemoBasicDebug.classifier demoDebug
+        bundleDemoBasicReleaseAar.classifier demoRelease
+        bundleDemoBasicDebugAar.classifier demoDebug
 
-        publishing.publications.aarRelease.artifact bundleDemoBasicRelease
-        publishing.publications.aarDebug.artifact bundleDemoBasicDebug
+        publishing.publications.aarRelease.artifact bundleDemoBasicReleaseAar
+        publishing.publications.aarDebug.artifact bundleDemoBasicDebugAar
 
-        project.getArtifacts().add("default", bundleDemoBasicDebug)
+        project.getArtifacts().add("default", bundleDemoBasicDebugAar)
     }
 }
 
