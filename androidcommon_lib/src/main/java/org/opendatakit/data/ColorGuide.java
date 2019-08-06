@@ -17,7 +17,7 @@ package org.opendatakit.data;
 
 /**
  * Class for interpreting the result of a test of the rule group. When this
- * is returned you are able to distinguish via the {@link didMatch} method
+ * is returned you are able to distinguish via the didMatch method
  * whether or not the rule should apply.
  * @author sudar.sam@gmail.com
  *
