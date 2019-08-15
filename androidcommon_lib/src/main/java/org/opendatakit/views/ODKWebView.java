@@ -169,9 +169,6 @@ import org.opendatakit.utilities.ODKFileUtils;
    public ODKWebView(Context context, AttributeSet attrs) {
       super(context, attrs);
 
-      if (Build.VERSION.SDK_INT < 11) {
-         throw new IllegalStateException("pre-3.0 not supported!");
-      }
       // Context is ALWAYS an IOdkDataActivity, IOdkCommonActivity, IAppAwareActivity, IInitResumeActivity...
 
       String appName = ((IAppAwareActivity) context).getAppName();
