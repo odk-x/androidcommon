@@ -58,7 +58,6 @@ import org.opendatakit.utilities.ODKFileUtils;
    private String loadPageUrl = null;
    private String containerFragmentID = null;
 
-   private Context odkContext;
    /**
     * isInactive == true -- when this View is being destroyed
     * shouldForceLoadDuringReload == true -- if true, always call loadUrl(loadPageUrl).
@@ -111,7 +110,7 @@ import org.opendatakit.utilities.ODKFileUtils;
    }
 
    public Context getOdkContext() {
-      return odkContext;
+      return super.getContext();
    }
 
    public void setContainerFragmentID(String containerFragmentID) {
@@ -173,19 +172,12 @@ import org.opendatakit.utilities.ODKFileUtils;
       }
    }
 
-   private static Context getFixedContext(Context context) {
-      if (Build.VERSION.SDK_INT >= 21 && Build.VERSION.SDK_INT < 23) // Android Lollipop 5.0 & 5.1
-         return context.createConfigurationContext(new Configuration());
-      return context;
-   }
-
    public ODKWebView(Context context, AttributeSet attrs) {
-      super(getFixedContext(context), attrs);
+      super(context, attrs);
 
-      odkContext = context;
       // Context is ALWAYS an IOdkDataActivity, IOdkCommonActivity, IAppAwareActivity, IInitResumeActivity...
 
-      String appName = ((IAppAwareActivity) odkContext).getAppName();
+      String appName = ((IAppAwareActivity) context).getAppName();
       log = WebLogger.getLogger(appName);
       log.i(t, "[" + this.hashCode() + "] ODKWebView()");
 
@@ -199,7 +191,7 @@ import org.opendatakit.utilities.ODKFileUtils;
       ws.setCacheMode(WebSettings.LOAD_DEFAULT);
       ws.setDatabaseEnabled(false);
       int fontSize = CommonToolProperties
-          .getQuestionFontsize(odkContext.getApplicationContext(), appName);
+          .getQuestionFontsize(context.getApplicationContext(), appName);
       ws.setDefaultFixedFontSize(fontSize);
       ws.setDefaultFontSize(fontSize);
       ws.setDomStorageEnabled(true);
@@ -224,11 +216,11 @@ import org.opendatakit.utilities.ODKFileUtils;
       setWebViewClient(new ODKWebViewClient(this));
 
       // set up the odkCommonIf
-      odkCommon = new OdkCommon((IOdkCommonActivity) odkContext, this);
+      odkCommon = new OdkCommon((IOdkCommonActivity) context, this);
       addJavascriptInterface(odkCommon.getJavascriptInterfaceWithWeakReference(),
           Constants.JavaScriptHandles.COMMON);
 
-      odkData = new OdkData((IOdkDataActivity) odkContext, this);
+      odkData = new OdkData((IOdkDataActivity) context, this);
       addJavascriptInterface(odkData.getJavascriptInterfaceWithWeakReference(),
           Constants.JavaScriptHandles.DATA);
    }
