@@ -50,17 +50,18 @@ public class DependencyChecker {
     private static void alertMissing(boolean servicesInstalled, Context
         context, Activity activity) {
 
-        String message;
+        String message = "";
         String title = context.getString(R.string.dependency_missing);
 
         if (!servicesInstalled) {
             message = context.getString(R.string.services_missing);
-        } else {
-            message = "";
         }
-        // TODO translated string for multiple depenedencies
-        //.   title = context.getString(R.string.dependencies_missing);
 
+        // translated string for multiple dependencies
+        // was used when we had multiple dependencies checked
+        // leaveing as a comment to put back in the if statements
+        // when we add further dependency checks
+        //.   title = context.getString(R.string.dependencies_missing);
 
         AlertDialog alert = buildAlert(title, message, activity);
         alert.show();
