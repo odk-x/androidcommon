@@ -22,7 +22,6 @@ import org.opendatakit.application.CommonApplication;
 public class DependencyChecker {
 
     public static final String surveyAppPkgName = "org.opendatakit.survey";
-    private static final String oiFileMgrPkgName = "org.openintents.filemanager";
     private static final String servicesAppPkgName = "org.opendatakit.services";
 
     private static final String tables = "tables";
@@ -34,44 +33,35 @@ public class DependencyChecker {
     public static boolean checkDependencies(Activity activity) {
 
         Context context = activity.getApplicationContext();
-
-        boolean oiInstalled;
         boolean servicesInstalled;
-
-        if (tables.equals(((CommonApplication)context).getToolName()) ||
-            scan.equals(((CommonApplication)context).getToolName())) { // need to check
-        // for OI and Services
-            oiInstalled = isPackageInstalled(context, oiFileMgrPkgName);
-        } else { // only need to check for Services
-            oiInstalled = true;
-        }
 
         servicesInstalled = isPackageInstalled(context, servicesAppPkgName);
 
-        if (oiInstalled && servicesInstalled) { // correct dependencies installed
+        if (servicesInstalled) { // correct dependencies installed
             return true;
         } else {
-            alertMissing(oiInstalled, servicesInstalled, context, activity); // missing
+            alertMissing(servicesInstalled, context, activity); // missing
             // dependencies, warn
             // user
             return false;
         }
     }
 
-    private static void alertMissing(boolean oiInstalled, boolean servicesInstalled, Context
+    private static void alertMissing(boolean servicesInstalled, Context
         context, Activity activity) {
 
-        String message;
+        String message = "";
         String title = context.getString(R.string.dependency_missing);
 
-        if (oiInstalled && !servicesInstalled) {
+        if (!servicesInstalled) {
             message = context.getString(R.string.services_missing);
-        } else if (!oiInstalled && servicesInstalled) {
-            message = context.getString(R.string.oi_missing);
-        } else {
-            message = context.getString(R.string.oi_and_services_missing);
-            title = context.getString(R.string.dependencies_missing);
         }
+
+        // translated string for multiple dependencies
+        // was used when we had multiple dependencies checked
+        // leaveing as a comment to put back in the if statements
+        // when we add further dependency checks
+        //.   title = context.getString(R.string.dependencies_missing);
 
         AlertDialog alert = buildAlert(title, message, activity);
         alert.show();
