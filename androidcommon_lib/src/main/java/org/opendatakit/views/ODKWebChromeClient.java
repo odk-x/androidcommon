@@ -17,6 +17,7 @@ package org.opendatakit.views;
 import android.webkit.ConsoleMessage;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JsResult;
+import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
@@ -68,6 +69,11 @@ public class ODKWebChromeClient extends WebChromeClient {
   public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback
       callback) {
     callback.invoke(origin, true, false);
+  }
+
+  @Override
+  public void onPermissionRequest(final PermissionRequest request) {
+    request.grant(request.getResources());
   }
 
 }
