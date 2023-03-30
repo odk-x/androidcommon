@@ -32,7 +32,7 @@ General instructions for setting up an ODK 2.0 environment can be found at our [
 
 Install [Android Studio](http://developer.android.com/tools/studio/index.html) and the [SDK](http://developer.android.com/sdk/index.html#Other).
 
-This project depends on the ODK [androidlibrary](https://github.com/opendatakit/androidlibrary) project; its binaries will be downloaded automatically from our maven repository during the build phase. If you wish to modify that project, you must clone it into the same parent directory as androidcommon. You directory stucture should resemble the following:
+This project depends on the ODK [androidlibrary](https://github.com/opendatakit/androidlibrary) project; its binaries will be downloaded automatically from our maven repository during the build phase. If you wish to modify both projects at the same time and test the results locally, you must clone it into the same parent directory as androidcommon. You directory stucture should resemble the following:
 
         |-- odk
 
