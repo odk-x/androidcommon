@@ -1,4 +1,4 @@
-gradle.ext.gradleConfigVersion = 155
+gradle.ext.gradleConfigVersion = 158
 
 if (!gradle.ext.has('workspacePath')) {
     logger.warn("rootDir: " + rootDir.getAbsolutePath());
@@ -35,8 +35,4 @@ if (libraryProjectPath.exists() && gradle.ext.useLocal) {
 
     include libraryProjectName
     project(libraryProjectName).setProjectDir(libraryProjectPath) // set local location
-}
-
-if (gradle.ext.odkPublishConfig) {
-    project(commonProjectChild).name = gradle.ext.odkCommonArchiveName
 }
