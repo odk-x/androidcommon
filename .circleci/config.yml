@@ -7,7 +7,7 @@ jobs:
     description: Runs unit tests and instrumented tests on the Android Common
     executor:
       name: android/android-machine
-      resource-class: large
+      resource-class: xlarge
       tag: 2024.01.1
 
     steps:
@@ -26,9 +26,9 @@ jobs:
           restore-gradle-cache-prefix: v2
           post-emulator-launch-assemble-command: ./gradlew assemble
       - android/run-tests:
-          test-command: ./gradlew test
+          test-command: ./gradlew testSnapshotDebugUnitTest
       - android/run-tests:
-          test-command: ./gradlew connectedAndroidTest
+          test-command: ./gradlew connectedSnapshotDebugAndroidTest
       - android/save-gradle-cache:
           cache-prefix: v1
       - store_artifacts:
@@ -55,7 +55,7 @@ jobs:
           cache-prefix: v1
       - run:
           name: Build Common
-          command: ./gradlew assemble
+          command: ./gradlew assembleSnapshotDebug
 
   deploy:
     executor:
@@ -75,7 +75,7 @@ jobs:
           cache-prefix: v1
       - run:
           name: Publish library
-          command: ./gradlew publish
+          command: ./gradlew publishSnapshotDebugPublicationToODKXAndroidCommonRepository
 
 
   trigger-children:
@@ -103,10 +103,11 @@ workflows:
   build-test-deploy-trigger-workflow:
     jobs:
       - build
-      - test
-      - deploy:
+      - test:
           requires:
             - build
+      - deploy:
+          requires:
             - test
       - trigger-children:
           requires:

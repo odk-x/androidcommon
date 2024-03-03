@@ -96,7 +96,7 @@ dependencies {
     if (libraryProjectPath.exists() && gradle.useLocal) { // Local project is favoured
         implementation project(libraryProjectName)
     } else {
-        implementation(group: odkxGroupId, name: libraryPackageName, version: primaryVersion)
+        primaryImplementation(group: odkxGroupId, name: libraryPackageName, version: primaryVersion)
         snapshotImplementation(group: odkxGroupId, name: libraryPackageName, version: snapshotVersion)
     }
 
