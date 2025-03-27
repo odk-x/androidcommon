@@ -7,91 +7,92 @@ import static org.junit.Assert.*;
 
 public class UrlUtilsTest {
 
+    private static final String EMPTY_STRING = "";
+    private static final String URL_SEGMENT1 = "test/";
+    private static final String FILE_PATH_PREFIX = "this/test/file/path/";
+    private static final String HTML_EXTENSION = ".html";
+    private static final String QUERY_PARAM_PREFIX = "?";
+    private static final String HASH_PREFIX = "#";
+    
+    private static final String FILE_PATH_WITH_HTML = FILE_PATH_PREFIX + HTML_EXTENSION;
+    private static final String FILE_WITH_HASH = URL_SEGMENT1 + "file" + HASH_PREFIX + "foo";
+    private static final String FILE_WITH_QUERY_PARAMS = "pretty/little/liar" + QUERY_PARAM_PREFIX + "foo&bar=3";
+    private static final String FILE_WITH_HASH_AND_QUERY = URL_SEGMENT1 + "test/test" + HTML_EXTENSION + HASH_PREFIX + "foo" + QUERY_PARAM_PREFIX + "bar=3&baz=55";
+    private static final String FILE_WITHOUT_PARAMS = URL_SEGMENT1 + "test/test" + HTML_EXTENSION;
+    private static final String FILE_WITH_HASH_ONLY = URL_SEGMENT1 + "test" + HTML_EXTENSION + HASH_PREFIX + "foo";
+    private static final String FILE_WITH_QUERY = "this/is/a/file/that/i/like" + HTML_EXTENSION + QUERY_PARAM_PREFIX + "foo=bar";
+    private static final String FILE_WITH_BOTH = "foo/bar" + HTML_EXTENSION + HASH_PREFIX + "foo" + QUERY_PARAM_PREFIX + "bar=baz";
+
     @Test
     public void testNoHashOrParameters() {
-        String fileName = "this/test/file/path/.html";
-        assertRetrieveFileNameHelper(fileName, fileName);
+        assertRetrieveFileNameHelper(FILE_PATH_WITH_HTML, FILE_PATH_WITH_HTML);
     }
 
     @Test
     public void testEmptyString() {
-        assertRetrieveFileNameHelper("", "");
+        assertRetrieveFileNameHelper(EMPTY_STRING, EMPTY_STRING);
     }
 
     @Test
     public void testOnlyHash() {
-        String segment = "test/file#foo";
-        assertRetrieveFileNameHelper("test/file", segment);
+        assertRetrieveFileNameHelper(URL_SEGMENT1 + "file", FILE_WITH_HASH);
     }
 
     @Test
     public void testOnlyQueryParams() {
-        String segment = "pretty/little/liar?foo&bar=3";
-        assertRetrieveFileNameHelper("pretty/little/liar", segment);
+        assertRetrieveFileNameHelper("pretty/little/liar", FILE_WITH_QUERY_PARAMS);
     }
 
     @Test
     public void testHashAndQueryParams() {
-        String segment = "test/test/test.html#foo?bar=3&baz=55";
-        assertRetrieveFileNameHelper("test/test/test.html", segment);
+        assertRetrieveFileNameHelper(URL_SEGMENT1 + "test/test" + HTML_EXTENSION, FILE_WITH_HASH_AND_QUERY);
     }
 
     @Test
     public void testGetIndexOfParamsNoParams() {
-        String segment = "test/test/test.html";
-        assertGetIndexHelper(segment, -1);
+        assertGetIndexHelper(FILE_WITHOUT_PARAMS, -1);
     }
 
     @Test
     public void testGetIndexOfParamsHash() {
-        String segment = "test/test.html#foo";
-        int expected = 14;
-        assertGetIndexHelper(segment, expected);
+        assertGetIndexHelper(FILE_WITH_HASH_ONLY, 14);
     }
 
     @Test
     public void testGetIndexOfQueryHash() {
-        String segment = "this/is/a/file/that/i/like.html?foo=bar";
-        int expected = 31;
-        assertGetIndexHelper(segment, expected);
+        assertGetIndexHelper(FILE_WITH_QUERY, 31);
     }
 
     @Test
     public void testGetIndexOfBoth() {
-        String segment = "foo/bar.html#foo?bar=baz";
-        int expected = 12;
-        assertGetIndexHelper(segment, expected);
+        assertGetIndexHelper(FILE_WITH_BOTH, 12);
     }
 
     @Test
     public void testGetParamsNone() {
-        String segment = "this/test/file/path/.html";
-        assertGetParamsHelper(segment, "");
+        assertGetParamsHelper(FILE_PATH_WITH_HTML, EMPTY_STRING);
     }
 
     @Test
     public void testGetParamsHash() {
-        String segment = "test/file#foo";
-        assertGetParamsHelper(segment, "#foo");
+        assertGetParamsHelper(FILE_WITH_HASH, HASH_PREFIX + "foo");
     }
 
     @Test
     public void testGetParamsQuery() {
-        String segment = "pretty/little/liar?foo&bar=3";
-        assertGetParamsHelper(segment, "?foo&bar=3");
+        assertGetParamsHelper(FILE_WITH_QUERY_PARAMS, QUERY_PARAM_PREFIX + "foo&bar=3");
     }
 
     @Test
     public void testGetParamsBoth() {
-        String segment = "test/test/test.html#foo?bar=3&baz=55";
-        assertGetParamsHelper(segment, "#foo?bar=3&baz=55");
+        assertGetParamsHelper(FILE_WITH_HASH_AND_QUERY, HASH_PREFIX + "foo" + QUERY_PARAM_PREFIX + "bar=3&baz=55");
     }
 
     /**
      * Take start, retrieve the file name, and assert that the result is equal to
      * expected.
-     * @param expected
-     * @param start
+     * @param expected Expected file path
+     * @param start Input URL segment
      */
     protected void assertRetrieveFileNameHelper(String expected, String start) {
         String result = UrlUtils.getPathFromUriFragment(start);
@@ -100,6 +101,8 @@ public class UrlUtilsTest {
 
     /**
      * Since getIndexOfParameters is package-private, we'll use reflection to access it
+     * @param segment URL segment to test
+     * @param expected Expected index of parameters
      */
     protected void assertGetIndexHelper(String segment, int expected) {
         try {
@@ -112,6 +115,11 @@ public class UrlUtilsTest {
         }
     }
 
+    /**
+     * Assert the parameters extracted from the URL segment
+     * @param segment URL segment to test
+     * @param expected Expected parameters string
+     */
     protected void assertGetParamsHelper(String segment, String expected) {
         String actual = UrlUtils.getParametersFromUriFragment(segment);
         assertEquals(expected, actual);
