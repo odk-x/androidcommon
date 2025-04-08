@@ -1,4 +1,4 @@
-package org.opendatakit.test;
+package org.opendatakit.test.webkitserver.utilities;
 
 import org.junit.Test;
 import org.opendatakit.webkitserver.utilities.UrlUtils;
@@ -13,6 +13,7 @@ public class UrlUtilsTest {
     private static final String HTML_EXTENSION = ".html";
     private static final String QUERY_PARAM_PREFIX = "?";
     private static final String HASH_PREFIX = "#";
+    private static final String TEST_PATH = "test/test";
 
     // File paths
     private static final String FILE_PATH_WITH_HTML = FILE_PATH_PREFIX + HTML_EXTENSION;
@@ -24,13 +25,16 @@ public class UrlUtilsTest {
     private static final String QUERY_VALUE_FOO_BAR = "foo=bar";
     private static final String QUERY_VALUE_BAR_BAZ = "bar=baz";
 
+    // Common path components
+    private static final String TEST_HTML_PATH = URL_SEGMENT1 + TEST_PATH + HTML_EXTENSION;
+
     // Complete URL fragments with parameters
     private static final String FILE_WITH_HASH = URL_SEGMENT1 + "file" + HASH_PREFIX + HASH_VALUE_FOO;
     private static final String FILE_WITH_QUERY_PARAMS = "pretty/little/liar" + QUERY_PARAM_PREFIX + QUERY_VALUE_FOO_AND_BAR;
-    private static final String FILE_WITH_HASH_AND_QUERY = URL_SEGMENT1 + "test/test" + HTML_EXTENSION +
+    private static final String FILE_WITH_HASH_AND_QUERY = TEST_HTML_PATH +
             HASH_PREFIX + HASH_VALUE_FOO +
             QUERY_PARAM_PREFIX + QUERY_VALUE_BAR_AND_BAZ;
-    private static final String FILE_WITHOUT_PARAMS = URL_SEGMENT1 + "test/test" + HTML_EXTENSION;
+    private static final String FILE_WITHOUT_PARAMS = TEST_HTML_PATH;
     private static final String FILE_WITH_HASH_ONLY = URL_SEGMENT1 + "test" + HTML_EXTENSION +
             HASH_PREFIX + HASH_VALUE_FOO;
     private static final String FILE_WITH_QUERY = "this/is/a/file/that/i/like" + HTML_EXTENSION +
@@ -61,7 +65,7 @@ public class UrlUtilsTest {
 
     @Test
     public void testHashAndQueryParams() {
-        assertRetrieveFileNameHelper(URL_SEGMENT1 + "test/test" + HTML_EXTENSION, FILE_WITH_HASH_AND_QUERY);
+        assertRetrieveFileNameHelper(TEST_HTML_PATH, FILE_WITH_HASH_AND_QUERY);
     }
 
     @Test
