@@ -36,25 +36,57 @@ public class SerializationUtilsTest {
     private static final String KEY_BOOLEAN_ARRAY = "booleanArrayKey";
     private static final String KEY_BUNDLE_ARRAY = "bundleArrayKey";
 
+    // Test values for simple types
+    private static final String TEST_STRING_VALUE = "test string";
+    private static final int TEST_INT_VALUE = 42;
+    private static final long TEST_LONG_VALUE = 9999999999L;
+    private static final double TEST_DOUBLE_VALUE = 3.14159;
+    private static final double TEST_DOUBLE_DELTA = 0.0000001;
+    private static final boolean TEST_BOOLEAN_VALUE = true;
+
+    // Test values for nested bundle
+    private static final String TEST_CHILD_STRING_VALUE = "child string";
+    private static final int TEST_CHILD_INT_VALUE = 99;
+
+    // Test values for array types
+    private static final String[] TEST_STRING_ARRAY = {"one", null, "three"};
+    private static final int[] TEST_INT_ARRAY = {1, 2, 3};
+    private static final long[] TEST_LONG_ARRAY = {100L, 200L, 300L};
+    private static final double[] TEST_DOUBLE_ARRAY = {1.1, 2.2, 3.3};
+    private static final boolean[] TEST_BOOLEAN_ARRAY = {true, false, true};
+
+    // Test values for array bundles
+    private static final String TEST_ARRAY_BUNDLE_1_STRING = "array bundle 1";
+    private static final String TEST_ARRAY_BUNDLE_2_STRING = "array bundle 2";
+
+    // Test values for array JSON objects
+    private static final String TEST_ARRAY_OBJECT_1_STRING = "array object 1";
+    private static final String TEST_ARRAY_OBJECT_2_STRING = "array object 2";
+
+    // Test values for string expansion
+    private static final String TEST_EXPANSION_SUFFIX = "_expanded";
+    private static final String TEST_EXPAND_STRING_1 = "expand_me";
+    private static final String TEST_EXPAND_STRING_2 = "expand_me_too";
+
     @Test
     public void testConvertFromBundleSimpleTypes() throws JSONException {
         // Create a bundle with various simple types
         Bundle bundle = new Bundle();
-        bundle.putString(KEY_STRING, "test string");
-        bundle.putInt(KEY_INT, 42);
-        bundle.putLong(KEY_LONG, 9999999999L);
-        bundle.putDouble(KEY_DOUBLE, 3.14159);
-        bundle.putBoolean(KEY_BOOLEAN, true);
+        bundle.putString(KEY_STRING, TEST_STRING_VALUE);
+        bundle.putInt(KEY_INT, TEST_INT_VALUE);
+        bundle.putLong(KEY_LONG, TEST_LONG_VALUE);
+        bundle.putDouble(KEY_DOUBLE, TEST_DOUBLE_VALUE);
+        bundle.putBoolean(KEY_BOOLEAN, TEST_BOOLEAN_VALUE);
         bundle.putString(KEY_NULL, null);
 
         // Convert to JSON
         JSONObject json = SerializationUtils.convertFromBundle(TEST_APP_NAME, bundle);
 
         // Verify conversion was correct
-        assertEquals("test string", json.getString(KEY_STRING));
-        assertEquals(42, json.getInt(KEY_INT));
-        assertEquals(9999999999L, json.getLong(KEY_LONG));
-        assertEquals(3.14159, json.getDouble(KEY_DOUBLE), 0.0000001);
+        assertEquals(TEST_STRING_VALUE, json.getString(KEY_STRING));
+        assertEquals(TEST_INT_VALUE, json.getInt(KEY_INT));
+        assertEquals(TEST_LONG_VALUE, json.getLong(KEY_LONG));
+        assertEquals(TEST_DOUBLE_VALUE, json.getDouble(KEY_DOUBLE), TEST_DOUBLE_DELTA);
         assertTrue(json.getBoolean(KEY_BOOLEAN));
         assertTrue(json.has(KEY_NULL));
         assertTrue(json.isNull(KEY_NULL));
@@ -64,57 +96,57 @@ public class SerializationUtilsTest {
     public void testConvertFromBundleArrayTypes() throws JSONException {
         // Create a bundle with various array types
         Bundle bundle = new Bundle();
-        bundle.putStringArray(KEY_STRING_ARRAY, new String[]{"one", null, "three"});
-        bundle.putIntArray(KEY_INT_ARRAY, new int[]{1, 2, 3});
-        bundle.putLongArray(KEY_LONG_ARRAY, new long[]{100L, 200L, 300L});
-        bundle.putDoubleArray(KEY_DOUBLE_ARRAY, new double[]{1.1, 2.2, 3.3});
-        bundle.putBooleanArray(KEY_BOOLEAN_ARRAY, new boolean[]{true, false, true});
+        bundle.putStringArray(KEY_STRING_ARRAY, TEST_STRING_ARRAY);
+        bundle.putIntArray(KEY_INT_ARRAY, TEST_INT_ARRAY);
+        bundle.putLongArray(KEY_LONG_ARRAY, TEST_LONG_ARRAY);
+        bundle.putDoubleArray(KEY_DOUBLE_ARRAY, TEST_DOUBLE_ARRAY);
+        bundle.putBooleanArray(KEY_BOOLEAN_ARRAY, TEST_BOOLEAN_ARRAY);
 
         // Convert to JSON
         JSONObject json = SerializationUtils.convertFromBundle(TEST_APP_NAME, bundle);
 
         // Verify string array
         JSONArray stringArray = json.getJSONArray(KEY_STRING_ARRAY);
-        assertEquals(3, stringArray.length());
-        assertEquals("one", stringArray.getString(0));
+        assertEquals(TEST_STRING_ARRAY.length, stringArray.length());
+        assertEquals(TEST_STRING_ARRAY[0], stringArray.getString(0));
         assertTrue(stringArray.isNull(1));
-        assertEquals("three", stringArray.getString(2));
+        assertEquals(TEST_STRING_ARRAY[2], stringArray.getString(2));
 
         // Verify int array
         JSONArray intArray = json.getJSONArray(KEY_INT_ARRAY);
-        assertEquals(3, intArray.length());
-        assertEquals(1, intArray.getInt(0));
-        assertEquals(2, intArray.getInt(1));
-        assertEquals(3, intArray.getInt(2));
+        assertEquals(TEST_INT_ARRAY.length, intArray.length());
+        assertEquals(TEST_INT_ARRAY[0], intArray.getInt(0));
+        assertEquals(TEST_INT_ARRAY[1], intArray.getInt(1));
+        assertEquals(TEST_INT_ARRAY[2], intArray.getInt(2));
 
         // Verify long array
         JSONArray longArray = json.getJSONArray(KEY_LONG_ARRAY);
-        assertEquals(3, longArray.length());
-        assertEquals(100L, longArray.getLong(0));
-        assertEquals(200L, longArray.getLong(1));
-        assertEquals(300L, longArray.getLong(2));
+        assertEquals(TEST_LONG_ARRAY.length, longArray.length());
+        assertEquals(TEST_LONG_ARRAY[0], longArray.getLong(0));
+        assertEquals(TEST_LONG_ARRAY[1], longArray.getLong(1));
+        assertEquals(TEST_LONG_ARRAY[2], longArray.getLong(2));
 
         // Verify double array
         JSONArray doubleArray = json.getJSONArray(KEY_DOUBLE_ARRAY);
-        assertEquals(3, doubleArray.length());
-        assertEquals(1.1, doubleArray.getDouble(0), 0.0001);
-        assertEquals(2.2, doubleArray.getDouble(1), 0.0001);
-        assertEquals(3.3, doubleArray.getDouble(2), 0.0001);
+        assertEquals(TEST_DOUBLE_ARRAY.length, doubleArray.length());
+        assertEquals(TEST_DOUBLE_ARRAY[0], doubleArray.getDouble(0), TEST_DOUBLE_DELTA);
+        assertEquals(TEST_DOUBLE_ARRAY[1], doubleArray.getDouble(1), TEST_DOUBLE_DELTA);
+        assertEquals(TEST_DOUBLE_ARRAY[2], doubleArray.getDouble(2), TEST_DOUBLE_DELTA);
 
         // Verify boolean array
         JSONArray booleanArray = json.getJSONArray(KEY_BOOLEAN_ARRAY);
-        assertEquals(3, booleanArray.length());
-        assertTrue(booleanArray.getBoolean(0));
-        assertFalse(booleanArray.getBoolean(1));
-        assertTrue(booleanArray.getBoolean(2));
+        assertEquals(TEST_BOOLEAN_ARRAY.length, booleanArray.length());
+        assertEquals(TEST_BOOLEAN_ARRAY[0], booleanArray.getBoolean(0));
+        assertEquals(TEST_BOOLEAN_ARRAY[1], booleanArray.getBoolean(1));
+        assertEquals(TEST_BOOLEAN_ARRAY[2], booleanArray.getBoolean(2));
     }
 
     @Test
     public void testConvertFromBundleNestedBundles() throws JSONException {
         // Create nested bundles
         Bundle childBundle = new Bundle();
-        childBundle.putString(KEY_STRING, "child string");
-        childBundle.putInt(KEY_INT, 99);
+        childBundle.putString(KEY_STRING, TEST_CHILD_STRING_VALUE);
+        childBundle.putInt(KEY_INT, TEST_CHILD_INT_VALUE);
 
         Bundle parentBundle = new Bundle();
         parentBundle.putBundle(KEY_BUNDLE, childBundle);
@@ -122,9 +154,9 @@ public class SerializationUtilsTest {
         // Create bundle array
         Bundle[] bundleArray = new Bundle[2];
         bundleArray[0] = new Bundle();
-        bundleArray[0].putString(KEY_STRING, "array bundle 1");
+        bundleArray[0].putString(KEY_STRING, TEST_ARRAY_BUNDLE_1_STRING);
         bundleArray[1] = new Bundle();
-        bundleArray[1].putString(KEY_STRING, "array bundle 2");
+        bundleArray[1].putString(KEY_STRING, TEST_ARRAY_BUNDLE_2_STRING);
 
         parentBundle.putParcelableArray(KEY_BUNDLE_ARRAY, bundleArray);
 
@@ -133,25 +165,25 @@ public class SerializationUtilsTest {
 
         // Verify nested bundle
         JSONObject nestedJson = json.getJSONObject(KEY_BUNDLE);
-        assertEquals("child string", nestedJson.getString(KEY_STRING));
-        assertEquals(99, nestedJson.getInt(KEY_INT));
+        assertEquals(TEST_CHILD_STRING_VALUE, nestedJson.getString(KEY_STRING));
+        assertEquals(TEST_CHILD_INT_VALUE, nestedJson.getInt(KEY_INT));
 
         // Verify bundle array
         JSONArray bundleJsonArray = json.getJSONArray(KEY_BUNDLE_ARRAY);
         assertEquals(2, bundleJsonArray.length());
-        assertEquals("array bundle 1", bundleJsonArray.getJSONObject(0).getString(KEY_STRING));
-        assertEquals("array bundle 2", bundleJsonArray.getJSONObject(1).getString(KEY_STRING));
+        assertEquals(TEST_ARRAY_BUNDLE_1_STRING, bundleJsonArray.getJSONObject(0).getString(KEY_STRING));
+        assertEquals(TEST_ARRAY_BUNDLE_2_STRING, bundleJsonArray.getJSONObject(1).getString(KEY_STRING));
     }
 
     @Test
     public void testConvertToBundleSimpleTypes() throws JSONException {
         // Create JSON with simple types
         JSONObject json = new JSONObject();
-        json.put(KEY_STRING, "test string");
-        json.put(KEY_INT, 42);
-        json.put(KEY_LONG, 9999999999L);
-        json.put(KEY_DOUBLE, 3.14159);
-        json.put(KEY_BOOLEAN, true);
+        json.put(KEY_STRING, TEST_STRING_VALUE);
+        json.put(KEY_INT, TEST_INT_VALUE);
+        json.put(KEY_LONG, TEST_LONG_VALUE);
+        json.put(KEY_DOUBLE, TEST_DOUBLE_VALUE);
+        json.put(KEY_BOOLEAN, TEST_BOOLEAN_VALUE);
         json.put(KEY_NULL, JSONObject.NULL);
 
         // Define a simple MacroStringExpander
@@ -159,7 +191,7 @@ public class SerializationUtilsTest {
             @Override
             public String expandString(String value) {
                 // Simple implementation: just append a suffix to demonstrate expansion
-                return value + "_expanded";
+                return value + TEST_EXPANSION_SUFFIX;
             }
         };
 
@@ -167,10 +199,10 @@ public class SerializationUtilsTest {
         Bundle bundle = SerializationUtils.convertToBundle(json, expander);
 
         // Verify conversion was correct
-        assertEquals("test string_expanded", bundle.getString(KEY_STRING));
-        assertEquals(42, bundle.getInt(KEY_INT));
-        assertEquals(9999999999L, bundle.getLong(KEY_LONG));
-        assertEquals(3.14159, bundle.getDouble(KEY_DOUBLE), 0.0000001);
+        assertEquals(TEST_STRING_VALUE + TEST_EXPANSION_SUFFIX, bundle.getString(KEY_STRING));
+        assertEquals(TEST_INT_VALUE, bundle.getInt(KEY_INT));
+        assertEquals(TEST_LONG_VALUE, bundle.getLong(KEY_LONG));
+        assertEquals(TEST_DOUBLE_VALUE, bundle.getDouble(KEY_DOUBLE), TEST_DOUBLE_DELTA);
         assertTrue(bundle.getBoolean(KEY_BOOLEAN));
         assertFalse(bundle.containsKey(KEY_NULL)); // NULL values aren't stored in the bundle
     }
@@ -182,37 +214,37 @@ public class SerializationUtilsTest {
 
         // String array
         JSONArray stringArray = new JSONArray();
-        stringArray.put("one");
+        stringArray.put(TEST_STRING_ARRAY[0]);
         stringArray.put(JSONObject.NULL);
-        stringArray.put("three");
+        stringArray.put(TEST_STRING_ARRAY[2]);
         json.put(KEY_STRING_ARRAY, stringArray);
 
         // Int array
         JSONArray intArray = new JSONArray();
-        intArray.put(1);
-        intArray.put(2);
-        intArray.put(3);
+        for (int value : TEST_INT_ARRAY) {
+            intArray.put(value);
+        }
         json.put(KEY_INT_ARRAY, intArray);
 
         // Long array
         JSONArray longArray = new JSONArray();
-        longArray.put(100L);
-        longArray.put(200L);
-        longArray.put(300L);
+        for (long value : TEST_LONG_ARRAY) {
+            longArray.put(value);
+        }
         json.put(KEY_LONG_ARRAY, longArray);
 
         // Double array
         JSONArray doubleArray = new JSONArray();
-        doubleArray.put(1.1);
-        doubleArray.put(2.2);
-        doubleArray.put(3.3);
+        for (double value : TEST_DOUBLE_ARRAY) {
+            doubleArray.put(value);
+        }
         json.put(KEY_DOUBLE_ARRAY, doubleArray);
 
         // Boolean array
         JSONArray booleanArray = new JSONArray();
-        booleanArray.put(true);
-        booleanArray.put(false);
-        booleanArray.put(true);
+        for (boolean value : TEST_BOOLEAN_ARRAY) {
+            booleanArray.put(value);
+        }
         json.put(KEY_BOOLEAN_ARRAY, booleanArray);
 
         // Convert to Bundle with null expander (no string expansion)
@@ -221,50 +253,50 @@ public class SerializationUtilsTest {
         // Verify string array
         String[] bundleStringArray = bundle.getStringArray(KEY_STRING_ARRAY);
         assert bundleStringArray != null;
-        assertEquals(3, bundleStringArray.length);
-        assertEquals("one", bundleStringArray[0]);
+        assertEquals(TEST_STRING_ARRAY.length, bundleStringArray.length);
+        assertEquals(TEST_STRING_ARRAY[0], bundleStringArray[0]);
         assertNull(bundleStringArray[1]);
-        assertEquals("three", bundleStringArray[2]);
+        assertEquals(TEST_STRING_ARRAY[2], bundleStringArray[2]);
 
         // Verify int array
         int[] bundleIntArray = bundle.getIntArray(KEY_INT_ARRAY);
         assert bundleIntArray != null;
-        assertEquals(3, bundleIntArray.length);
-        assertEquals(1, bundleIntArray[0]);
-        assertEquals(2, bundleIntArray[1]);
-        assertEquals(3, bundleIntArray[2]);
+        assertEquals(TEST_INT_ARRAY.length, bundleIntArray.length);
+        for (int i = 0; i < TEST_INT_ARRAY.length; i++) {
+            assertEquals(TEST_INT_ARRAY[i], bundleIntArray[i]);
+        }
 
         // Verify long array
         long[] bundleLongArray = bundle.getLongArray(KEY_LONG_ARRAY);
         assert bundleLongArray != null;
-        assertEquals(3, bundleLongArray.length);
-        assertEquals(100L, bundleLongArray[0]);
-        assertEquals(200L, bundleLongArray[1]);
-        assertEquals(300L, bundleLongArray[2]);
+        assertEquals(TEST_LONG_ARRAY.length, bundleLongArray.length);
+        for (int i = 0; i < TEST_LONG_ARRAY.length; i++) {
+            assertEquals(TEST_LONG_ARRAY[i], bundleLongArray[i]);
+        }
 
         // Verify double array
         double[] bundleDoubleArray = bundle.getDoubleArray(KEY_DOUBLE_ARRAY);
         assert bundleDoubleArray != null;
-        assertEquals(3, bundleDoubleArray.length);
-        assertEquals(1.1, bundleDoubleArray[0], 0.0001);
-        assertEquals(2.2, bundleDoubleArray[1], 0.0001);
-        assertEquals(3.3, bundleDoubleArray[2], 0.0001);
+        assertEquals(TEST_DOUBLE_ARRAY.length, bundleDoubleArray.length);
+        for (int i = 0; i < TEST_DOUBLE_ARRAY.length; i++) {
+            assertEquals(TEST_DOUBLE_ARRAY[i], bundleDoubleArray[i], TEST_DOUBLE_DELTA);
+        }
 
         // Verify boolean array
         boolean[] bundleBooleanArray = bundle.getBooleanArray(KEY_BOOLEAN_ARRAY);
         assert bundleBooleanArray != null;
-        assertEquals(3, bundleBooleanArray.length);
-        assertTrue(bundleBooleanArray[0]);
-        assertFalse(bundleBooleanArray[1]);
-        assertTrue(bundleBooleanArray[2]);
+        assertEquals(TEST_BOOLEAN_ARRAY.length, bundleBooleanArray.length);
+        for (int i = 0; i < TEST_BOOLEAN_ARRAY.length; i++) {
+            assertEquals(TEST_BOOLEAN_ARRAY[i], bundleBooleanArray[i]);
+        }
     }
 
     @Test
     public void testConvertToBundleNestedObjects() throws JSONException {
         // Create nested JSON objects
         JSONObject childJson = new JSONObject();
-        childJson.put(KEY_STRING, "child string");
-        childJson.put(KEY_INT, 99);
+        childJson.put(KEY_STRING, TEST_CHILD_STRING_VALUE);
+        childJson.put(KEY_INT, TEST_CHILD_INT_VALUE);
 
         JSONObject parentJson = new JSONObject();
         parentJson.put(KEY_BUNDLE, childJson);
@@ -272,9 +304,9 @@ public class SerializationUtilsTest {
         // Create JSON array of objects
         JSONArray jsonArray = new JSONArray();
         JSONObject arrayObj1 = new JSONObject();
-        arrayObj1.put(KEY_STRING, "array object 1");
+        arrayObj1.put(KEY_STRING, TEST_ARRAY_OBJECT_1_STRING);
         JSONObject arrayObj2 = new JSONObject();
-        arrayObj2.put(KEY_STRING, "array object 2");
+        arrayObj2.put(KEY_STRING, TEST_ARRAY_OBJECT_2_STRING);
         jsonArray.put(arrayObj1);
         jsonArray.put(arrayObj2);
 
@@ -286,8 +318,8 @@ public class SerializationUtilsTest {
         // Verify nested bundle
         Bundle nestedBundle = bundle.getBundle(KEY_BUNDLE);
         assertNotNull(nestedBundle);
-        assertEquals("child string", nestedBundle.getString(KEY_STRING));
-        assertEquals(99, nestedBundle.getInt(KEY_INT));
+        assertEquals(TEST_CHILD_STRING_VALUE, nestedBundle.getString(KEY_STRING));
+        assertEquals(TEST_CHILD_INT_VALUE, nestedBundle.getInt(KEY_INT));
 
         // Verify bundle array
         Parcelable[] bundleArray = bundle.getParcelableArray(KEY_BUNDLE_ARRAY);
@@ -295,8 +327,8 @@ public class SerializationUtilsTest {
         assertEquals(2, bundleArray.length);
         Bundle bundle1 = (Bundle) bundleArray[0];
         Bundle bundle2 = (Bundle) bundleArray[1];
-        assertEquals("array object 1", bundle1.getString(KEY_STRING));
-        assertEquals("array object 2", bundle2.getString(KEY_STRING));
+        assertEquals(TEST_ARRAY_OBJECT_1_STRING, bundle1.getString(KEY_STRING));
+        assertEquals(TEST_ARRAY_OBJECT_2_STRING, bundle2.getString(KEY_STRING));
     }
 
     @Test
@@ -304,15 +336,15 @@ public class SerializationUtilsTest {
         // Create JSON with string array that needs expansion
         JSONObject json = new JSONObject();
         JSONArray stringArray = new JSONArray();
-        stringArray.put("expand_me");
-        stringArray.put("expand_me_too");
+        stringArray.put(TEST_EXPAND_STRING_1);
+        stringArray.put(TEST_EXPAND_STRING_2);
         json.put(KEY_STRING_ARRAY, stringArray);
 
         // Define a simple MacroStringExpander
         MacroStringExpander expander = new MacroStringExpander() {
             @Override
             public String expandString(String value) {
-                return value + "_expanded";
+                return value + TEST_EXPANSION_SUFFIX;
             }
         };
 
@@ -324,28 +356,28 @@ public class SerializationUtilsTest {
         String[] bundleStringArray = bundle.getStringArray(KEY_STRING_ARRAY);
         assert bundleStringArray != null;
         assertEquals(2, bundleStringArray.length);
-        assertEquals("expand_me", bundleStringArray[0]);  // Should NOT be expanded
-        assertEquals("expand_me_too", bundleStringArray[1]);  // Should NOT be expanded
+        assertEquals(TEST_EXPAND_STRING_1, bundleStringArray[0]);  // Should NOT be expanded
+        assertEquals(TEST_EXPAND_STRING_2, bundleStringArray[1]);  // Should NOT be expanded
     }
 
     @Test
     public void testRoundTripConversion() throws JSONException {
         // Create a complex bundle with various types
         Bundle originalBundle = new Bundle();
-        originalBundle.putString(KEY_STRING, "test string");
-        originalBundle.putInt(KEY_INT, 42);
-        originalBundle.putLong(KEY_LONG, 9999999999L);
-        originalBundle.putDouble(KEY_DOUBLE, 3.14159);
-        originalBundle.putBoolean(KEY_BOOLEAN, true);
+        originalBundle.putString(KEY_STRING, TEST_STRING_VALUE);
+        originalBundle.putInt(KEY_INT, TEST_INT_VALUE);
+        originalBundle.putLong(KEY_LONG, TEST_LONG_VALUE);
+        originalBundle.putDouble(KEY_DOUBLE, TEST_DOUBLE_VALUE);
+        originalBundle.putBoolean(KEY_BOOLEAN, TEST_BOOLEAN_VALUE);
 
         // Add arrays
-        originalBundle.putStringArray(KEY_STRING_ARRAY, new String[]{"one", null, "three"});
-        originalBundle.putIntArray(KEY_INT_ARRAY, new int[]{1, 2, 3});
+        originalBundle.putStringArray(KEY_STRING_ARRAY, TEST_STRING_ARRAY);
+        originalBundle.putIntArray(KEY_INT_ARRAY, TEST_INT_ARRAY);
 
         // Add nested bundle
         Bundle nestedBundle = new Bundle();
-        nestedBundle.putString(KEY_STRING, "nested string");
-        nestedBundle.putInt(KEY_INT, 99);
+        nestedBundle.putString(KEY_STRING, TEST_CHILD_STRING_VALUE);
+        nestedBundle.putInt(KEY_INT, TEST_CHILD_INT_VALUE);
         originalBundle.putBundle(KEY_BUNDLE, nestedBundle);
 
         // Convert Bundle to JSON
@@ -358,7 +390,7 @@ public class SerializationUtilsTest {
         assertEquals(originalBundle.getString(KEY_STRING), resultBundle.getString(KEY_STRING));
         assertEquals(originalBundle.getInt(KEY_INT), resultBundle.getInt(KEY_INT));
         assertEquals(originalBundle.getLong(KEY_LONG), resultBundle.getLong(KEY_LONG));
-        assertEquals(originalBundle.getDouble(KEY_DOUBLE), resultBundle.getDouble(KEY_DOUBLE), 0.0000001);
+        assertEquals(originalBundle.getDouble(KEY_DOUBLE), resultBundle.getDouble(KEY_DOUBLE), TEST_DOUBLE_DELTA);
         assertEquals(originalBundle.getBoolean(KEY_BOOLEAN), resultBundle.getBoolean(KEY_BOOLEAN));
 
         // Verify string array
