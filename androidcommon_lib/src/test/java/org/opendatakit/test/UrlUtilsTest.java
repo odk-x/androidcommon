@@ -13,15 +13,31 @@ public class UrlUtilsTest {
     private static final String HTML_EXTENSION = ".html";
     private static final String QUERY_PARAM_PREFIX = "?";
     private static final String HASH_PREFIX = "#";
-    
+
+    // File paths
     private static final String FILE_PATH_WITH_HTML = FILE_PATH_PREFIX + HTML_EXTENSION;
-    private static final String FILE_WITH_HASH = URL_SEGMENT1 + "file" + HASH_PREFIX + "foo";
-    private static final String FILE_WITH_QUERY_PARAMS = "pretty/little/liar" + QUERY_PARAM_PREFIX + "foo&bar=3";
-    private static final String FILE_WITH_HASH_AND_QUERY = URL_SEGMENT1 + "test/test" + HTML_EXTENSION + HASH_PREFIX + "foo" + QUERY_PARAM_PREFIX + "bar=3&baz=55";
+
+    // Query and hash parameter values
+    private static final String HASH_VALUE_FOO = "foo";
+    private static final String QUERY_VALUE_FOO_AND_BAR = "foo&bar=3";
+    private static final String QUERY_VALUE_BAR_AND_BAZ = "bar=3&baz=55";
+    private static final String QUERY_VALUE_FOO_BAR = "foo=bar";
+    private static final String QUERY_VALUE_BAR_BAZ = "bar=baz";
+
+    // Complete URL fragments with parameters
+    private static final String FILE_WITH_HASH = URL_SEGMENT1 + "file" + HASH_PREFIX + HASH_VALUE_FOO;
+    private static final String FILE_WITH_QUERY_PARAMS = "pretty/little/liar" + QUERY_PARAM_PREFIX + QUERY_VALUE_FOO_AND_BAR;
+    private static final String FILE_WITH_HASH_AND_QUERY = URL_SEGMENT1 + "test/test" + HTML_EXTENSION +
+            HASH_PREFIX + HASH_VALUE_FOO +
+            QUERY_PARAM_PREFIX + QUERY_VALUE_BAR_AND_BAZ;
     private static final String FILE_WITHOUT_PARAMS = URL_SEGMENT1 + "test/test" + HTML_EXTENSION;
-    private static final String FILE_WITH_HASH_ONLY = URL_SEGMENT1 + "test" + HTML_EXTENSION + HASH_PREFIX + "foo";
-    private static final String FILE_WITH_QUERY = "this/is/a/file/that/i/like" + HTML_EXTENSION + QUERY_PARAM_PREFIX + "foo=bar";
-    private static final String FILE_WITH_BOTH = "foo/bar" + HTML_EXTENSION + HASH_PREFIX + "foo" + QUERY_PARAM_PREFIX + "bar=baz";
+    private static final String FILE_WITH_HASH_ONLY = URL_SEGMENT1 + "test" + HTML_EXTENSION +
+            HASH_PREFIX + HASH_VALUE_FOO;
+    private static final String FILE_WITH_QUERY = "this/is/a/file/that/i/like" + HTML_EXTENSION +
+            QUERY_PARAM_PREFIX + QUERY_VALUE_FOO_BAR;
+    private static final String FILE_WITH_BOTH = "foo/bar" + HTML_EXTENSION +
+            HASH_PREFIX + HASH_VALUE_FOO +
+            QUERY_PARAM_PREFIX + QUERY_VALUE_BAR_BAZ;
 
     @Test
     public void testNoHashOrParameters() {
@@ -75,17 +91,17 @@ public class UrlUtilsTest {
 
     @Test
     public void testGetParamsHash() {
-        assertGetParamsHelper(FILE_WITH_HASH, HASH_PREFIX + "foo");
+        assertGetParamsHelper(FILE_WITH_HASH, HASH_PREFIX + HASH_VALUE_FOO);
     }
 
     @Test
     public void testGetParamsQuery() {
-        assertGetParamsHelper(FILE_WITH_QUERY_PARAMS, QUERY_PARAM_PREFIX + "foo&bar=3");
+        assertGetParamsHelper(FILE_WITH_QUERY_PARAMS, QUERY_PARAM_PREFIX + QUERY_VALUE_FOO_AND_BAR);
     }
 
     @Test
     public void testGetParamsBoth() {
-        assertGetParamsHelper(FILE_WITH_HASH_AND_QUERY, HASH_PREFIX + "foo" + QUERY_PARAM_PREFIX + "bar=3&baz=55");
+        assertGetParamsHelper(FILE_WITH_HASH_AND_QUERY, HASH_PREFIX + HASH_VALUE_FOO + QUERY_PARAM_PREFIX + QUERY_VALUE_BAR_AND_BAZ);
     }
 
     /**
