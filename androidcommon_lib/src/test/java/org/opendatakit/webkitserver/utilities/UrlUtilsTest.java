@@ -1,7 +1,6 @@
-package org.opendatakit.test.webkitserver.utilities;
+package org.opendatakit.webkitserver.utilities;
 
 import org.junit.Test;
-import org.opendatakit.webkitserver.utilities.UrlUtils;
 
 import static org.junit.Assert.*;
 
@@ -120,19 +119,13 @@ public class UrlUtilsTest {
     }
 
     /**
-     * Since getIndexOfParameters is package-private, we'll use reflection to access it
+     * Test the package-private getIndexOfParameters method directly
      * @param segment URL segment to test
      * @param expected Expected index of parameters
      */
     protected void assertGetIndexHelper(String segment, int expected) {
-        try {
-            java.lang.reflect.Method method = UrlUtils.class.getDeclaredMethod("getIndexOfParameters", String.class);
-            method.setAccessible(true);
-            int actual = (int) method.invoke(null, segment);
-            assertEquals(expected, actual);
-        } catch (Exception e) {
-            fail("Could not access getIndexOfParameters method: " + e.getMessage());
-        }
+        int actual = UrlUtils.getIndexOfParameters(segment);
+        assertEquals(expected, actual);
     }
 
     /**
@@ -144,4 +137,6 @@ public class UrlUtilsTest {
         String actual = UrlUtils.getParametersFromUriFragment(segment);
         assertEquals(expected, actual);
     }
+
 }
+
